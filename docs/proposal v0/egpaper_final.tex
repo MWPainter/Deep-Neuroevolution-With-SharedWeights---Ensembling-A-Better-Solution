@@ -1,0 +1,148 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Include other packages here, before hyperref.
+
+% If you comment hyperref and then uncomment it, you should delete
+% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
+% run, let it finish, and you should be clear).
+\usepackage[breaklinks=true,bookmarks=false]{hyperref}
+
+\cvprfinalcopy % *** Uncomment this line for the final submission
+
+\def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+% Pages are numbered in submission mode, and unnumbered in camera-ready
+%\ifcvprfinal\pagestyle{empty}\fi
+\setcounter{page}{1}
+\begin{document}
+
+%%%%%%%%% TITLE
+\title{CS231N Project Proposal (long version)\\ Deep Neuroevolution with Shared Parameters: Ensembling a Better Solution}
+
+\author{Michael Painter\\
+Stanford University\\
+{\tt\small mp703@stanford.edu}
+% For a paper whose authors are all at the same institution,
+% omit the following lines up until the closing ``}''.
+% Additional authors and addresses can be added with ``\and'',
+% just like the second author.
+% To save space, use either the email address or home page, not both
+}
+
+\maketitle
+%\thispagestyle{empty}
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+   The 200-400 words submitted as a project proposal: \\
+   todo
+\end{abstract}
+
+%%%%%%%%% BODY TEXT
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+
+\section{Introduction}
+Recently, there is a number of works that investigate performing an architecture search, to autonomize neural network architecture design. Naively, this involves training a neural network architectures from scratch and comparing their performance on the test set \cite{as1, as2}. However, this tends to be computationally very expensive, and is paralleled by a random search over weights, when optimizing a neural network. Clearly this is extremely inefficient, and it can and has been improved upon \cite{eas1, eas2}. In this project, we have identified that a number of methods used to perform (efficient) architecture searches could be combined, so we will investigate the effect this has, similar to how Rainbow \cite{rainbow} combined a number of Deep Reinforcment Learning methods to increase performance.
+
+Specifically, we will implement an architecture search by neuroevolution. We will use a constrained space of architectures, that can be formed by ``extending each other'' using function preserving transformations as in \cite{eas1}, using function preserving transformations similar to net2net \cite{net2net}. Moreover, the transformations will be implemented in such a way that requires no existing parameters to be altered, and we can therefore share parameters across models, as shown effective by \_\_\_ et al \cite{eas2}, allowing models to quickly be trained an evaluated without enormous computational cost.
+
+For the purpose of this project, define our domain as $\cX$, and output domain $\cY$. We define a model architecture space $\cH$, where for each model $h \in \cH$, we let $\Theta_h$ to be the set of possible weights (i.e. if $h$ have $k$ parameters, then $\Theta_h = \mathbb{R}^k$). That is, we have $h:\cX \times \Theta_h \rightarrow \cY$. 
+
+Often in machine learning, we consider the optimization of an objective function $J:\Theta \rightarrow \mathbb{R}$, where $\Theta$ is the set of possible weights, given some fixed model. We can extend this idea, to instead optimize over the function $J:\cH\times\Theta \rightarrow \mathbb{R}$, and we've set $\Theta = \bigcup_h \Theta_h$. We observe that $J$ is now not differentiable, as $\cH$ isn't a continuous domain, and therefore appeal to neuroevolutionary updates to optimize with respect to $\cH$, as neuroevolutionary strategies can be applied to non-differentiable domains, and will use classical gradient based methods to optimize each $J(h,\cdot)$ with respect to $\Theta$. 
+
+Finally, our work will involve the creation of a `meta-algorithm', which will perform the neuroevolutionary architecture search. The algorithm is `meta' as it we can use different forms of updates with it, for example, we could use it to train networks for classification (minimizing a cross-entropy loss for classification), or we could alternatively train a policy network for Reinforcement Learning tasks (using proximal policy optimization updates \cite{PPO}).
+
+
+
+
+
+\section{Reading}
+I have already read a fair number of papers for this project, but here we reference all of the background reading that will be useful.
+
+Firstly, we as we will be implementing some form of architecture search, I will read about some architecture searches, which allowed for huge computational costs \cite{as1, as2}, and a number of `efficient' architecture searches, run on less than 5 GPUs \cite{eas1, eas2}. 
+
+As our architecture search is based on neuroevolution and function preserving transforms, it will be useful to read about some classic (topological) neuroevolution \cite{shimonsarl, ne1, ne2, ne3}, as well as work on transfer learning and function preserving transforms (which is a specific method of transfer learning) \cite{transfer1, net2net}.
+
+If time, we will look at combining a number of models into an ensemble. Specifically, we will use a heirarchical ensemble, as described in \cite{heirarchicalensemble}. For this to be effective, it will require coevolutionary strategies to be used, as described by Whiteson et al here \cite{shimonsarl}.
+
+As we will be evaluating the algorithms and architectures on image classification, we also need to survey the current state of the art in image classification \cite{classify4, classify2, classify3, classify6, resnet3, as1}, and the current state of the art in CNN architectures. Specifically, we will look at inception networks \cite{inception1, inception2, inception3}, residual networks \cite{resnet1, resnet2, resnet3} and densenets \cite{densenet}.
+
+
+
+
+\section{Data}
+We will be use Imagenet \cite{imagenet} to evaluate the performance of the algorithms and architectures, which is openly available. Given enough time, we intend to submit an entry to OpenAI's retro contest \cite{retrocontest}, where we would train a policy network using PPO updates \cite{PPO}. PPO was chosen because OpenAI claims that it is a good trade off between performance and ease of implementation. For prototyping, we will use a smaller image classification dataset, such as Tiny Imagenet, or CIFAR-10. So algorithm and architecture desicions may be made based on results with these datasets. 
+
+
+\section{Methods and Algorithms}
+\begin{itemize}
+	\item TODO: write out the algorithm using algorithmic (do it in a MODULAR way, using \textit{evolutionaryStrategy}. Then we can define \textit{naiveEvolution : evolutionaryStrategy} function, and also \textit{coevolutionaryStrategy : evolutionaryStrategy} function.
+    \item It would be:
+    \item Initialize population
+    \item For some number of loops:
+    \item Extend population, using some \textit{mutationStrategy}
+    \item Train, for some number of steps (either cycle through networks, or choose randomly)
+    \item Select best networks from population, using some \textit{evolutionaryStrategy}
+\end{itemize}
+
+To begin with, we will look at implementing function preserving transforms of neural networks. Because of the modular form of Inception networks \cite{inception1,inception2,inception3}, we will use this as a basis for our architecture space. 
+
+Net2net \cite{net2net} defines operations to deepen and widen an inception network, however, we wish to not alter any weights that already exist in the network, and will have to define a new network widen transformation. To do so, we will derive an initialization that allows us to add Inception modules into the network, without altering it's overall function that the network currently represents. This amounts to being able to initialize a convolutional module such that it always has a contribution of `zero' to the overall output, for every possible. I have already derived and tested that this is possible. Conceptually, this is similar to being able to write, for any $f,g,\beta$, that $f(x) = f(x)+\beta g(x) - \beta g(x)$, where $f$ would be the current network, and $g$ represents any additional module added. I will leave full details of this until the progress report, .
+
+Next, we will run tests, similar to those run in net2net, to confirm that training a small network and then transforming it into to a larger network and continuing training will still hit the same performance as if we had have trained the larger model from scratch. Moreover, we will compare the training time of this two stage training procedure to the randomly initialized training, to confirm that the transfer learning is beneficial and doesn't take longer to train.
+
+Finally, we will implement our neuroevolution meta-algorithm, which will take the following form: This will involve, first, training a `small' network, for say $N_1$ steps. We will then generate a population of size $M$ from this initial network, by randomly adding inception modules for `widen' or `deepen' transformations. The rest of training will then proceed as follows:
+\begin{enumerate}
+	\item Initialize and train a network with small capacity, for $N_1$ steps. (The current population is of size 1).
+    \item While the population size is less than $M_1$, randomly pick a member of the population, and `mutate' it, by performing a network widen or deepen operation on it.
+    \item Train each of the $M$ networks, for $N_2$ steps. (Or, for $M_1N_2$ steps, randomly pick a network and perform an update for it).
+    \item Reduce the population to the $M_2 < M_1$ best performing networks. (Naively, pick the $M_2$ with best performance, but hopefully we will explore more interesting ways to select networks). 
+    \item Perform steps 2 to 4 for another $K-1$ iterations, so that $K$ iterations are performed in total.
+\end{enumerate}
+
+We note, that because we will be defining the transformations such that no existing weights are altered, we can use parameter sharing between the different networks of the population. This should lead to significant computational improvements, without hindering performance too much, as explained by Pham et al \cite{eas2}.
+
+Finally, we will attempt to take the $M_3$ best performing networks at the end of the training, and we will use them in a hierarchical ensemble to see if we can boost the performance. We expect that this by itself will not boost performance much, but, if we have time, we will try more interesting evolutionary strategies that encourage a more diverse population of networks.
+
+Further ideas to try, given enough time:
+\begin{itemize}
+	\item Try changing what ``the best X performing network'' means. Specifically, we wish to explore coevolutionary strategies 
+    \item We want to enter OpenAI's retro contest \cite{retrocontest}, which aims to be a new benchmark for `meta-learning', or transfer learning algorithms. If enough time, we will use our `meta-algorithm' with PPO \cite{PPO}, as OpenAI claims that it has good performance, and is easy to implement. Our main motivation is that this would provide further evaluation on if our neuroevolution `meta-algorithm' is useful.
+\end{itemize}
+
+
+
+\section{Evaluation}
+Our evaluation metric will be accuracy on the test set of Imagenet \cite{imagenet}. As we are looking to perform an architecture search efficiently, without requiring hundreds of GPUs, we also will analyze the computational efficiency. Specifically, we should compare the number of FLOPs (rather than training time or epochs) with respect to training and test accuracies between models. In particular, for this comparison, we would look to compare training a single network, an ensemble of networks and our method.
+
+
+
+{\small
+\bibliographystyle{ieee}
+\bibliography{egbib}
+}
+
+\appendix
+\section{Layerwise Dropout Experiments}
+\begin{itemize}
+	\item Diagram
+    \item Table of accuracy vs perfomance. (Experiment with 5 random masks for the dropout, and then combine them into an ensemble)
+    \item A graph of performance vs dropout prob, of a one layer network on mnist. Many curves for different numbers of filters.
+\end{itemize}
+
+\section{Zero Initialized Modules}
+\begin{itemize}
+	\item Gritty details on implementing the shared parameters, likely using masks
+    \item Diagram of the module
+\end{itemize}
+
+\end{document}
