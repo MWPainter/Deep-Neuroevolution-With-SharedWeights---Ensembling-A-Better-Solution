@@ -79,22 +79,16 @@ def conv_zero_module(inputs, balance_inputs, num_output_filters, add_max_pool, s
 		D = filter_shape[2] / 2
 		K = filter_shape[3] / 2
 		if balance_inputs:
-			filter_init[:,:,:D,:K] = conv_he_initialization((A,A,D,K))
+			filter_init[:,:, :D, :K] = conv_he_initialization((A,A,D,K))
 			filter_init[:,:, D:, :K] = -filter_init[:,:, :D, :K]
 		else:
-			filter_init[:,:,:,:K] = conv_he_initialization((A, A, 2*D, K))
+			filter_init[:,:,:, :K] = conv_he_initialization((A, A, 2*D, K))
 
 		# Now to initialize the negated, second half of the filter
 		filter_init[:,:,:, K:] = filter_init[:,:,:, :K]
 
 		# Add noise to filter
-		
-		# print("---------")
-		# print(filter_init)
-		# print("---------")
 		filter_init += np.random.randn(*filter_shape).astype(np.float32) * noise_stddev
-		# print(filter_init)
-		# print("---------")
 
 		# Actually make the filter tf variable, and make the convolutional layer
 		filter = tf.Variable(filter_init, name=scope+"/conv_filter")
