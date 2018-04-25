@@ -1,0 +1,93 @@
+\documentclass[10pt,letterpaper]{article}
+
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Include other packages here, before hyperref.
+
+% If you comment hyperref and then uncomment it, you should delete
+% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
+% run, let it finish, and you should be clear).
+\usepackage[breaklinks=true,bookmarks=false]{hyperref}
+
+\cvprfinalcopy % *** Uncomment this line for the final submission
+
+\def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+% Pages are numbered in submission mode, and unnumbered in camera-ready
+%\ifcvprfinal\pagestyle{empty}\fi
+\setcounter{page}{1}
+\begin{document}
+
+%%%%%%%%% TITLE
+\title{CS231N Project Proposal \\ Deep Neuroevolution with Shared Parameters: Ensembling a Better Solution}
+
+\author{Michael Painter\\
+Stanford University\\
+{\tt\small mp703@stanford.edu}
+% For a paper whose authors are all at the same institution,
+% omit the following lines up until the closing ``}''.
+% Additional authors and addresses can be added with ``\and'',
+% just like the second author.
+% To save space, use either the email address or home page, not both
+}
+
+\maketitle
+%\thispagestyle{empty}
+
+%%%%%%%%% BODY TEXT
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+
+\section{Problem Introduction}
+A lot of work has gone into designing neural network architectures, however, often they are still difficult to design and many architectures are tried and tested to select the best one for a task. Automating this process leads to the notion of a neural architecture search \cite{as2, as1, as3}. Naively implemented, this involves training hundreds of models from scratch, typically requiring hundreds of GPUs. This can be improved by using transfer learning (via function preserving transforms \cite{eas1, net2net}) and sharing parameters between models searching over \cite{eas2}. Moreover, likely from computational brute force, architecture searches tend to lead to state of the art performance \cite{as1}.
+
+\section{Methods And Algorithms}
+
+In this project, we wish to explore performing an architecture search, using neuroevolution to search the ``architecture space''. We will share parameters between models, similar to the efficient architecture search described by Pham et al. \cite{eas2}, allowing a single GPU to be used in training, and new models will be created using function preserving transforms, extended from the works of Chen et al. \cite{net2net} and Cai et al. \cite{eas1}, so that models need not be trained from scratch. 
+
+This project will require new versions of the transforms defined by Chen et al. \cite{net2net}, and will consist of adding modules into Incpetion networks, initialized such that it doesn't alter the overall function the network represents, which is outlined in figure \ref{fig:zero_init_modules}.
+
+\begin{figure}[h]
+	\centering
+    \includegraphics[scale=0.25]{zm1.png} \hspace{1cm}
+    \includegraphics[scale=0.25]{zm2.png} \vspace{1cm}
+    \caption{Left: Our initial concept for a zero initialized module. Adding two convolutional filters, one initialized with weights $W$ and the other with weights $-W$. The split arrows represent duplication here. Right: Altered zero initialized module, so that it can be represented as a single filter, and also allows for non-symmetry in the activation function, weights $\beta$ and $-\beta$ must be used on the output, to provide the ``zero output''. The split arrows represent splitting according to the two sets of filters here.}
+	\label{fig:zero_init_modules}
+\end{figure}
+
+At the end, of training, we will incorporate multiple of the learned networks into an ensemble model. If time, we will investigate methods of maintaining a diverse population of networks (i.e. each network is good at classifying some classes that other networks are not), so that when combined in a ensemble model, it gives greater performance.
+
+
+\section{Data}
+We will be use Imagenet \cite{imagenet} to evaluate the performance of the algorithms and architectures, which is openly available. 
+
+
+\section{Evaluation}
+Our evaluation metric will be classification accuracy on the test set of Imagenet \cite{imagenet}. As we are looking to perform an architecture search efficiently, without requiring hundreds of GPUs, we also will analyze the computational efficiency. Specifically, we should compare the number of floating point operation (FLOPs) (rather than training time or epochs) with respect to training and test accuracies between models. In particular, for this comparison, we would look to compare training a single network, an ensemble of networks and our method.
+
+
+\section{Reading}
+We have already undertaken a reasonable amount of reading for this project, however, in total, we have identified the following topics as important to survey prior to implementation. Here is a brief list of what will/has be surveyed: 
+\begin{itemize}
+	\item Architecture searches \cite{as2, as1, as3},
+    \item Efficient Architecture searches \cite{eas1, eas2},
+    \item Transfer Learning and Function Preserving Transformations \cite{net2net, transfer1},
+    \item Neuroevolution \cite{ne3, as2, ne1, ne2, shimonsarl},
+    \item State of the art CNN architectures \cite{densenet,inception3,resnet3},
+    \item State of the art image classification \cite{classify3, classify4, classify2, resnet3, classify6, as1}.
+\end{itemize}
+
+
+{\small
+\bibliographystyle{ieee}
+\bibliography{egbib}
+}
+
+\end{document}
