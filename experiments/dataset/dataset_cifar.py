@@ -5,10 +5,11 @@ from six.moves import cPickle as pickle
 import numpy as np
 import os
 import platform
+import torch as t
 
 from dataset import *
 
-ROOT = os.path.abspath(os.path.join('.', 'data', 'cifar10'))
+ROOT = os.path.abspath(os.path.join('.', 'dataset', 'data', 'cifar10'))
 
 def load_pickle(f):
     version = platform.python_version_tuple()
@@ -109,34 +110,72 @@ class CifarDataset(Dataset):
         
         data = get_data(num_training=50000-validation_set_size,
                         num_validation=validation_set_size,
-                        subtract)mean=subtract_mean)
+                        subtract_mean=subtract_mean)
         self.xtrain = data['X_train']
-        self.xtrain = data['y_train']
+        self.ytrain = data['y_train']
         self.xval = data['X_val']
         self.yval = data['y_val']
         self.xtest = data['X_test']
         self.ytest = data['y_test']
         
+        self.validation_set_size = validation_set_size
+        self.test_set_size = self.xtest.shape[0]
+        
     def _indices(self, batch_size, max_index):
         return np.random.choice(max_index, batch_size, replace=True)
+    
+    def _one_hot(self, classes, num_classes=10):
+        return np.eye(num_classes)[classes]
 
     def next_batch(self, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size
-        indices = self._indices(batch_size, self.xtrain.size[0])
-        return t.tensor(self.xtrain[indices]), t.tensor(self.ytrain[indices])
+        indices = self._indices(batch_size, self.xtrain.shape[0])
+        imgs = t.tensor(self.xtrain[indices], dtype=t.float)
+        labels = t.tensor(self._one_hot(self.ytrain[indices]), dtype=t.float)
+        return imgs, labels
     
     def next_val_batch(self, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size
-        indices = self._indices(batch_size, self.xval.size[0])
-        return t.tensor(self.xval[indices]), t.tensor(self.yval[indices])
+        indices = self._indices(batch_size, self.xval.shape[0])
+        imgs = t.tensor(self.xval[indices], dtype=t.float)
+        labels = t.tensor(self._one_hot(self.yval[indices]), dtype=t.float)
+        return imgs, labels
+    
+    def get_val_set_size(self):
+        return self.validation_set_size
+    
+    def val_set(self, batch_size=None):
+        if batch_size is None:
+            batch_size = self.batch_size
+        i = 0
+        while i < self.validation_set_size:
+            xs = self.xval[i:i+batch_size]
+            ys = self.yval[i:i+batch_size]
+            yield t.tensor(xs, dtype=t.float), t.tensor(self._one_hot(ys), dtype=t.float)
+            i += batch_size
+    
+    def get_test_set_size(self):
+        return self.test_set_size
+        
+    def test_set(self, batch_size=None):
+        if batch_size is None:
+            batch_size = self.batch_size
+        i = 0
+        while i < self.test_set_size:
+            xs = self.xtest[i:i+batch_size]
+            ys = self.ytest[i:i+batch_size]
+            yield t.tensor(xs, dtype=t.float), t.tensor(self._one_hot(ys), dtype=t.float)
+            i += batch_size
 
     def next_test_batch(self, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size
-        indices = self._indices(batch_size, self.xtest.size[0])
-        return t.tensor(self.xtest[indices]), t.tensor(self.ytest[indices])
+        indices = self._indices(batch_size, self.xtest.shape[0])
+        imgs = t.tensor(self.xtest[indices], dtype=t.float)
+        labels = t.tensor(self._one_hot(self.ytest[indices]), dtype=t.float)
+        return imgs, labels
 
     def display(self, image):
         return np.clip(image, 0.0, 1.0)

@@ -23,6 +23,22 @@ class Dataset:
     def next_test_batch(self, batch_size):
         self.handle_unsupported_op()
         return None
+        
+    def get_val_set_size(self):
+        self.handle_unsupported_op()
+        return None
+    
+    def val_set(self, batch_size=None):
+        self.handle_unsupported_op()
+        return None
+    
+    def get_test_set_size(self):
+        self.handle_unsupported_op()
+        return None
+        
+    def test_set(self, batch_size=None):
+        self.handle_unsupported_op()
+        return None
 
     def display(self, image):
         return image
@@ -62,12 +78,36 @@ class DatasetCudaWrapper:
         if self.use_cuda:
             xs = xs.cuda()
             ys = ys.cuda()
-        return xs, ys
+        return xs, ys    
+    
+    def get_val_set_size(self):
+        return self.dataset.get_val_set_size()
+    
+    def val_set(self, batch_size=None):
+        for xs, ys in self.dataset.val_set(batch_size):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            yield xs, ys
+    
+    def get_test_set_size(self):
+        return self.dataset.get_test_set_size()
+        
+    def test_set(self, batch_size=None):
+        for xs, ys in self.dataset.test_set(batch_size):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            yield xs, ys
 
     def display(self, image):
         return self.dataset.display(image)
     
     def reset(self):
         self.dataset.reset()
+        
+    def __iter__(self):
+        for xs, ys in self.dataset:
+            xs = xs.cuda()
+            ys = ys.cuda()
+            yield xs, ys
 
         

@@ -73,6 +73,9 @@ class MnistDataset(Dataset):
 
     def reset(self):
         self.mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+        
+    def __iter__(self):
+        raise NotImplementedError()
 
 
 if __name__ == '__main__':
