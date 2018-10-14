@@ -13,9 +13,10 @@ The setup that we use for this code is as follows:
 1. Download andinstall [Anaconda](https://www.anaconda.com/download/#linux),
 2. Create a new conda environment `conda create -n <your_env_name> python=3.6 anaconda`.
 3. Use `source activate <your_env_name>` to start using the environment, and `source deactivate <your_env_name>` to stop.
-4. When in your environment (after running `source activate <your_env_name>`) install the following dependencies, ensuring that you install using `conda` and the appropriate versions for your system:
-    1. [PyTorch](https://pytorch.org/)
-    2. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx). (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo for anyone interested).
+4. When in your environment (after running `source activate <your_env_name>`) install the following dependencies, ensuring that you install using `conda` and the appropriate versions for your system, including if you want to use a GPU or not:
+    1. [PyTorch](https://pytorch.org/),
+    2. [TensorFlow](https://anaconda.org/conda-forge/tensorflow),
+    3. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx), (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo for anyone interested).
     
 Note that we will use jupyter notebooks, which are part of the default anaconda environment.
 
@@ -80,7 +81,7 @@ TODO: just direct them to the appropriate scripts
 
 #### Network Transforms Todo
 - Alter the network transforms to actually be a function
-    - newLayerBefore, newLayer, newLayerAfter = R2R(layerBefore, layer, layerAfter)
+    - newLayer, newLayerAfter = R2R(layer, layerAfter)
     - apply iteratively down for a widen
     - have a suite of network transforms?
     - get rid of the use of specific modules
@@ -93,6 +94,7 @@ TODO: just direct them to the appropriate scripts
 - At expanding the network time, try freezing the old networks weights and seeing if they 
 - Looking into multiple applications of the transforms
     - How to optimally apply them through training
+- For inception networks, we actually will need \[newLayers], \[newLayersAfters] = R2R(\[layers], \[layersAfter])
 
 TODO: clean this next bullet up into more concise ideas
 - Better understanding of the learning rate problem
@@ -149,8 +151,12 @@ TODO: clean this next bullet up into more concise ideas
             - Do the old layers change?
     - See the weight visualizations in cs231n assignments (and do something similar)
         - How they're like the edges and the different filters for edges/colours
+    - Maybe consider the weights for the following situations:
+        - Net2DeeperNet by adding a new FIRST layer
+        - R2DeeperR by adding a new FIRST layer
 - Run all of these visualizations on Net2Net and compare
     - Maybe/hopefully we see that our's learn the new edges etc faster
+    
 
 
 #### Paper/Writing Todo
