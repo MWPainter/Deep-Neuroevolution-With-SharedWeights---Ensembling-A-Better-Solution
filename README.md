@@ -77,6 +77,7 @@ TODO: just direct them to the appropriate scripts
 - Add tensorboardX for plotting
     - And plot lots of things!
     - Use it to debug better
+- Upate extending_out_channels to re-use code from extending_in_channels
 
 
 #### Network Transforms Todo
