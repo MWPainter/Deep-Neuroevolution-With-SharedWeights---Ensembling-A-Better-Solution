@@ -14,8 +14,8 @@ The setup that we use for this code is as follows:
 2. Create a new conda environment `conda create -n <your_env_name> python=3.6 anaconda`.
 3. Use `source activate <your_env_name>` to start using the environment, and `source deactivate <your_env_name>` to stop.
 4. When in your environment (after running `source activate <your_env_name>`) install the following dependencies, ensuring that you install using `conda` and the appropriate versions for your system:
-    4. [PyTorch](https://pytorch.org/)
-    4. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx). (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo for anyone interested).
+    1. [PyTorch](https://pytorch.org/)
+    2. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx). (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo for anyone interested).
     
 Note that we will use jupyter notebooks, which are part of the default anaconda environment.
 
