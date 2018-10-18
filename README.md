@@ -27,13 +27,13 @@ TODO: just direct them to the appropriate scripts
 ## Schedule
 
 
-- R2R finished + tests: 20th Oct
-- Imagnet + inception: 27th Oct
-- Net2Net reproduced + encorporated in tests: 10th Nov
-- Flops counting and visualizations: 24th Nov
-- Draft: Dec 1st
-- Finished: Dec 15th
-- Deadline: Jan 8th
+- R2R finished + tests: 27th Oct
+- Imagnet + inception: 10th Nov
+- Net2Net reproduced + encorporated in tests: 17th Nov
+- Flops counting and visualizations: 1st Dec
+- Draft: Dec 8st
+- Finished: Dec 22nd
+- Deadline: Jan 23rd
 
 
 
@@ -46,7 +46,7 @@ TODO: just direct them to the appropriate scripts
 - Make sure all of the "assumptions" made in R2R_block_v1 are updated in the later versions
 
 #### Admin
-- Remove /dataset directory
+- ~Remove /dataset directory~
 - ~rename "Deriving resnet2resnet.py" to "tutorial.py"~
 - Write a proper description + diagrams for the readme
 - write a description of how to use the repo 
@@ -54,18 +54,31 @@ TODO: just direct them to the appropriate scripts
     - working through the tutorial/deriving the code
     - how the library is structured
     - how to use the librarys
-    - how to visualize (i.e. the training scripts will save 
+    - how to visualize (i.e. the training scripts will save arrays, and run them in jupyter notebook)
 - Clean up Deriving resnet2resnt/tutorial
-    - Update the forword
+    - Update the forword/high level wordy description at the beginning
     - Add a link to the paper describing the whole process
-    - Have a high level, wordy description
-    - Level 1 headers for title. Level 2 headers for section. Level 3 headers for each bit of code
-    - Clean all of the code snippits
+    - ~Level 1 headers for title. Level 2 headers for section. Level 3 headers for each bit of code~
+    - ~Clean all of the code snippits~
 - Clean up the library code
-    - Properly split into files
-    - Have a main.py/train.py which is the entry point to training
+    - ~Properly split into files. Have difference packages:~
+        - ~Dataset~
+        - ~R2R~
+        - ~Neuroevolution (or ne?)~
+        - ~utils~
+    - ~Have a main.py/train.py which is the entry point to training~ 
+    - **Move everything from R2R into `utils`/`r2r`/`ne` appropraitely 
+        - Go through all of the files in utils, moving the things it says
+        - Go through all of the files in r2r, moving things ass appropriate (start with r2r.py then resblock then resnet and so on)
+        - Go through all of the files in ne, moving things as appropriate
+    - Make sure all \_\_init\_\_.py's are correct 
+    - Move everything from `batch_cifar_tests.py` to `main.py`, and make sure that the
+        - Test that the main.py scripts still run (fix broken imports...)
     - Clean up the plotting code (jupyter notebook)
-- Test that everything works
+        - Test that the plotting code works (train some small networks one time for say 200 iter)
+    - Add to this readme: description of the high level overview - i.e. the folders + plotting code description (like MSFT work)
+- Test that everything works**
+- Update the docs directory, to include the historical docs from the class, and the up to date docs when they're written
 
 
 #### (General) Coding Todo
@@ -86,7 +99,10 @@ TODO: just direct them to the appropriate scripts
     - apply iteratively down for a widen
     - have a suite of network transforms?
     - get rid of the use of specific modules
-- Implement R2R for fully connected layers
+- **Implement R2R for fully connected layers
+    - The transform can be implemented as a special case of a conv (where the spatial dimensions are 1x1. So just need to expand dims and squeeze dims around the general widen transform!!)
+    - Explain that we decided to go with explaining it this way, because it makes the correspondence between the two more obvious.**
+- Find a better way to deal with residual connections than masking?
 - Fix the R2DeeperR test
 - Implement Net2Net in PyTorch (find another repo that does this?)
     - Run Net2Net through our tests
@@ -96,6 +112,7 @@ TODO: just direct them to the appropriate scripts
 - Looking into multiple applications of the transforms
     - How to optimally apply them through training
 - For inception networks, we actually will need \[newLayers], \[newLayersAfters] = R2R(\[layers], \[layersAfter])
+    - I.e. we need arrays of layers, which are concatenated together
 
 TODO: clean this next bullet up into more concise ideas
 - Better understanding of the learning rate problem
@@ -143,6 +160,7 @@ TODO: clean this next bullet up into more concise ideas
         - New layers after widening should be random
         - New layers after training should learn something
 - Weight visualizatioons
+    - **Prototype this in tutorial.py first**
     - Show that the weights in the networks before and after widening
     - E.g. show that new layers in the network are random
     - E.g. show that new layers in the first layer of the network
@@ -157,6 +175,8 @@ TODO: clean this next bullet up into more concise ideas
         - R2DeeperR by adding a new FIRST layer
 - Run all of these visualizations on Net2Net and compare
     - Maybe/hopefully we see that our's learn the new edges etc faster
+- Tensorboard summaries -> pretty seaboarn plots
+    - OpenSource this too
     
 
 
