@@ -38,17 +38,12 @@ TODO: just direct them to the appropriate scripts
 
 
 ## Todo list:
-#### Cleaning up the tutorial.py file
-- At: "### Training a small netowork, with 3 resnet modules, 3 max pools, and a fc output" markdown
-- Update the r2r block 1 to actually add noise, as a ratio of the average weight in the filter
-    - A function to compute the stddev value in the filter
-    - Add noise with a stddev *= noise ratio
-- Make sure all of the "assumptions" made in R2R_block_v1 are updated in the later versions
 
 #### Admin
 - ~Remove /dataset directory~
 - ~rename "Deriving resnet2resnet.py" to "tutorial.py"~
 - Write a proper description + diagrams for the readme
+- Write a description of the repo overview (what librarys are where)
 - write a description of how to use the repo 
     - downloading the datasets
     - working through the tutorial/deriving the code
@@ -90,16 +85,17 @@ TODO: just direct them to the appropriate scripts
 - Add tensorboardX for plotting
     - And plot lots of things!
     - Use it to debug better
-- Upate extending_out_channels to re-use code from extending_in_channels
+- ~Update extending_out_channels to re-use code from extending_in_channels~
 
 
 #### Network Transforms Todo
-- Alter the network transforms to actually be a function
-    - newLayer, newLayerAfter = R2R(layer, layerAfter)
-    - apply iteratively down for a widen
-    - have a suite of network transforms?
-    - get rid of the use of specific modules
+- ~Alter the network transforms to actually be a function~
+    - ~newLayer, newLayerAfter = R2R(layer, layerAfter)~
+    - ~apply iteratively down for a widen~
+    - ~have a suite of network transforms?~
+    - ~get rid of the use of specific modules~
 - **Implement R2R for fully connected layers
+    - Prototype in tutorial.pynb first
     - The transform can be implemented as a special case of a conv (where the spatial dimensions are 1x1. So just need to expand dims and squeeze dims around the general widen transform!!)
     - Explain that we decided to go with explaining it this way, because it makes the correspondence between the two more obvious.**
 - Find a better way to deal with residual connections than masking?
@@ -209,6 +205,12 @@ TODO: clean this next bullet up into more concise ideas
 - In the introduction
     - Look at all the papers about R2R and how people are using it
     - Mention the many uses that it has
+- Our contributions:
+    - A new set of function preserving transforms
+        - Deepen works with residual connections, whereas net2deepernet works without residual connections
+        - New weights are arbitrary (this is a blessing and a curse, as we have to consider inits, however, the freedom to initialize the weights however you like could allow a lot of flexibility, forseeably in meta learning or transfer learning)
+        - (we believe?) that our schema is simpler to implement and use
+        - We don't alter any weights in the function transformation. Therefore, if on widening you decide to keep the weights fixed, then you could still run the old network as before. That is, you can train YOLO mini, then widen, and finish training to YOLO full, and then keep both networks.
     
 
 
