@@ -130,6 +130,7 @@ TODO: clean this next bullet up into more concise ideas
     - I did have some math that seemed like it would work
         - Taylor expansions of the gradient, w.r.t new weights. Variance of the gradients, taylor expanded the gradient expression. 
     - Compare the different ideas with some test? Compare lots of curves for different schemes
+- Try merging R2R and Net2Net? (I.e. duplicated filters, with the negation as we have in R2R. Use this to show ours is a bit more general?)
     
     
 #### Imagenet work
@@ -160,7 +161,13 @@ TODO: clean this next bullet up into more concise ideas
         - New layers after widening should be random
         - New layers after training should learn something
 - Weight visualizatioons
-    - **Prototype this in tutorial.py first**
+    - ~**Prototype this in tutorial.py first**~
+        - From prototyping we conclude:
+        - To learn in the new layers, we actually need a strong reward signal (if we're at 99% training acc, then we won't learn anything in the new weights)
+        - MNist is too easy to really see anything, we need to re-run on Cifar-10. That is, you can basically "solve" Mnist using a fully connected network, and the conv's can be very random still
+        - we can demonstrate these things in the paper, as it may be interesting
+        - maybe something is broken and the weights for Mnist should be much cleaner?
+        - Try fixing the weights from before?
     - Show that the weights in the networks before and after widening
     - E.g. show that new layers in the network are random
     - E.g. show that new layers in the first layer of the network
