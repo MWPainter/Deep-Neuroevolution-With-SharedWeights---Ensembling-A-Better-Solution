@@ -164,6 +164,7 @@ TODO: clean this next bullet up into more concise ideas
         - we can demonstrate these things in the paper, as it may be interesting
         - maybe something is broken and the weights for Mnist should be much cleaner?
         - Try fixing the weights from before?
+        - **Try using a two fc network to provide some visualizations for MNist instead??**
     - Show that the weights in the networks before and after widening
     - E.g. show that new layers in the network are random
     - E.g. show that new layers in the first layer of the network
