@@ -27,8 +27,8 @@ TODO: just direct them to the appropriate scripts
 ## Schedule
 
 
-- R2R finished + tests: 27th Oct
-- Imagnet + inception: 10th Nov
+- Imagnet + inception: 27th Oct
+- R2R finished + tests: 10th Nov
 - Net2Net reproduced + encorporated in tests: 17th Nov
 - Flops counting and visualizations: 1st Dec
 - Draft: Dec 8st
@@ -94,10 +94,9 @@ TODO: just direct them to the appropriate scripts
     - ~apply iteratively down for a widen~
     - ~have a suite of network transforms?~
     - ~get rid of the use of specific modules~
-- **Implement R2R for fully connected layers
-    - Prototype in tutorial.pynb first
-    - The transform can be implemented as a special case of a conv (where the spatial dimensions are 1x1. So just need to expand dims and squeeze dims around the general widen transform!!)
-    - Explain that we decided to go with explaining it this way, because it makes the correspondence between the two more obvious.**
+- ~Implement R2R for fully connected layers~
+    - ~Prototype in tutorial.pynb first~
+    - ~The transform can be implemented as a special case of a conv (where the spatial dimensions are 1x1. So just need to expand dims and squeeze dims around the general widen transform!!)~
 - Find a better way to deal with residual connections than masking?
 - Fix the R2DeeperR test
 - Implement Net2Net in PyTorch (find another repo that does this?)
@@ -157,7 +156,7 @@ TODO: clean this next bullet up into more concise ideas
         - New layers after widening should be random
         - New layers after training should learn something
 - Weight visualizatioons
-    - ~**Prototype this in tutorial.py first**~
+    - ~Prototype this in tutorial.py first~
         - From prototyping we conclude:
         - To learn in the new layers, we actually need a strong reward signal (if we're at 99% training acc, then we won't learn anything in the new weights)
         - MNist is too easy to really see anything, we need to re-run on Cifar-10. That is, you can basically "solve" Mnist using a fully connected network, and the conv's can be very random still
