@@ -63,16 +63,16 @@ TODO: just direct them to the appropriate scripts
         - ~utils~
     - ~Have a main.py/train.py which is the entry point to training~ 
     - **Move everything from R2R into `utils`/`r2r`/`ne` appropraitely 
-        - Go through all of the files in utils, moving the things it says
-        - Go through all of the files in r2r, moving things ass appropriate (start with r2r.py then resblock then resnet and so on)
-        - Go through all of the files in ne, moving things as appropriate
-    - Make sure all \_\_init\_\_.py's are correct 
-    - Move everything from `batch_cifar_tests.py` to `main.py`, and make sure that the
-        - Test that the main.py scripts still run (fix broken imports...)
-    - Clean up the plotting code (jupyter notebook)
-        - Test that the plotting code works (train some small networks one time for say 200 iter)
-    - Add to this readme: description of the high level overview - i.e. the folders + plotting code description (like MSFT work)
-- Test that everything works**
+        - **Go through all of the files in utils, moving the things it says
+        - **Go through all of the files in r2r, moving things ass appropriate (start with r2r.py then resblock then resnet and so on)
+        - **Go through all of the files in ne, moving things as appropriate
+    - **Make sure all \_\_init\_\_.py's are correct 
+    - **Move everything from `batch_cifar_tests.py` to `main.py`, and make sure that the
+        - **Test that the main.py scripts still run (fix broken imports...)
+    - **Clean up the plotting code (jupyter notebook)
+        - **Test that the plotting code works (train some small networks one time for say 200 iter)
+    - **Add to this readme: description of the high level overview - i.e. the folders + plotting code description (like MSFT work)
+- Test that everything works
 - Update the docs directory, to include the historical docs from the class, and the up to date docs when they're written
 
 
@@ -133,9 +133,11 @@ TODO: clean this next bullet up into more concise ideas
     - Downloading the data
     - Dataset object
     - Definitely req's data loaders
-- Implement Inception-Resnetv2 architecture 
-    - ANd a smaller shallower version as a starting point
+- **Implement Inception-Resnetv2 architecture 
+    - **ANd a smaller shallower version as a starting point
+    - **Adapt implementation from [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionresnetv2.py) and [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionv4.py) and reference them correctly
 - Repeate all experiments on imagenet using Inception-Resnetv2
+    - Use the pretrained models from [here](https://github.com/Cadene/pretrained-models.pytorch) and reference correctly
 - Data augmentation? 
     - Hve this mostly from MSFT internship
   
