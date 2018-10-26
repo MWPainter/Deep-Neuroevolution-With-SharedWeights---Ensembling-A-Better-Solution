@@ -218,6 +218,7 @@ TODO: clean this next bullet up into more concise ideas
 
 ### Neuroevolution Todo
 #### Coding Todo
+- Uncomment and re-format to work with how r2r is now implemented
 - Make it actually work again (larger population? change algo a bit?)
 - Fine tuning
 - Fix ensemble idea
