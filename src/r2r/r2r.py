@@ -8,17 +8,6 @@ from module_utils.py import *
 
 
 
-"""
-TODO:
-1. Move the commented out functions below into the correct place (taking a graph as input)
-2. Making graphs from the enum functions
-3. Updating the implementation of _r_2_wider_r_
-4. Update all = [...]
-"""
-
-
-
-
 
 """
 This file contains all of the logic related to performing widening and deepening transforms and initializations.
@@ -56,7 +45,13 @@ Note, that this means that we will sometimes be declaring function names like '_
 
 
 # Only export things that actually widen/deepen volumes, and not helper functions
-all = [HVG, HVN, HVE, Deepened_Network, make_deeper_network]
+all = [r_2_wider_r_,
+       HVG, 
+       HVN, 
+       HVE, 
+       widen_network_,
+       Deepened_Network, 
+       make_deeper_network] # make_deeper_network = r2deeperr if add identity initialized module
 
 
 
@@ -69,22 +64,10 @@ Widening hidden volumes
 
 
 
-
-def r_2_wider_r_no_concat_(prev_layer, next_layer, volume_shape, extra_channels=0, init_type='He', function_preserving=True):
+def r_2_wider_r_(prev_layers, next_layers, volume_shape, extra_channels=0, init_type="He", function_preserving=True):
     """
-    Helper to still provide a consistent interface as before
-    """
-    return r_2_wider_r_([prev_layer], [next_layer], volume_shape, extra_channels, init_type, function_preserving)
-
-
-
-
-
-# TODO (make it work for the 3 changed inputs)
-def r_2_wider_r_(prev_layers, next_layers, volume_shape, extra_channels=0, init_type='He', function_preserving=True):
-    """
-    This is an almost complete implementation of R2WiderR. All that will remain is dealing with lists of layers
-    for input and output, for use with Inception networks.
+    Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
+    
     
     This function will widen the hidden volume output by a convolutional layer, or the hidden units output 
     by a linear layer. 'prev_layer' refers to the layer who's output we are widening, and, we also take 
@@ -102,21 +85,106 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, extra_channels=0, init_
     (nn.Conv2d, nn.Linear)
     (nn.Linear, nn.Linear)
     
-    :param prev_layer: A list of layers before the hidden volume/units being widened (their outputs are concatenated together)
-    :param next_layer: A list of layers layer after the hidden volume/units being widened (inputs are the concatenated out)
+    :param prev_layers: A (list of) layer(s) before the hidden volume/units being widened (their outputs are 
+            concatenated together)
+    :param next_layers: A (list of) layer(s) layer after the hidden volume/units being widened (inputs are the 
+            concatenated out)
+    :param volume_shape: 
+    :param batch_norm: The batch norm function associated with the volume being widened (None if there is no batch norm)
     :param input_shape: The shape of the input
     :param extra_channels: The number of new conv channels/hidden units to add
     :param init_type: The type of initialization to use ('He' or 'Xavier')
     :param function_preserving: If we wish for the widening to preserve the function I/O
-    :return: 
+    """
+    # Handle inputting of single input/output layers
+    if type(prev_layers) != list:
+        prev_layers = [prev_layers]
+    if type(next_layers) != list:
+        next_layers = [next_layers]
+        
+    _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving)
+
+
+
+
+
+def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving):
+    """  
+    The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
+    More helper functions are used.
     """
     # For us to be able to perform a function preserving transforms, extra channels must be even and non-negative
     if extra_channels <= 0 or (function_preserving and extra_channels % 2 != 0):
         raise Exception("Invalid number of extra channels in widen.")
-        
-    new_params_shape = None
     
-    # Compute the widened output of prev layer, and assign the new variables to the layer
+    # Check that the types of all the in/out layers are the same
+    for i in range(1,len(prev_layers)):
+        if type(prev_layers[0]) != type(prev_layers[i]):
+            raise Exception("All input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+    for i in range(1,len(next_layers)):
+        if type(prev_layers[0]) != type(next_layers[i]):
+            raise Exception("All output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+            
+    # Work out the number of params per new channel (for fc this is 1)
+    new_params_per_new_channel = 1
+    if len(volume_shape) == 3:
+        _, height, width = volume_shape
+        new_params_per_new_channel = height * width
+    
+    # Compute the slicing of the volume from the input (to widen outputs appropraitely)
+    volume_slices_indxs = [0]
+    for prev_layer in prev_layers:
+        new_slice_indx = volume_slices_indxs[-1] + prev_layer.weight.size(0)
+        volume_slices_indxs.append(new_slice_indx)
+    
+    # Sanity check that our slices are covering the entire volume that is being widened
+    if volume_slices_indxs[-1] != volume_shape[0]:
+        raise Exception("Number of channels output from prev_layers is inconsistent with the number of channels in volume " +
+                        "shape. They should be consistent.")
+    
+    # Iterate through all of the prev layers, and widen them appropraitely
+    for prev_layer in prev_layers:
+        _widen_output_channels_(prev_layer, extra_channels, init_type)
+    
+    # Widen batch norm appropriately 
+    if batch_norm:
+        _extend_bn_(batch_norm, extra_channels)
+    
+    # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
+    for next_layer in next_layers:
+        _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs)
+
+        
+        
+        
+
+def _extend_bn_(bn, new_channels):
+    """
+    Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
+    Really this is just a helper function for R2WiderR
+    
+    :param bn: The batch norm layer to be extended
+    :param new_channels: The number of new channels to add
+    """
+    new_scale = _one_pad_1d(bn.weight.data.cpu().numpy(), new_channels)
+    new_shift = _zero_pad_1d(bn.bias.data.cpu().numpy(), new_channels)
+    new_running_mean = _zero_pad_1d(bn.running_mean.data.cpu().numpy(), new_channels)
+    new_running_var = _zero_pad_1d(bn.running_var.data.cpu().numpy(), new_channels)
+        
+    _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
+    
+    
+    
+    
+    
+def _widen_output_channels_(prev_layer, extra_channels, init_type):
+    """
+    Helper function for r2widerr. Containing all of the logic for widening the output channels of the 'prev_layers'.
+    
+    :param prev_layer: A layer before the hidden volume/units being widened
+    :param extra_channels: The number of new conv channels/hidden units to add
+    :param init_type: The type of initialization to use ('He' or 'Xavier')
+    """
     if type(prev_layer) is nn.Conv2d:
         # unpack conv2d params to numpy tensors
         prev_kernel = prev_layer.weight.data.cpu().numpy()
@@ -132,14 +200,6 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, extra_channels=0, init_
         
         # assign new conv and bias
         _assign_kernel_and_bias_to_conv_(prev_layer, prev_kernel, prev_bias)
-        
-        # Compute the shape of the new hidden volume added
-        _, img_width, img_height = input_shape
-        pad_width, pad_height = prev_layer.padding
-        stride_width, stride_height = prev_layer.stride
-        new_img_width = (img_width - width + 2*pad_width) / stride_width
-        new_img_height = (img_height - height + 2*pad_height) / stride_height
-        new_params_shape = (extra_channels, new_img_width, new_img_height)
         
     elif type(prev_layer) is nn.Linear:
         # unpack linear params to numpy tensors
@@ -157,51 +217,73 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, extra_channels=0, init_
         # assign new matrix and bias
         _assign_weights_and_bias_to_linear_(prev_layer, prev_matrix, prev_bias)
         
-        # Compute the shape of the new hidden units added
-        new_params_shape = (extra_channels)
-        
     else:
         raise Exception("We can only handle input nn.Modules that are Linear or Conv2d at the moment.")
-        
-       
-    # Compute the widened input of next layer, and assign the new variables to the layer 
+                            
+                            
+                            
+                            
+                            
+def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs, input_linear, extra_params_per_input):
+    """
+    Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
+    
+    :param next_layer: A layer after the hidden volume/units being widened
+    :param extra_channels: The number of new conv channels/hidden units to add
+    :param init_type: The type of initialization to use ('He' or 'Xavier')
+    :param volume_slice_indx: The indices to be able to slice the volume 
+    :param extra_params_per_input: The number of extra parameters to add per layer that was input to the hidden volume.
+    """
+    # Check that we don't do linear -> conv, as haven't worked this out yet
+    if input_linear and type(next_layer) is nn.Conv2d:
+        raise Exception("We currently don't handle the nn.Linear -> nn.Conv2d case in r_2_wider_r.")
+    
     if type(next_layer) is nn.Conv2d:
-        # Check that we only do conv to conv, and not linear to conv
-        if len(shape) != 4:
-            raise Exception("We currently don't handle the nn.Linear -> nn.Conv2d case.")
-            
         # unpack conv2d params to numpy tensors
         next_kernel = next_layer.weight.data.cpu().numpy()
         next_bias = next_layer.bias.data.cpu().numpy()
         
-        # Compute the new kernel for 'next_kernel'
+        # Compute the new kernel for 'next_kernel' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
         out_channels, _, width, height = next_kernel.shape 
         kernel_extra_shape = (out_channels, extra_channels, width, height)
-        next_kernel = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel, init_type, alpha)
+        next_kernel_parts = []
+        for i in range(1, len(volume_slice_indxs)):
+            beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
+            kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[beg:end], init_type, alpha)
+            next_kernel_parts.append(kernel_part)
+        next_kernel = np.concatenate(next_kernel_parts, axis=1)
         
         # assign new conv (don't need to change bias)
         _assign_kernel_and_bias_to_conv_(next_layer, next_kernel)
         
-    elif type(next_layer) is nn.Linear:
-        # The number of extra inputs is the total flattened size
-        extra_params = np.prod(new_params_shape)
-            
+    elif type(next_layer) is nn.Linear:            
         # unpack linear params to numpy tensors
         next_matrix = next_layer.weight.data.cpu().numpy()
         next_bias = next_layer.bias.data.cpu().numpy()
         
-        # Compute the new matrix for 'next_matrix'
+        # Compute the new matrix for 'next_matrix' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
         n_out, _ = next_matrix.shape 
-        matrix_extra_shape = (n_out, extra_params)
-        next_matrix = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix, init_type, alpha)
+        matrix_extra_shape = (n_out, extra_params_per_input)
+        next_matrix_parts = []
+        for i in range(1, len(volume_slice_indxs)):
+            beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
+            matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[beg:end], init_type, alpha)
+            next_matrix_parts.append(matrix_part)
+        next_matrix = np.concatenate(next_matrix_parts, axis=1)        
         
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
         
     else:
         raise Exception("We can only handle output nn.Modules that are Linear or Conv2d at the moment.")
+        
+
+
+        
+        
+        
 
 
 
@@ -315,6 +397,14 @@ class HVN(object):
         Gets a list of nn.Modules from the child edges (in the same order)
         """
         return [edge.module for edge in self.child_edges]
+    
+    
+    
+    def _is_conv_volume(self):
+        """
+        Volumes output by conv layers are 3D, and linear are 1D.
+        """
+        return len(self.hv_shape) == 3
         
             
             
@@ -338,147 +428,65 @@ class HVE(object):
         self.parent_node = parent_node
         self.child_node = child_node
         self.pytorch_module = module
+        
+        
+        
+        
+        
+def _hvg_from_enum(network):
+    """
+    Creates a HVG graph from the conv enum 
+    :param network: A nn.Module that implements the 'lle' (linear layer enum) interface 
+    """
+    hvg = None
+    prev_node = None
+    prev_module = None
+    for shape, batch_norm, module in network.lle():
+        if not hvg:
+            hvg = HVG(shape)
+            prev_node = hvg.root_hvn
+        else:
+            prev_node = hvg.add_hvn(shape, [prev_node], [prev_module], batch_norm)
+        prev_module = module
+    return hvg
+        
+        
+        
 
-
-
-
-
-
-"""
-TODO: some helper functions to widen entire networks
-"""
-# def _extend_bn_(bn, new_channels):
-#     """
-#     Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
-#     Really this is just a helper function for R2WiderR
+        
+def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', function_preserving=True):
+    """
+    We implement a loop that loops through all the layers of a network, according to what we will call the 
+    enum_layers interface. The interface should return, for every hidden volume, the layer before it and 
+    any batch norm layer associated with it, along with the shape for the current hidden volume.
     
-#     :param bn: The batch norm layer to be extended
-#     :param new_channels: The number of new channels to add
-#     """
-#     new_scale = _one_pad_1d(bn.weight.data.cpu().numpy(), new_channels)
-#     new_shift = _zero_pad_1d(bn.bias.data.cpu().numpy(), new_channels)
-#     new_running_mean = _zero_pad_1d(bn.running_mean.data.cpu().numpy(), new_channels)
-#     new_running_var = _zero_pad_1d(bn.running_var.data.cpu().numpy(), new_channels)
-        
-#     _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
-        
-
-
-        
-        
-# def _widen_network_all_layers_(network, extra_channels, init_type='He', function_preserving=True):
-#     """
-#     We implement a loop that loops through all the layers of a network, according to what we will call the 
-#     enum_layers interface. The interface should return, for every hidden volume, the layer before it and 
-#     any batch norm layer associated with it, along with the shape for the current hidden volume.
+    For simplicity we add 'new_channels' many new channels to hidden volumes, and 'new_units' many additional 
+    hidden units. By setting one of them to zero we can easily just widen the convs or fc layers of a network independently.
     
-#     For simplicity we add 'exp_channels' many new channels to hidden volumes, and 'exp_channels' many additional 
-#     hidden units. 
-    
-#     To be explicit abour how 'enum_layers' should be implemented:
-#     for each hidden_volume (*including*) the input volume:
-#         return the shape of it
-#         return the batch norm for it (none if there is not a batch norm)
-#         return the layer that it feeds into
-    
-#     :param network: The nn.Module to be widened
-#     :param extra_channels: The number of new channels/hidden units to add
-#     :param init_type: The initialization type to use for new variables
-#     :param function_preserving: If we want the widening to be function preserving
-#     :return: A reference to the widened network
-#     """
-#     prev_layer, prev_bn, prev_shape, next_layer, next_bn, next_shape = None, None, None, None, None, None
-    
-#     # Iterate through all hidden voluems of the network
-#     for shape, bn, layer in network.enum_layers():
-#         prev_shape = next_shape    # shape input to layer before hidden volume being extended
-#         prev_bn = next_bn          # bn for the layer before (can be ignored)
-#         prev_layer = next_layer    # the layer before the hidden volume being extended
+    :param network: The nn.Module to be widened
+    :param new_channels: The number of new channels/hidden units to add in conv layers
+    :param new_hidden_nodes: The number of new hidden nodes to add in fully connected layers
+    :param init_type: The initialization type to use for new variables
+    :param function_preserving: If we want the widening to be function preserving
+    :return: A reference to the widened network
+    """
+    # Create the hidden volume graph
+    if network.lle:
+        hvg = _hvg_from_enum(network)
+    else:
+        hvg = network.hvg()
         
-#         next_shape = shape         # the shape of the volume being extended
-#         next_bn = bn               # the bn for the current layer
-#         next_layer = layer         # the layer the hidden volume is fed into
-        
-#         # Skip on the first one
-#         if prev_layer is None:
-#             continue
-            
-#         # Apply R2WiderR at this hidden volume
-#         _r_2_wider_r_(prev_layer, next_layer, prev_shape, extra_channels, init_type, function_preserving)
-        
-#         # Extend the batch norms at this hidden volume too
-#         if next_bn is not None:
-#             _extend_bn_(next_bn, extra_channels)
+    # Iterate through the hvg, widening appropriately in each place
+    for prev_layers, shape, batch_norm, next_layers in  hvg.node_iterator():
+        channels_or_nodes_to_add = new_channels if len(shape) == 3 else new_hidden_nodes
+        if channels_or_nodes_to_add == 0:
+            continue
+        r_2_wider_r_(prev_layers, next_layers, shape, channels_or_nodes_to_add, init_type, function_preserving)
 
 
 
 
-
-
-# def _widen_network_convs_(network, exp_channels, init_type='He', function_preserving=True, uniform=False):
-#     """
-#     A common implementation of 'uniform_widen_network_conv' and 'scaled_widen_network_conv'.
-#     Iterate through all of the convolutional and batch norm layers, extending the number of channels in each
-#     volume by 'new_channels'.
-    
-#     Note that the one volume it doesn't change in the convolutional stack is the output, because it 
-#     needs a consistent shape (for now) to be input into the fully connected portion of the network.
-    
-#     :param network: A nn.Module that implements the methods 'conv_enum' and 'batch_norm_enum' to widen
-#     :param exp_channels: The number of new channels to add if 'uniform', otherwise, it's a multiplicative constant
-#             to scale the number of channels by.
-#     :param init_type: Either 'He' or 'Xavier'. Specifies the init type to use for new params.
-#     :param function_preserving: If we want to initialize new parameters for a function preserving transform.
-#     :param uniform: If we should treat 'exp_channels' as the number of new channels to add at every volume, 
-#             or, if we should treat it as a multiplicative constant of how many channels to add.
-#     """
-#     prev_conv, next_conv = None, None
-#     for conv in network.conv_enum():
-#         prev_conv = next_conv
-#         next_conv = conv
         
-#         # Skip on the first one
-#         if prev_conv is None:
-#             continue
-            
-#         # Get numpy params
-#         prev_kernel = prev_conv.weight.data.cpu().numpy()
-#         prev_bias = prev_conv.bias.data.cpu().numpy()
-#         next_kernel = next_conv.weight.data.cpu().numpy()
-        
-#         # Compute widening (note if multiplying channels by m, we only want (m-1)*old_channels additional channels)
-#         new_channels = exp_channels if uniform else prev_kernel.shape[0] * (exp_channels - 1)
-#         new_params = _widen_hidden_volume(prev_kernel, prev_bias, next_kernel, extra_channels=new_channels,
-#                                           init_type=init_type, function_preserving=function_preserving)
-#         prev_kernel, prev_bias, next_kernel = new_params
-        
-#         # Make assignment
-#         _assign_kernel_and_bias_to_conv_(prev_conv, prev_kernel, prev_bias)
-#         _assign_kernel_and_bias_to_conv_(next_conv, next_kernel)
-        
-#     # Extend all of the batch norms. Extend scales with 1 padding, shifts with 0 padding
-#     for bn in network.batch_norm_enum():
-#         new_channels = exp_channels if uniform else bn.weight.data.size(0) * (exp_channels - 1)
-        
-#         new_scale = _one_pad_1d(bn.weight.data.cpu().numpy(), new_channels)
-#         new_shift = _zero_pad_1d(bn.bias.data.cpu().numpy(), new_channels)
-#         new_running_mean = _zero_pad_1d(bn.running_mean.data.cpu().numpy(), new_channels)
-#         new_running_var = _zero_pad_1d(bn.running_var.data.cpu().numpy(), new_channels)
-        
-#         _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
-        
-        
-# def _widen_network_convs_uniformly_(network, exp_channels, init_type='He', function_preserving=True):
-#     return _widen_network_convs_(network, exp_channels, init_type, function_preserving, uniform=True)
-        
-        
-# def _widen_network_convs_scaled_(network, exp_channels, init_type='He', function_preserving=True):
-#     return _widen_network_convs_(network, exp_channels, init_type, function_preserving, uniform=False)
-
-
-
-
-
 """
 Deepening networks.
 """
@@ -535,16 +543,17 @@ class Deepened_Network(nn.Module):
         Extends the network with nn.Module 'layer'. We assume that the layer is to be applied between the convolutional 
         stack and the fc stack, unless 'layer' is of type nn.Linear.
         
+        To register the parameters for autograd computation, we need to use "add_module", which is similar to 
+        "register_parameter".
+        
         Note: we take the liberty to assume that the shapings of layer are correct to just work.
         """
         if type(layer) is nn.Linear:
             self.fc_extensions.append(layer)
-            # TODO: register params
-            raise Exception("TODO: register params")
+            self.add_module("fc_ext_{n}".format(n=len(self.fc_extensions)), layer)
         else:
             self.conv_extensions.append(layer)
-            # TODO: register params
-            raise Exception("TODO: register params")
+            self.add_module("conv_ext_{n}".format(n=len(self.conv_extensions)), layer)
 
         
         
