@@ -2,8 +2,8 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 
-from init_utils.py import *
-from module_utils.py import *
+from init_utils import *
+from module_utils import *
 
 
 
