@@ -19,8 +19,7 @@ class _R2R_Block(nn.Module):
     Defines a residual block to be used in our mnist and cifar tests.
     This really just aggregates a lot of the work found in the 'tutorial' notebook, and allows us to identity initialize.
     """
-    def __init__(self, input_channels, intermediate_channels, output_channels, 
-                 add_max_pool=False, add_batch_norm=True, zero_initialize=True, noise_ratio=1e-3):
+    def __init__(self, input_channels, intermediate_channels, output_channels, add_batch_norm=True, zero_initialize=True):
         """
         Initializes each of the layers in the R2R module, and initializes the variables appropriately. That is 
         if zero_initialize == True, then we initialize the network to have a constant zero output.
@@ -35,8 +34,6 @@ class _R2R_Block(nn.Module):
         :param add_max_pool: if we should add a max pool layer at the beginning
         :param add_batch_norm: if we should add a batch norm layer in the middle, before the activation function
         :param zero_initialize: should we initialize the module such that the output is always zero?
-        :param noise_ratio: the amount of noise to add, as ratio (of the max init weight in the conv2d kernel) 
-                (break symmetry)
         """
         # Superclass initializer
         super(R2R_Block_v1, self).__init__()
@@ -46,8 +43,6 @@ class _R2R_Block(nn.Module):
     
         # Make the layers
         self.opt_max_pool = lambda x: x
-        if add_max_pool:
-            self.opt_max_pool = nn.MaxPool2d(kernel_size=2)
         self.conv1 = nn.Conv2d(input_channels, intermediate_channels, kernel_size=3, padding=1)
         self.opt_batch_norm = lambda x: x 
         if add_batch_norm:
@@ -124,25 +119,35 @@ class Res_Block(nn.Module):
     
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
-    def __init__(self, input_channels, output_channels, identity_initialize=True, noise_ratio=0.0):
+    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, input_shape=None):
         """
         Initialize the filters, optionally making this identity initialized.
         All convolutional filters have the same number of output channels
         """
         # Superclass initializer
         super(Res_Block, self).__init__()
-    
-        self.residual_channels = input_channels
-        self.noise_ratio = noise_ratio
         
-        self.conv1 = nn.Conv2d(input_channels, output_channels, kernel_size=3, padding=1)
+        # Check that we gave the correct number of intermediate channels
+        if len(intermediate_channels) != 3:
+            raise Exception("Need to specify 3 intemediate channels in the resblock")
+    
+        # The amount of channels to use (forever :( ) in the residual connection
+        self.residual_channels = input_channels
+        
+        # Stuff that we need to remember
+        self.input_shape = input_shape
+        self.intermediate_channels = intermediate_channels
+        self.output_channels = output_channels
+        
+        # Actual nn.Modules for the network
+        self.conv1 = nn.Conv2d(input_channels, intermediate_channels[0], kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(num_features=output_channels)
         self.relu = F.relu
-        self.conv2 = nn.Conv2d(output_channels, output_channels, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(intermediate_channels[0], intermediate_channels[1], kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(num_features=output_channels)
         
-        self.r2r = _R2R_Block(output_channels, output_channels, output_channels, 
-                              zero_initialize=identity_initialize, noise_ratio=noise_ratio)
+        self.r2r = _R2R_Block(intermediate_channels[1], intermediate_channels[2], output_channels,
+                              zero_initialize=identity_initialize)
         
         
     def forward(self, x):
@@ -169,31 +174,78 @@ class Res_Block(nn.Module):
         return out 
     
     
-    """
-    TODO: implement any interfaces needed for widen transforms.
-    """
-#     def conv_enum(self):
-#         """
-#         Enumerate through all the convolutional layers (from network input to output)
-#         """
-#         yield self.conv1
-#         yield self.conv2
-#         yield self.r2r.conv1
-#         yield self.r2r.conv2
+    
+    def _get_input_shape(self, input_shape):
+        """
+        Returns an input shape determined by what is set internally in the resblock, or specified by the input. 
+        This sanity checks the input shapes dimensions + that at least one is not None.
+        :param input_shape: The input shape to be used if self.input_shape is None
+        :return: The input shape
+        """
+        if self.input_shape is None and input_shape is None:
+            raise Exception("Need an input shape somewhere to be able to properly enumerate through layers of the resblock")
+         
+        shape = self.input_shape if self.input_shape is not None else input_shape
+        if len(cur_shape) != 3:
+            raise Exception("Input shape needs to be of length 3")
+            
+        return shape
+    
+    
+    
+    def lle(self, input_shape=None):
+        """
+        Implement the lle (linear layer enum) to iterate through layers for widening.
+        Input shape must either not be none here or not be none from before 
+        :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
+        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
+        """
+        cur_shape = self._get_input_shape(input_shape)
+        
+        yield (cur_shape, None, self.conv1)
+        cur_shape[0] = self.intermediate_channels[0]
+        yield (cur_shape, self.bn1, self.conv2)
+        cur_shape[0] = self.intermediate_channels[1]
+        yield (cur_shape, self.bn2, self.r2r.conv1)
+        cur_shape[0] = self.intermediate_channels[2]
+        yield (cur_shape, self.r2r.opt_batch_norm, self.r2r.conv2)
+        
+        
+        
+    def extend_hvg(self, cur_hvg, input_node):
+        """
+        Extends a hidden volume graph 'hvg', from the node 'input_node'
+        :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
+        :param input_node: The node that this module takes as input
+        :return: The hvn for the output from the resblock
+        """
+        next_shape = self._get_input_shape(input_node.hv_shape)
+
+        # First hidden volume
+        next_shape[0] = self.intermediate_channels[0]
+        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[input_node], input_modules=[self.conv1], self.bn1)
+        
+        # Second hidden volume
+        next_shape[0] = self.intermediate_channels[1]
+        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.conv2], self.bn2)
+        
+        # Third hidden volume (first of r2r block)
+        next_shape[0] = self.intermediate_channels[2]
+        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.r2r.conv1], 
+                                    self.r2r.opt_batch_norm)
+        
+        # Fourth (output) hidden volume (second of r2r block)
+        next_shape[0] = self.output_channels
+        out_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.r2r.conv2])
+        return out_node
+        
+                   
+                   
+                   
+    def hvg(self):
+        raise Exception("hvg() not implemented directly for resblock.")
         
     
-#     def batch_norm_enum(self):
-#         """
-#         Enumerate through all the batch norm layers (from network input to output)
-#         """
-#         yield self.bn1
-#         yield self.bn2
-#         if self.r2r.has_batch_norm:
-#             yield self.r2r.opt_batch_norm
-    
-    """
-    Note: We don't implement an interface for deepening transforms, because we don't need to deepen out residual blocks.
-    """
     
     
     
