@@ -6,7 +6,7 @@ import torch
 
 # All we want to expose is a method to count the number of flops of a model
 # We're not considering dynamically changing models, so just counting the flops on occasion is sufficient :)
-all = [model_flops]
+__all__ = ['model_flops']
 
 
 

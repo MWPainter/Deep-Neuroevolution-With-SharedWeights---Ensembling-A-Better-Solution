@@ -10,7 +10,12 @@ A collection of utility functions/classes, such as keeping track of averages and
 
 
 
-all = [AverageMeter, count_parameters, parameter_magnitude, gradient_madnitude, update_magnitude, update_ratio]
+__all__ = ['AverageMeter', 
+           'count_parameters', 
+           'parameter_magnitude', 
+           'gradient_magnitude', 
+           'update_magnitude', 
+           'update_ratio']
 
 
 
@@ -61,6 +66,7 @@ def parameter_magnitude(model):
         if p.requires_grad:
             mag += torch.sum(torch.abs(p.data.cpu()))
     return mag
+
 
 def gradient_magnitude(model):
     """

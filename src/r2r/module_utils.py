@@ -12,9 +12,9 @@ module_utils.py contains all of the code concerning "assignment" of new weights 
 
 
 
-all = [_assign_kernel_and_bias_to_conv_, 
-       _assign_to_batch_norm_,
-       _assign_weights_and_bias_to_linear_]
+__all__ = ['_assign_kernel_and_bias_to_conv_', 
+           '_assign_to_batch_norm_',
+           '_assign_weights_and_bias_to_linear_']
 
 
 

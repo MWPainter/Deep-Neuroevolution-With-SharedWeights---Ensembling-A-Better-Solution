@@ -11,7 +11,7 @@ Helper functions that really should be built into pytorch
 
 
 
-all = [cudafy, flatten]
+__all__ = ['cudafy', 'flatten']
 
 
 
@@ -27,7 +27,7 @@ def cudafy(x):
 
 
 
-def flatten(x)
+def flatten(x):
     """
     Flattens a tensor, 'x', with shape (batch_size, ...)
     """

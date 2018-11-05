@@ -1,7 +1,8 @@
 import torch
 
 from tqdm import tqdm as Bar
-from plotting_utils import AverageMeter
+
+from utils.plotting_utils import AverageMeter
 
 from collections import defaultdict
 import string
@@ -13,7 +14,7 @@ from tensorboardX import SummaryWriter
 
 
 
-all = [train_loop]
+__all__ = ['train_loop']
 
 
 

@@ -1,14 +1,15 @@
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parameter import Parameter
 
-from init_utils import *
+from r2r.init_utils import *
 
 
 
 
 # Just export the residual block
-all = [Res_Block]
+__all__ = ['Res_Block']
 
 
 
@@ -36,9 +37,8 @@ class _R2R_Block(nn.Module):
         :param zero_initialize: should we initialize the module such that the output is always zero?
         """
         # Superclass initializer
-        super(R2R_Block_v1, self).__init__()
-        
-        self.has_max_pool = add_max_pool
+        super(_R2R_Block, self).__init__()
+
         self.has_batch_norm = add_batch_norm
     
         # Make the layers
@@ -119,7 +119,7 @@ class Res_Block(nn.Module):
     
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
-    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, input_shape=None):
+    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, input_spatial_shape=None):
         """
         Initialize the filters, optionally making this identity initialized.
         All convolutional filters have the same number of output channels
@@ -135,7 +135,7 @@ class Res_Block(nn.Module):
         self.residual_channels = input_channels
         
         # Stuff that we need to remember
-        self.input_shape = input_shape
+        self.input_spatial_shape = input_spatial_shape
         self.intermediate_channels = intermediate_channels
         self.output_channels = output_channels
         
@@ -171,44 +171,35 @@ class Res_Block(nn.Module):
         out = x
         out[:, :self.residual_channels] += res[:, :self.residual_channels]
         
-        return out 
+        return out
     
     
-    
-    def _get_input_shape(self, input_shape):
+
+
+
+    def conv_lle(self, input_shape=None):
         """
-        Returns an input shape determined by what is set internally in the resblock, or specified by the input. 
-        This sanity checks the input shapes dimensions + that at least one is not None.
-        :param input_shape: The input shape to be used if self.input_shape is None
-        :return: The input shape
+        Conv part of the 'lle' function (see below)
         """
-        if self.input_shape is None and input_shape is None:
-            raise Exception("Need an input shape somewhere to be able to properly enumerate through layers of the resblock")
-         
-        shape = self.input_shape if self.input_shape is not None else input_shape
-        if len(cur_shape) != 3:
-            raise Exception("Input shape needs to be of length 3")
-            
-        return shape
-    
-    
-    
+        height, width = self.input_spatial_shape
+
+        # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
+        yield ((self.conv1.weight.data.size(1), height, width), None, self.conv1)
+        yield ((self.conv2.weight.data.size(1), height, width), self.bn1, self.conv2)
+        yield ((self.r2r.conv1.weight.data.size(1), height, width), self.bn2, self.r2r.conv1)
+        yield ((self.r2r.conv2.weight.data.size(1), height, width), self.r2r.opt_batch_norm, self.r2r.conv2)
+
+
+
+
     def lle(self, input_shape=None):
         """
         Implement the lle (linear layer enum) to iterate through layers for widening.
-        Input shape must either not be none here or not be none from before 
+        Input shape must either not be none here or not be none from before
         :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
         :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
         """
-        cur_shape = self._get_input_shape(input_shape)
-        
-        yield (cur_shape, None, self.conv1)
-        cur_shape[0] = self.intermediate_channels[0]
-        yield (cur_shape, self.bn1, self.conv2)
-        cur_shape[0] = self.intermediate_channels[1]
-        yield (cur_shape, self.bn2, self.r2r.conv1)
-        cur_shape[0] = self.intermediate_channels[2]
-        yield (cur_shape, self.r2r.opt_batch_norm, self.r2r.conv2)
+        return self.conv_lle(input_shape)
         
         
         
@@ -223,16 +214,16 @@ class Res_Block(nn.Module):
 
         # First hidden volume
         next_shape[0] = self.intermediate_channels[0]
-        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[input_node], input_modules=[self.conv1], self.bn1)
+        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[input_node], input_modules=[self.conv1], batch_norm=self.bn1)
         
         # Second hidden volume
         next_shape[0] = self.intermediate_channels[1]
-        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.conv2], self.bn2)
+        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.conv2], batch_norm=self.bn2)
         
         # Third hidden volume (first of r2r block)
         next_shape[0] = self.intermediate_channels[2]
         cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.r2r.conv1], 
-                                    self.r2r.opt_batch_norm)
+                                    batch_norm=self.r2r.opt_batch_norm)
         
         # Fourth (output) hidden volume (second of r2r block)
         next_shape[0] = self.output_channels

@@ -10,15 +10,15 @@ init_utils is where the actual core logic all is. This contains most things impl
 
 
 # All these functions need to be used across r2r. However, they're not exported from the package
-all = [_conv_xavier_initialize, 
-       _conv_he_initialize, 
-       _extend_filter_with_repeated_in_channels, 
-       _extend_filter_with_repeated_out_channels, 
-       _extend_matrix_with_repeated_in_weights, 
-       _extend_matrix_with_repeated_out_weights,
-       _zero_pad_1d, 
-       _one_pad_1d, 
-       _widen_hidden_volume]
+__all__ = ['_conv_xavier_initialize', 
+           '_conv_he_initialize', 
+           '_extend_filter_with_repeated_in_channels', 
+           '_extend_filter_with_repeated_out_channels', 
+           '_extend_matrix_with_repeated_in_weights', 
+           '_extend_matrix_with_repeated_out_weights',
+           '_zero_pad_1d', 
+           '_one_pad_1d', 
+           '_widen_hidden_volume']
 
 
 

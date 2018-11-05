@@ -1,3 +1,7 @@
+import torch as t
+
+
+
 
 class Dataset:
     def __init__(self):
@@ -54,10 +58,11 @@ class Dataset:
         
         
         
+        
 class DatasetCudaWrapper:
-    def __init__(self, dataset, use_cuda=True):
+    def __init__(self, dataset):
         self.dataset = dataset
-        self.use_cuda = use_cuda
+        self.use_cuda = use_cuda and t.cuda.is_available()
     
     def next_batch(self, batch_size=None):
         xs, ys = self.dataset.next_batch(batch_size)
@@ -85,8 +90,9 @@ class DatasetCudaWrapper:
     
     def val_set(self, batch_size=None):
         for xs, ys in self.dataset.val_set(batch_size):
-            xs = xs.cuda()
-            ys = ys.cuda()
+            if use_cuda:
+                xs = xs.cuda()
+                ys = ys.cuda()
             yield xs, ys
     
     def get_test_set_size(self):
@@ -94,8 +100,9 @@ class DatasetCudaWrapper:
         
     def test_set(self, batch_size=None):
         for xs, ys in self.dataset.test_set(batch_size):
-            xs = xs.cuda()
-            ys = ys.cuda()
+            if use_cuda:
+                xs = xs.cuda()
+                ys = ys.cuda()
             yield xs, ys
 
     def display(self, image):
@@ -106,8 +113,9 @@ class DatasetCudaWrapper:
         
     def __iter__(self):
         for xs, ys in self.dataset:
-            xs = xs.cuda()
-            ys = ys.cuda()
+            if use_cuda:
+                xs = xs.cuda()
+                ys = ys.cuda()
             yield xs, ys
 
         

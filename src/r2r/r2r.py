@@ -2,8 +2,8 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 
-from init_utils import *
-from module_utils import *
+from r2r.init_utils import *
+from r2r.module_utils import *
 
 
 
@@ -45,13 +45,13 @@ Note, that this means that we will sometimes be declaring function names like '_
 
 
 # Only export things that actually widen/deepen volumes, and not helper functions
-all = [r_2_wider_r_,
-       HVG, 
-       HVN, 
-       HVE, 
-       widen_network_,
-       Deepened_Network, 
-       make_deeper_network] # make_deeper_network = r2deeperr if add identity initialized module
+__all__ = ['r_2_wider_r_',
+           'HVG', 
+           'HVN', 
+           'HVE', 
+           'widen_network_',
+           'Deepened_Network',
+           'make_deeper_network'] # make_deeper_network = r2deeperr if add identity initialized module
 
 
 
@@ -173,7 +173,7 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, scaled):
     new_scale_slices = []
     new_shift_slices = []
     new_running_mean_slices = []
-    new_running_var = []
+    new_running_var_slices = []
     
     old_scale = bn.weight.data.cpu().numpy()
     old_shift = bn.bias.data.cpu().numpy()
@@ -191,10 +191,10 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, scaled):
         new_running_mean_slices.append(_zero_pad_1d(old_running_mean[beg:end], new_channels))
         new_running_var_slices.append(_zero_pad_1d(old_running_var[beg:end], new_channels))
         
-    new_scale = np.concatinate(new_scale_slices)
-    new_shift = np.concatinate(new_shift_slices)
-    new_running_mean = np.concatinate(new_running_mean_slices)
-    new_running_Var = np.concatinate(new_running_var_slices)
+    new_scale = np.concatenate(new_scale_slices)
+    new_shift = np.concatenate(new_shift_slices)
+    new_running_mean = np.concatenate(new_running_mean_slices)
+    new_running_var = np.concatenate(new_running_var_slices)
         
     _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
     
