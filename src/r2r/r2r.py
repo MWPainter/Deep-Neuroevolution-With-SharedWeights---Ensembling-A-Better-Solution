@@ -1,3 +1,4 @@
+import numpy as np
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -58,6 +59,33 @@ __all__ = ['r_2_wider_r_',
 
 
 """
+Some helper functions :)
+"""
+
+
+
+
+def _is_linear_volume(vol_shape):
+    """
+    Checks if a hidden volume is a "linear" volume
+    """
+    return len(vol_shape) == 1
+
+
+
+
+
+def _is_conv_volume(vol_shape):
+    """
+    Checks if a hidden volume is a "convolutional" volume
+    """
+    return len(vol_shape) == 3
+
+
+
+
+
+"""
 Widening hidden volumes
 """
 
@@ -104,7 +132,7 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chann
     if type(next_layers) != list:
         next_layers = [next_layers]
         
-    _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving)
+    _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving, scaled)
 
 
 
@@ -127,11 +155,23 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
         if type(prev_layers[0]) != type(next_layers[i]):
             raise Exception("All output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
             
-    # Work out the number of params per new channel (for fc this is 1)
-    new_params_per_new_channel = 1
-    if len(volume_shape) == 3:
-        _, height, width = volume_shape
-        new_params_per_new_channel = height * width
+    # Check that the volume shape is either linear or convolutional
+    if len(volume_shape) not in [1,3]:
+        raise Exception("Volume shape must be 1D or 3D for R2WiderR to work")
+            
+    # Get if we have a linear input or not
+    is_linear_input = type(prev_layers[0]) is nn.Linear
+            
+    # Work out the number of hiden units per new channel 
+    # (for fc pretend 1x1 spatial resolution, so 1 per channel) (for conv this is width*height)
+    # For conv -> linear layers this can be a little complex. But we always know the number of channels from the prev kernels
+    channels_in_volume = np.sum([layer.weight.size(0) for layer in prev_layers])
+    total_hidden_units = np.prod(volume_shape)
+    new_hidden_units_per_new_channel = total_hidden_units // channels_in_volume
+    
+    # Sanity check
+    if is_linear_input and new_hidden_units_per_new_channel != 1:
+        raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
     
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
     volume_slices_indxs = [0]
@@ -140,25 +180,30 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
         volume_slices_indxs.append(new_slice_indx)
     
     # Sanity check that our slices are covering the entire volume that is being widened
-    if volume_slices_indxs[-1] != volume_shape[0]:
-        raise Exception("Number of channels output from prev_layers is inconsistent with the number of channels in volume " +
-                        "shape. They should be consistent.")
+    # There is some complexity when conv volumes are flattened as input to a linear layer
+    # We effectively check that the input is consistent with the volume shape here
+    if ((_is_conv_volume(volume_shape) and volume_slices_indxs[-1] != volume_shape[0]) or 
+        (_is_linear_volume(volume_shape) and volume_slices_indxs[-1] * new_hidden_units_per_new_channel != volume_shape[0])):
+        raise Exception("The shape output from the input layers is inconsistent with the ")
     
     # Iterate through all of the prev layers, and widen them appropraitely
+    input_is_linear = False
     for prev_layer in prev_layers:
+        input_is_linear = input_is_linear or type(prev_layer) is nn.Linear
         _widen_output_channels_(prev_layer, extra_channels, init_type, scaled)
     
     # Widen batch norm appropriately 
     if batch_norm:
-        _extend_bn_(batch_norm, extra_channels, volume_slice_indxs, scaled)
+        _extend_bn_(batch_norm, extra_channels, volume_slices_indxs, scaled)
     
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for next_layer in next_layers:
-        _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs, scaled)
+        _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indxs, input_is_linear, 
+                               new_hidden_units_per_new_channel, scaled, function_preserving)
+        
+        
+        
 
-        
-        
-        
 
 def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, scaled):
     """
@@ -184,7 +229,8 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, scaled):
         beg = volume_slice_indxs[i-1]
         end = volume_slice_indxs[i]
         
-        new_channels = new_channels_per_slice if not scaled else new_channels_per_slice * (end-beg)
+        # to triple number of channels, *add* 2x the current num
+        new_channels = new_channels_per_slice if not scaled else (new_channels_per_slice - 1) * (end-beg)
         
         new_scale_slices.append(_one_pad_1d(old_scale[beg:end], new_channels))
         new_shift_slices.append(_zero_pad_1d(old_shift[beg:end], new_channels))
@@ -219,7 +265,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, scaled):
         # new conv kernel
         old_out_channels, in_channels, width, height = prev_kernel.shape
         if scaled:
-            extra_channels *= old_out_channels
+            extra_channels = old_out_channels * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
         kernel_extra_shape = (extra_channels, in_channels, width, height)
         prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
 
@@ -237,7 +283,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, scaled):
         # new linear matrix
         old_n_out, n_in = prev_matrix.shape
         if scaled:
-            extra_channels *= old_n_out
+            extra_channels = old_n_out * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
         matrix_extra_shape = (extra_channels, n_in)
         prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
 
@@ -254,8 +300,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, scaled):
                             
                             
                             
-def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs, input_linear, extra_params_per_input, 
-                           scaled):
+def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs, input_linear,
+                           new_hidden_units_per_new_channel, scaled, function_preserving):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -264,8 +310,10 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
     :param init_type: The type of initialization to use ('He' or 'Xavier')
     :param volume_slice_indx: The indices to be able to slice the volume 
     :param input_linear: If input is from a linear layer previously
-    :param extra_params_per_input: The number of extra parameters to add per layer that was input to the hidden volume.
+    :param new_hidden_units_per_new_channel: The number of new hidden units in the volume per channel output from 
+            'prev_layers'. Conssider a linear 'prev_layer' to be a 1x1 conv, on a volume with 1x1 spatial dimensions.
     :param scaled: If true, then we should interpret "extra channels" as a scaling factor for the number of outputs
+    :param function_preserving: If we want the widening to be done in a function preserving fashion
     """
     # Check that we don't do linear -> conv, as haven't worked this out yet
     if input_linear and type(next_layer) is nn.Conv2d:
@@ -279,13 +327,14 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
         # Compute the new kernel for 'next_kernel' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
         out_channels, old_in_channels, width, height = next_kernel.shape 
-        if scaled:
-            extra_channels *= old_in_channels
-        kernel_extra_shape = (out_channels, extra_channels, width, height)
         next_kernel_parts = []
         for i in range(1, len(volume_slice_indxs)):
             beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
-            kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[beg:end], init_type, alpha)
+            if scaled:
+                extra_channels = (end-beg) * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
+            kernel_extra_shape = (out_channels, extra_channels, width, height)
+            kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
+                                                                   init_type, alpha)
             next_kernel_parts.append(kernel_part)
         next_kernel = np.concatenate(next_kernel_parts, axis=1)
         
@@ -300,12 +349,13 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
         # Compute the new matrix for 'next_matrix' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
         n_out, old_n_in = next_matrix.shape 
-        if scaled:
-            extra_channels *= old_n_in
-        matrix_extra_shape = (n_out, extra_params_per_input)
         next_matrix_parts = []
         for i in range(1, len(volume_slice_indxs)):
-            beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
+            beg = volume_slice_indxs[i-1] * new_hidden_units_per_new_channel
+            end = volume_slice_indxs[i] * new_hidden_units_per_new_channel
+            if scaled:
+                extra_params_per_input_layer = (end-beg) * (extra_channels - 1) # triple num outputs = *add* 2x the current num
+            matrix_extra_shape = (n_out, extra_params_per_input_layer)
             matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[beg:end], init_type, alpha)
             next_matrix_parts.append(matrix_part)
         next_matrix = np.concatenate(next_matrix_parts, axis=1)        
@@ -367,9 +417,13 @@ class HVG(object):
         """
         Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm, [next_layer_modules]),
         ready to be fed into a volume widening function.
+        
+        Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input 
+        to another layer.
         """
         for node in self.nodes:
-            yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node._get_child_modules())
+            if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
+                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node._get_child_modules())
             
             
             
@@ -437,7 +491,7 @@ class HVN(object):
         """
         Gets a list of nn.Modules from the parent edges (in the same order)
         """
-        return [edge.module for edge in self.parent_edges]
+        return [edge.pytorch_module for edge in self.parent_edges]
     
     
     
@@ -445,7 +499,7 @@ class HVN(object):
         """
         Gets a list of nn.Modules from the child edges (in the same order)
         """
-        return [edge.module for edge in self.child_edges]
+        return [edge.pytorch_module for edge in self.child_edges]
     
     
     
@@ -528,14 +582,16 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
         
     # Iterate through the hvg, widening appropriately in each place
     for prev_layers, shape, batch_norm, next_layers in  hvg.node_iterator():
-        channels_or_nodes_to_add = new_channels if len(shape) == 3 else new_hidden_nodes
+        linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
+        channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_hidden_nodes
         if channels_or_nodes_to_add == 0:
             continue
-        r_2_wider_r_(prev_layers, next_layers, shape, channels_or_nodes_to_add, init_type, function_preserving, scaled)
+        r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, init_type, 
+                     function_preserving, scaled)
+        
 
 
-
-
+        
         
 """
 Deepening networks.
@@ -640,4 +696,5 @@ def make_deeper_network(network, layer):
         network = Deepened_Network(network)
     network.extend(layer)
     return network
+
 

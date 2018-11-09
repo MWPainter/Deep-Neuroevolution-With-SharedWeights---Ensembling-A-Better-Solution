@@ -2,6 +2,9 @@ import torch as t
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
+from utils.pytorch_utils import cudafy
+
+
 
 
 
@@ -52,8 +55,7 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
     conv.register_parameter('bias', conv.bias)
     
     # Move to GPU if need be
-    if use_gpu:
-        conv = conv.cuda()
+    conv = cudafy(conv)
         
     return conv
 
@@ -76,8 +78,7 @@ def _assign_to_batch_norm_(batch_norm, scale, bias, run_mean, run_var):
     batch_norm.running_var = t.tensor(run_var)
     
     # Move to gpu if need be
-    if use_gpu:
-        batch_norm = batch_norm.cuda()
+    batch_norm = cudafy(batch_norm)
     
     return batch_norm
 
@@ -121,7 +122,6 @@ def _assign_weights_and_bias_to_linear_(linear, matrix, bias=None):
     linear.register_parameter('bias', linear.bias)
     
     # Move to GPU if need be
-    if use_gpu:
-        linear = linear.cuda()
+    linear = cudafy(linear)
         
     return linear

@@ -48,7 +48,7 @@ class _R2R_Block(nn.Module):
         if add_batch_norm:
             self.opt_batch_norm = nn.BatchNorm2d(num_features=intermediate_channels)
         self.activation_function = F.relu
-        self.conv2 = nn.Conv2d(intermediate_channels, output_channels, kernel_size=3)
+        self.conv2 = nn.Conv2d(intermediate_channels, output_channels, kernel_size=3, padding=1)
 
         # If providing a zero initialization, do all of our repeated weight trickery!
         if zero_initialize:
@@ -59,7 +59,7 @@ class _R2R_Block(nn.Module):
             self.conv1.weight.data = Parameter(t.Tensor(conv1_filter_init))
             self.conv1.bias.data *= 0.0
             
-            conv2_filter_shape = (output_channels, intermediate_channels, 1, 1)
+            conv2_filter_shape = (output_channels, intermediate_channels, 3, 3)
             conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', 
                                                                        alpha=-1.0)
             

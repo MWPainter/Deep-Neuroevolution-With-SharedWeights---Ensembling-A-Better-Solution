@@ -93,29 +93,29 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
     """
     We want to extend filter by adding output channels with appropriately initialized weights.
     
-    Let F be the 'existing_filter', with shape [C1,I,W,H]. 'extending_filter_shape' if the shape 
+    Let F be the 'existing_filter', with shape [C1,I,H,W]. 'extending_filter_shape' if the shape 
     by which we want to extend F. 
     
-    Let 'extending_filter_shape' be [2*C2,I,W,H]. If the shape value that should be 2*C2 is odd or 
+    Let 'extending_filter_shape' be [2*C2,I,H,W]. If the shape value that should be 2*C2 is odd or 
     non-positive, then it's an error.
     
-    The shape of the extended filter is [C1+2*C2, I, W, H].
+    The shape of the extended filter is [C1+2*C2, I, H, W].
     
-    The method initializes E of shape [C2, I, W, H] with the specified 'init_type'. The function returns 
+    The method initializes E of shape [C2, I, H, W] with the specified 'init_type'. The function returns 
     the concatenation [F;E;alpha*E], where concatination is in the inconsistent dimension and alpha is a 
     multiplicative scalar.
     
     To make a fresh/new filter, with repeated weights, let 'existing_filter' be None, and it will 
     return just [E;alpha*E], as F is "empty". (Concatenation in the output channels dimension.)
     
-    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [2*C2,I,W,H]
-    :param existing_filter: If not None, it must have shape [C1,I,W,H]. This is the existing filter.
+    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [2*C2,I,H,W]
+    :param existing_filter: If not None, it must have shape [C1,I,H,W]. This is the existing filter.
     :param init_type: The type of initialization to use for new weights.
-    :return: A filter of shape [C1+2*C2, I, W, H], which is the 'existing_filter' extended by 2*C2 output channels. 
+    :return: A filter of shape [C1+2*C2, I, H, W], which is the 'existing_filter' extended by 2*C2 output channels. 
             I.e. the filter [F;E;alpha*E]
     """
     # Unpack params input.
-    twoC2, I, W, H = extending_filter_shape
+    twoC2, I, H, W = extending_filter_shape
     C2 = twoC2 // 2
     C1 = 0 if existing_filter is None else existing_filter.shape[0]
     
@@ -127,16 +127,16 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
         raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
     
     # Canvas for the new numpy array to return. Copy existing filter weights.
-    canvas = np.zeros((C1+twoC2, I, W, H)).astype(np.float32)
+    canvas = np.zeros((C1+twoC2, I, H, W)).astype(np.float32)
     if existing_filter is not None:
         canvas[:C1,:,:,:] = existing_filter
 
     # Initialize the new weights, and copy that into the canvas (twice).
     new_channels_weights = None
     if init_type == 'He':
-        new_channels_weights = _conv_he_initialize((C2,I,W,H))
+        new_channels_weights = _conv_he_initialize((C2,I,H,W))
     elif init_type == 'Xavier':
-        new_channels_weights = _conv_xavier_initialize((C2,I,W,H), override_output_channels=C1+twoC2)
+        new_channels_weights = _conv_xavier_initialize((C2,I,H,W), override_output_channels=C1+twoC2)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -159,29 +159,29 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     They're nearly identical. 
     (There is/was code to extend both input and output channels at once, but it's overly complex to use here.)
     
-    Let F be the 'existing_filter', with shape [C,I1,W,H]. 'extending_filter_shape' if the shape 
+    Let F be the 'existing_filter', with shape [C,I1,H,W]. 'extending_filter_shape' if the shape 
     by which we want to extend F. 
     
-    Let 'extending_filter_shape' be [C,2*I2,W,H]. If the shape value that should be '2*I2' is odd or 
+    Let 'extending_filter_shape' be [C,2*I2,H,W]. If the shape value that should be '2*I2' is odd or 
     non-positive, then it's an error.
     
-    The shape of the extended filter is [C, I1+2*I2, W, H].
+    The shape of the extended filter is [C, I1+2*I2, H, W].
     
-    The method initializes E of shape [C, I2, W, H] with the specified 'init_type'. The function returns 
+    The method initializes E of shape [C, I2, H, W] with the specified 'init_type'. The function returns 
     the concatenation [F;E;alpha*E], where concatination is in the inconsistent dimension and alpha is a 
     multiplicative scalar.
     
     To make a fresh/new filter, with repeated weights, let 'existing_filter' be None, and it will 
     return just [E;alpha*E], as F is "empty". (Concatenation in the input channel dimension.)
     
-    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [C,2*I2,W,H]
-    :param existing_filter: If not None, it must have shape [C,I1,W,H]. This is the existing filter.
+    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [C,2*I2,H,W]
+    :param existing_filter: If not None, it must have shape [C,I1,H,W]. This is the existing filter.
     :param init_type: The type of initialization to use for new weights.
-    :return: A filter of shape [C, I1+2*I2, W, H], which is the 'existing_filter' extended by 2*I2 input channels. 
+    :return: A filter of shape [C, I1+2*I2, H, W], which is the 'existing_filter' extended by 2*I2 input channels. 
             I.e. the filter [F;E;alpha*E]
     """
     # Unpack params input.
-    C, twoI2, W, H = extending_filter_shape
+    C, twoI2, H, W = extending_filter_shape
     I2 = twoI2 // 2
     I1 = 0 if existing_filter is None else existing_filter.shape[1]
     
@@ -193,16 +193,16 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
         raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
     
     # Canvas for the new numpy array to return. Copy existing filter weights.
-    canvas = np.zeros((C, I1+twoI2, W, H)).astype(np.float32)
+    canvas = np.zeros((C, I1+twoI2, H, W)).astype(np.float32)
     if existing_filter is not None:
         canvas[:,:I1,:,:] = existing_filter
 
     # Initialize the new weights, and copy that into the canvas (twice).
     new_channels_weights = None
     if init_type == 'He':
-        new_channels_weights = _conv_he_initialize((C,I2,W,H))
+        new_channels_weights = _conv_he_initialize((C,I2,H,W))
     elif init_type == 'Xavier':
-        new_channels_weights = _conv_xavier_initialize((C,I2,W,H), overried_input_channels=I1+twoI2)
+        new_channels_weights = _conv_xavier_initialize((C,I2,H,W), overried_input_channels=I1+twoI2)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -251,6 +251,7 @@ def _extend_matrix_with_repeated_in_weights(extending_matrix_shape, existing_mat
     """
     return _extend_matrix_helper(_extend_filter_with_repeated_in_channels, extending_matrix_shape, 
                                  existing_matrix, init_type, alpha)
+
 
 
 
