@@ -589,6 +589,9 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
         r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, init_type, 
                      function_preserving, scaled)
         
+    # Return model for if someone want to use this in an assignment form etc
+    return network
+        
 
 
         
