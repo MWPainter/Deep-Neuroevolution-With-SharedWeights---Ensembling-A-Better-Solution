@@ -119,7 +119,8 @@ class Res_Block(nn.Module):
     
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
-    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, input_spatial_shape=None):
+    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, 
+                 input_spatial_shape=None):
         """
         Initialize the filters, optionally making this identity initialized.
         All convolutional filters have the same number of output channels
@@ -177,7 +178,7 @@ class Res_Block(nn.Module):
 
 
 
-    def conv_lle(self, input_shape=None):
+    def conv_lle(self):
         """
         Conv part of the 'lle' function (see below)
         """
@@ -199,22 +200,20 @@ class Res_Block(nn.Module):
         :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
         :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
         """
-        return self.conv_lle(input_shape)
+        return self.conv_lle()
         
         
         
-    def extend_hvg(self, cur_hvg, input_node):
+    def conv_hvg(self, cur_hvg):
         """
-        Extends a hidden volume graph 'hvg', from the node 'input_node'
+        Extends a hidden volume graph 'hvg'.
         :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
-        :param input_node: The node that this module takes as input
+        :param input_nodes: The node that this module takes as input
         :return: The hvn for the output from the resblock
         """
-        next_shape = self._get_input_shape(input_node.hv_shape)
-
         # First hidden volume
         next_shape[0] = self.intermediate_channels[0]
-        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[input_node], input_modules=[self.conv1], batch_norm=self.bn1)
+        cur_node = cur_hvg.add_hvn(next_shape, input_modules=[self.conv1], batch_norm=self.bn1)
         
         # Second hidden volume
         next_shape[0] = self.intermediate_channels[1]

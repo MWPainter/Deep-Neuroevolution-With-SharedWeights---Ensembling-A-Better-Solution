@@ -26,11 +26,12 @@ network_instance.fc_forward(x)   - the fc portion of the network
 network_instance.out_forward(x)  - the output portion of the network (anything that happens after the fc networks)
 
 If we wish for a nn.Module to ever be widened after a deepen transform, then, we must implement the following additional 
-functions, which break down the computation of :
+functions, which break down the generation of the hidden volume graph:
 network_instance.conv_lle()
 network_instance.fc_lle()
 OR
-network_instance.conv_hvg()
+network_instance.input_shape()
+network_instance.conv_hvg(cur_hvg)
 network_instance.fc_hvg(cur_hvg)
 
 
@@ -124,7 +125,8 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chann
     :param extra_channels: The number of new conv channels/hidden units to add
     :param init_type: The type of initialization to use ('He' or 'Xavier')
     :param function_preserving: If we wish for the widening to preserve the function I/O
-    :param scaled: If 
+    :param scaled: If we want the number of extra channels to be multiplicative (i.e. 2 = double number of layers) or additive 
+            (i.e. 2 = add two layers)
     """
     # Handle inputting of single input/output layers
     if type(prev_layers) != list:
@@ -402,11 +404,15 @@ class HVG(object):
     
     
     
-    def add_hvn(self, hv_shape, input_hvns=[], input_modules=[], batch_norm=None):
+    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None):
         """
         Creates a new hvn node, and is just a wrapper around the HVN constructor. 
         THe wrapper allows the graph object to keep track of the nodes that have been added.
+        If input_hvn's aren't specified, assume that its the current set of output nodes from this graph.
         """
+        if input_hvns is None:
+            input_hvns = self.get_output_nodes()
+        
         hvn = HVN(hv_shape, input_hvns, input_modules, batch_norm)
         self.nodes.append(hvn)
         return hvn
@@ -449,7 +455,7 @@ class HVN(object):
         Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any 
         associated batch norm layers.
         
-        :param hv_shape: The 
+        :param hv_shape: The shape of the volume being represented
         :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
                 concatenated for this hidden volume (node).
@@ -466,14 +472,15 @@ class HVN(object):
         
         
     
-    def _link_nodes(self, input_hvns, input_modules):
+    def _link_nodes(self, input_modules, input_hvns):
         """
         Links a list of hvn's to this hvn, with edges that correspond to PyTorch nn.Modules
         
-        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
                 concatenated for this hidden volume (node).
+        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         """
+        # If 
         # Check for invalid input
         if len(input_hvns) != len(input_modules):
             raise Exception("When linking nodes in HVG need to provide the same number of input nodes as modules")
@@ -656,34 +663,72 @@ class Deepened_Network(nn.Module):
         To register the parameters for autograd computation, we need to use "add_module", which is similar to 
         "register_parameter".
         
-        'layer' should also be able to extend a hvg with a function 'extend_hvg(cur_hvg)'.
+        'module' should also be able to extend a hvg with a function 'conv_hvg(cur_hvg)'.
         
         Note: we take the liberty to assume that the shapings of layer are correct to just work.
         """
-        if type(layer) is nn.Linear:
-            self.fc_extensions.append(layer)
-            self.add_module("fc_ext_{n}".format(n=len(self.fc_extensions)), layer)
+        if type(module) is nn.Linear:
+            self.fc_extensions.append(module)
+            self.add_module("fc_ext_{n}".format(n=len(self.fc_extensions)), module)
         else:
-            self.conv_extensions.append(layer)
-            self.add_module("conv_ext_{n}".format(n=len(self.conv_extensions)), layer)
+            self.conv_extensions.append(module)
+            self.add_module("conv_ext_{n}".format(n=len(self.conv_extensions)), module)
             
             
             
     def hvg(self):
         """
+        Implements the hvg interface, assuming that all components of the deepened network do too (base network and new 
+        modules).
+        
         Assumes that the base network implements the following functions:
-        self.base_network.conv_hvg()
+        self.base_network.input_shape()
+        self.base_network.conv_hvg(cur_hvg)
         self.base_network.fc_hvg(cur_hvg)
+        
+        And assumes that all layers 'module' in self.conv_extensions implement:
+        module.conv_hvg(cur_hvg)
         
         This function builds a hidden volume graph for the deepened network.
         """
-        hvg = self.base_network.conv_hvg()
+        hvg = HVG(self.base_network.input_shape())
+        hvg = self.base_network.conv_hvg(hvg)
         for conv_module in self.conv_extensions:
-            hvg = conv_module.extend_hvg(hvg)
+            hvg = conv_module.conv_hvg(hvg)
         hvg = self.fc_hvg(cur_hvg)
         for fc_layer in self.fc_extensions:
-            hvg = hvg.add_hvn(fc_layer.out_features, hvg.get_output_nodes(), [fc_layer])
+            hvg = hvg.add_hvn((fc_layer.out_features,) [fc_layer])
         return hvg
+    
+    
+    
+    def lle(self):
+        """
+        Implements the lle interface, assuming that all components of the deepened network do too (base network and new 
+        modules).
+        
+        Assumes that the base network implements the following functions:
+        self.base_network.conv_lle()
+        self.base_network.fc_lle()
+        
+        It also assumes that each of the conv modules 'module' implements the following:
+        module.lle()
+        """
+        itr = self.base_network.conv_lle()
+        for conv_module in self.conv_extensions:
+            itr = chain(itr, conv_module.conv_lle())
+        itr = chain(itr, self.base_network.fc_lle())
+        itr = chain(itr, self._fc_lle())
+        return itr
+        
+        
+        
+    def _fc_lle(self):
+        """
+        Iterates through all of the fc additions in the deepening
+        """
+        for fc_layer in self.fc_extensions:
+            yield ((fc_layer.in_features,), None, fc_layer)
 
         
         
@@ -697,7 +742,7 @@ def make_deeper_network(network, layer):
     """
     if type(network) is not Deepened_Network:
         network = Deepened_Network(network)
-    network.extend(layer)
+    network.deepen(layer)
     return network
 
 
