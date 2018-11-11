@@ -6,6 +6,8 @@ import torch.nn.functional as F
 from r2r.init_utils import *
 from r2r.module_utils import *
 
+from itertools import chain
+
 
 
 
