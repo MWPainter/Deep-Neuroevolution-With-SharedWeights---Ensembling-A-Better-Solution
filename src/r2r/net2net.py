@@ -245,10 +245,10 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
             new_kernel.select(0, index).copy_(prev_kernel.select(0, extra_channels_mapping[index]).clone())
             new_bias[index] = prev_bias[extra_channels_mapping[index]]
 
-        """if noise:
-            noise = np.random.normal(scale=5e-2 * new_kernel.std(),
-                                     size=list(new_kernel.size))
-            new_kernel += t.FloatTensor(noise).type_as(new_kernel)"""
+        if noise:
+            noise = np.random.normal(scale=5e-5 * new_kernel.std(),
+                                     size=list(new_kernel.size()))
+            new_kernel += t.FloatTensor(noise).type_as(new_kernel)
 
         # assign new conv and bias
         _assign_kernel_and_bias_to_conv_(prev_layer, new_kernel.numpy(), new_bias.numpy())
@@ -279,10 +279,10 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
             new_matrix.select(0, index).copy_(prev_matrix.select(0, extra_channels_mapping[index]).clone())
             new_bias[index] = prev_bias[extra_channels_mapping[index]]
 
-        """if noise:
-            noise = np.random.normal(scale=5e-2 * new_matrix.std(),
+        if noise:
+            noise = np.random.normal(scale=5e-5 * new_matrix.std(),
                                      size=list(new_matrix.size()))
-            new_matrix += t.FloatTensor(noise).type_as(new_matrix)"""
+            new_matrix += t.FloatTensor(noise).type_as(new_matrix)
 
         # assign new matrix and bias
         _assign_weights_and_bias_to_linear_(prev_layer, new_matrix.numpy(), new_bias.numpy())
