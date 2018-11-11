@@ -2,3 +2,4 @@
 from .r2r import *
 from .mnist_resnet import *
 from .cifar_resnet import *
+from .resblock import *

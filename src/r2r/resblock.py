@@ -141,10 +141,10 @@ class Res_Block(nn.Module):
         
         # Actual nn.Modules for the network
         self.conv1 = nn.Conv2d(input_channels, intermediate_channels[0], kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(num_features=output_channels)
+        self.bn1 = nn.BatchNorm2d(num_features=intermediate_channels[0])
         self.relu = F.relu
         self.conv2 = nn.Conv2d(intermediate_channels[0], intermediate_channels[1], kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(num_features=output_channels)
+        self.bn2 = nn.BatchNorm2d(num_features=intermediate_channels[1])
         
         self.r2r = _R2R_Block(intermediate_channels[1], intermediate_channels[2], output_channels,
                               zero_initialize=identity_initialize)

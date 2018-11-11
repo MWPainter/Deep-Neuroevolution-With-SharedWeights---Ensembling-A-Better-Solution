@@ -2,13 +2,13 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 
-from r2r import Mnist_Resnet, Cifar_Resnet, widen_network_
+from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network
 
 
     
     
     
-def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, data_channels=1, layer=None):
+def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, data_channels=1, layer1=None, layer2=None):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -21,8 +21,8 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
-    # widen (scaled) and check that the outputs are (almost) identical
-    network = make_deeper_network(network, layer)
+    # deepen and check that the outputs are (almost) identical
+    model = make_deeper_network(model, layer1)
     
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
@@ -35,7 +35,7 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
     print("Params after the transform is: {param}".format(param=params_after)) 
 
     # widen (scaled) and check that the outputs are (almost) identical
-    network = make_deeper_network(network, layer)
+    model = make_deeper_network(model, layer2)
     
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
@@ -89,17 +89,17 @@ class _Baby_Siamese(nn.Module):
         super(_Baby_Siamese, self).__init__()
         self.c11 = nn.Conv2d(1, 10, kernel_size=3, padding=1)
         self.c12 = nn.Conv2d(1, 10, kernel_size=3, padding=1)
-        self.c21 = nn.Conv2d(20, , kernel_size=3, padding=1)
-        self.c22 = nn.Conv2d(20, intermediate_channels[0], kernel_size=3, padding=1)
+        self.c21 = nn.Conv2d(20, 20, kernel_size=3, padding=1)
+        self.c22 = nn.Conv2d(20, 20, kernel_size=3, padding=1)
         self.linear = nn.Linear((20+20)*32*32, 2)
         
     def conv_forward(self, x):
         x1 = self.c11(x)
         x2 = self.c12(x)
-        x = 
+        x = t.cat((x1,x2), 1)
         x1 = self.c21(x)
         x2 = self.c22(x)
-        x = 
+        x = t.cat((x1,x2), 1)
         return x
         
     def fc_forward(self, x):
@@ -148,28 +148,37 @@ if __name__ == "__main__":
     print("Testing random padding for Cifar Resnet:")
     test_function_preserving_r2widerr(Cifar_Resnet(), 0.0001, False, data_channels=3)
     
+    print("\n"*4)
     print("Testing R2DeeperR for Mnist Resnet:")
     rblock = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 0.0001, layer=rblock)
+    rblock2 = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+                       identity_initialize=True, input_spatial_shape=(4,4))
+    test_function_preserving_r2deeperr(Mnist_Resnet(), 0.0001, layer1=rblock, layer2=rblock2)
     
     print("\n"*4)
     print("Testing random padding deepening for Mnist Resnet:")
     rblock = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
                        identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 0.0001, False, layer=rblock)
+    rblock2 = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+                       identity_initialize=False, input_spatial_shape=(4,4))
+    test_function_preserving_r2deeperr(Mnist_Resnet(), 0.0001, False, layer1=rblock, layer2=rblock2)
     
     print("\n"*4)
     print("Testing R2DeeperR for Cifar Resnet:")
     rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 0.0001, data_channels=3, layer=rblock)
+    rblock2 = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+                       identity_initialize=True, input_spatial_shape=(4,4))
+    test_function_preserving_r2deeperr(Cifar_Resnet(), 0.0001, data_channels=3, layer1=rblock, layer2=rblock2)
     
     print("\n"*4)
     print("Testing random padding deepening for Cifar Resnet:")
     rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
                        identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 0.0001, False, data_channels=3, layer=rblock)
+    rblock2 = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+                       identity_initialize=False, input_spatial_shape=(4,4))
+    test_function_preserving_r2deeperr(Cifar_Resnet(), 0.0001, False, data_channels=3, layer1=rblock, layer2=rblock2)
     
     print("\n"*4)
     print("Testing R2WiderR for siamese network:")
