@@ -217,16 +217,15 @@ class Res_Block(nn.Module):
         
         # Second hidden volume
         next_shape[0] = self.intermediate_channels[1]
-        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.conv2], batch_norm=self.bn2)
+        cur_hvg.add_hvn(next_shape, input_modules=[self.conv2], batch_norm=self.bn2)
         
         # Third hidden volume (first of r2r block)
         next_shape[0] = self.intermediate_channels[2]
-        cur_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.r2r.conv1], 
-                                    batch_norm=self.r2r.opt_batch_norm)
+        cur_hvg.add_hvn(next_shape, input_modules=[self.r2r.conv1], batch_norm=self.r2r.opt_batch_norm)
         
         # Fourth (output) hidden volume (second of r2r block)
         next_shape[0] = self.output_channels
-        out_node = cur_hvg.add_hvn(next_shape, input_hvns=[cur_node], input_modules=[self.r2r.conv2])
+        out_node = cur_hvg.add_hvn(next_shape, input_modules=[self.r2r.conv2])
         return out_node
         
                    

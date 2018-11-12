@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from r2r.resblock import *
-
 from utils import flatten
 
 from itertools import chain
@@ -77,6 +76,19 @@ class Mnist_Resnet(nn.Module):
         x = self.conv_forward(x)
         x = self.fc_forward(x)
         return self.out_forward(x)
+    
+    
+    
+    def lle_or_hvg(self):
+        """
+        Return if we're using the lle or hvg interface
+        """
+        return "lle"
+    
+    
+    
+    def input_shape(self):
+        return (1,32,32)
     
     
     

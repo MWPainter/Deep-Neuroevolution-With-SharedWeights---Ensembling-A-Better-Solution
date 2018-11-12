@@ -55,7 +55,7 @@ __all__ = ['r_2_wider_r_',
            'HVE', 
            'widen_network_',
            'Deepened_Network',
-           'make_deeper_network'] # make_deeper_network = r2deeperr if add identity initialized module
+           'make_deeper_network_'] # make_deeper_network = r2deeperr if add identity initialized module
 
 
 
@@ -335,8 +335,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
         for i in range(1, len(volume_slice_indxs)):
             beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
             if scaled:
-                extra_channels = (end-beg) * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
-            kernel_extra_shape = (out_channels, extra_channels, width, height)
+                slice_extra_channels = (end-beg) * (extra_channels - 1) # to triple num channels, *add* 2x the current num
+            kernel_extra_shape = (out_channels, slice_extra_channels, width, height)
             kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
                                                                    init_type, alpha)
             next_kernel_parts.append(kernel_part)
@@ -415,7 +415,7 @@ class HVG(object):
         if input_hvns is None:
             input_hvns = self.get_output_nodes()
         
-        hvn = HVN(hv_shape, input_hvns, input_modules, batch_norm)
+        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm)
         self.nodes.append(hvn)
         return hvn
     
@@ -447,20 +447,35 @@ class HVG(object):
     
     
     
+    def get_edge_associated_with_module(self, module):
+        """
+        Gets the HVE associated with some pytorch module 'module'. We return the first edge found, and assume that every 
+        module is associated with at most one HVE edge.
+        
+        :param module: The module to get the associated edge for
+        :returns: The HVE object associated with the module given
+        """
+        for node in self.nodes:
+            for edge in node.parent_edges:
+                if edge.pytorch_module is module:
+                    return edge
+        return None
+    
+    
     
 class HVN(object):
     """
     Class representing a node in the hidden volume graph.
     """
-    def __init__(self, hv_shape, input_hvns=[], input_modules=[], batch_norm=None):
+    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None):
         """
         Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any 
         associated batch norm layers.
         
         :param hv_shape: The shape of the volume being represented
-        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
                 concatenated for this hidden volume (node).
+        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm
         """
         # Keep track of the state
@@ -470,7 +485,7 @@ class HVN(object):
         self.batch_norm = batch_norm
         
         # Make the edges between this node and it's parents/inputs
-        self._link_nodes(input_hvns, input_modules)
+        self._link_nodes(input_modules, input_hvns)
         
         
     
@@ -481,8 +496,7 @@ class HVN(object):
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
                 concatenated for this hidden volume (node).
         :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
-        """
-        # If 
+        """ 
         # Check for invalid input
         if len(input_hvns) != len(input_modules):
             raise Exception("When linking nodes in HVG need to provide the same number of input nodes as modules")
@@ -545,7 +559,7 @@ class HVE(object):
         
         
         
-def _hvg_from_enum(network):
+def _hvg_from_lle(network):
     """
     Creates a HVG graph from the conv enum 
     :param network: A nn.Module that implements the 'lle' (linear layer enum) interface 
@@ -558,7 +572,8 @@ def _hvg_from_enum(network):
             hvg = HVG(shape)
             prev_node = hvg.root_hvn
         else:
-            prev_node = hvg.add_hvn(shape, [prev_node], [prev_module], batch_norm)
+            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module], 
+                                    input_hvns=[prev_node], batch_norm=batch_norm)
         prev_module = module
     return hvg
         
@@ -584,15 +599,15 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
     :return: A reference to the widened network
     """
     # Create the hidden volume graph
-    if network.lle:
-        hvg = _hvg_from_enum(network)
+    if network.lle_or_hvg() == "lle":
+        hvg = _hvg_from_lle(network)
     else:
         hvg = network.hvg()
         
     # Iterate through the hvg, widening appropriately in each place
     for prev_layers, shape, batch_norm, next_layers in  hvg.node_iterator():
         linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
-        channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_hidden_nodes
+        channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_channels
         if channels_or_nodes_to_add == 0:
             continue
         r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, init_type, 
@@ -678,6 +693,16 @@ class Deepened_Network(nn.Module):
             
             
             
+    def lle_or_hvg(self):
+        """
+        To decide to use lle or hvg interface, just propogate what the base network was using.
+        
+        :return: String indicating if we're using "lle" or "hvg"
+        """
+        return self.base_network.lle_or_hvg()
+            
+            
+            
     def hvg(self):
         """
         Implements the hvg interface, assuming that all components of the deepened network do too (base network and new 
@@ -736,7 +761,7 @@ class Deepened_Network(nn.Module):
         
         
         
-def make_deeper_network(network, layer):
+def make_deeper_network_(network, layer):
     """
     Given a network 'network', create a deeper network adding in a new layer 'layer'. 
     

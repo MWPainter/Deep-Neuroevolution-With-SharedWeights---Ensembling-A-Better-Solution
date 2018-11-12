@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from r2r.resblock import *
-
 from utils import flatten
 
 from itertools import chain
@@ -21,15 +20,12 @@ __all__ = ['Cifar_Resnet']
 class Cifar_Resnet(nn.Module):
     """
     A small residual network to be used for mnist/cifar10 tests.
-r_
+
     For v2 the only real change to v1 is that we've made all of the layers iterable.
     """
     def __init__(self, identity_initialize=True):
         # Superclass initializer
         super(Cifar_Resnet, self).__init__()
-        
-        # Make the three conv layers, with three max pools
-        
         
         # Make the three conv layers, with three max pools
         self.resblock1 = Res_Block(input_channels=3, intermediate_channels=[16,16,16], 
@@ -80,6 +76,19 @@ r_
         x = self.conv_forward(x)
         x = self.fc_forward(x)
         return self.out_forward(x)
+    
+    
+    
+    def lle_or_hvg(self):
+        """
+        Return if we're using the lle or hvg interface
+        """
+        return "lle"
+    
+    
+    
+    def input_shape(self):
+        return (3,32,32)
     
     
     
