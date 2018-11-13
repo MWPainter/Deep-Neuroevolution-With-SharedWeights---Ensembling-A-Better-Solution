@@ -164,7 +164,7 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
         raise Exception("Volume shape must be 1D or 3D for R2WiderR to work")
             
     # Get if we have a linear input or not
-    is_linear_input = type(prev_layers[0]) is nn.Linear
+    input_is_linear = type(prev_layers[0]) is nn.Linear
             
     # Work out the number of hiden units per new channel 
     # (for fc pretend 1x1 spatial resolution, so 1 per channel) (for conv this is width*height)
@@ -174,7 +174,7 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
     new_hidden_units_per_new_channel = total_hidden_units // channels_in_volume
     
     # Sanity check
-    if is_linear_input and new_hidden_units_per_new_channel != 1:
+    if input_is_linear and new_hidden_units_per_new_channel != 1:
         raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
     
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
@@ -188,12 +188,10 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
     # We effectively check that the input is consistent with the volume shape here
     if ((_is_conv_volume(volume_shape) and volume_slices_indxs[-1] != volume_shape[0]) or 
         (_is_linear_volume(volume_shape) and volume_slices_indxs[-1] * new_hidden_units_per_new_channel != volume_shape[0])):
-        raise Exception("The shape output from the input layers is inconsistent with the ")
+        raise Exception("The shape output from the input layers is inconsistent with the hidden volume provided in R2WiderR.")
     
     # Iterate through all of the prev layers, and widen them appropraitely
-    input_is_linear = False
     for prev_layer in prev_layers:
-        input_is_linear = input_is_linear or type(prev_layer) is nn.Linear
         _widen_output_channels_(prev_layer, extra_channels, init_type, scaled)
     
     # Widen batch norm appropriately 
@@ -606,8 +604,8 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
         
     # Iterate through the hvg, widening appropriately in each place
     for prev_layers, shape, batch_norm, next_layers in  hvg.node_iterator():
-        linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
-        channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_channels
+        feeding_to_linear = (type(prev_layers[0]) is nn.Linear) or (type(next_layers[0]) is nn.Linear)
+        channels_or_nodes_to_add = new_hidden_nodes if feeding_to_linear else new_channels
         if channels_or_nodes_to_add == 0:
             continue
         r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, init_type, 
@@ -722,9 +720,9 @@ class Deepened_Network(nn.Module):
         hvg = self.base_network.conv_hvg(hvg)
         for conv_module in self.conv_extensions:
             hvg = conv_module.conv_hvg(hvg)
-        hvg = self.fc_hvg(cur_hvg)
+        hvg = self.base_network.fc_hvg(hvg)
         for fc_layer in self.fc_extensions:
-            hvg = hvg.add_hvn((fc_layer.out_features,) [fc_layer])
+            hvg.add_hvn((fc_layer.out_features,) [fc_layer])
         return hvg
     
     

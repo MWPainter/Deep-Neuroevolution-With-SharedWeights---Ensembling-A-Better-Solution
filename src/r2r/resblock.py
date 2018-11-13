@@ -211,22 +211,22 @@ class Res_Block(nn.Module):
         :param input_nodes: The node that this module takes as input
         :return: The hvn for the output from the resblock
         """
-        # First hidden volume
-        next_shape[0] = self.intermediate_channels[0]
-        cur_node = cur_hvg.add_hvn(next_shape, input_modules=[self.conv1], batch_norm=self.bn1)
+        # First hidden 
+        cur_hvg.add_hvn((self.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv1], batch_norm=self.bn1)
         
         # Second hidden volume
-        next_shape[0] = self.intermediate_channels[1]
-        cur_hvg.add_hvn(next_shape, input_modules=[self.conv2], batch_norm=self.bn2)
+        cur_hvg.add_hvn((self.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
+                        input_modules=[self.conv2], batch_norm=self.bn2)
         
         # Third hidden volume (first of r2r block)
-        next_shape[0] = self.intermediate_channels[2]
-        cur_hvg.add_hvn(next_shape, input_modules=[self.r2r.conv1], batch_norm=self.r2r.opt_batch_norm)
+        cur_hvg.add_hvn((self.r2r.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
+                        input_modules=[self.r2r.conv1], batch_norm=self.r2r.opt_batch_norm)
         
         # Fourth (output) hidden volume (second of r2r block)
-        next_shape[0] = self.output_channels
-        out_node = cur_hvg.add_hvn(next_shape, input_modules=[self.r2r.conv2])
-        return out_node
+        cur_hvg.add_hvn((self.r2r.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
+                         input_modules=[self.r2r.conv2])
+        return cur_hvg
         
                    
                    
