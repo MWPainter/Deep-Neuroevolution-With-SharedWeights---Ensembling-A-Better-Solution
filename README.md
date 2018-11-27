@@ -217,6 +217,8 @@ TODO: clean this next bullet up into more concise ideas
         - Scale and shift have to undo the (random) mean and variance of a batch
     - This all means that we're "exactly" a function preserving transform, whereas Net2Net is just an approxate preserving transform
         - In practise this will make little to no difference
+        - Numerical errors also mean that R2R isn't exact
+        - However, it is theoretically more sound
 - Math
     - Write up the math about symmetry breaking
     - Write up the math for guiding the initialization of further parameters
