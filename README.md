@@ -28,13 +28,13 @@ TODO: just direct them to the appropriate scripts
 ## Schedule
 
 
-- Imagnet + inception: 27th Oct
-- R2R finished + tests: 10th Nov
-- Net2Net reproduced + encorporated in tests: 17th Nov
-- Flops counting and visualizations: 1st Dec
-- Draft: Dec 8st
-- Finished: Dec 22nd
-- Deadline: Jan 23rd
+- R2R finished + tests: 3rd Dec
+- Imagnet + inception: 10th Dec
+- Net2Net reproduced + encorporated in tests: 10th Dec
+- Flops counting and visualizations: 24th Dec
+- Draft: 17th Dec
+- Finished: 5th Jan
+- Deadline: 13rd Jan
 
 
 
@@ -63,17 +63,17 @@ TODO: just direct them to the appropriate scripts
         - ~Neuroevolution (or ne?)~
         - ~utils~
     - ~Have a main.py/train.py which is the entry point to training~ 
-    - **Move everything from R2R into `utils`/`r2r`/`ne` appropraitely 
-        - **Go through all of the files in utils, moving the things it says
-        - **Go through all of the files in r2r, moving things ass appropriate (start with r2r.py then resblock then resnet and so on)
-        - **Go through all of the files in ne, moving things as appropriate
-    - **Make sure all \_\_init\_\_.py's are correct 
-    - **Move everything from `batch_cifar_tests.py` to `main.py`, and make sure that the
-        - **Test that the main.py scripts still run (fix broken imports...)
-    - **Clean up the plotting code (jupyter notebook)
-        - **Test that the plotting code works (train some small networks one time for say 200 iter)
-    - **Add to this readme: description of the high level overview - i.e. the folders + plotting code description (like MSFT work)
-- Test that everything works
+    - ~Move everything from R2R into `utils`/`r2r`/`ne` appropraitely~ 
+        - ~Go through all of the files in utils, moving the things it says~
+        - ~Go through all of the files in r2r, moving things ass appropriate (start with r2r.py then resblock then resnet and so on)~
+        - ~Go through all of the files in ne, moving things as appropriate~
+    - ~Make sure all \_\_init\_\_.py's are correct~
+    - ~Move everything from `batch_cifar_tests.py` to `main.py`, and make sure that the~
+        - ~Test that the main.py scripts still run (fix broken imports...)~
+    - ~Clean up the plotting code (jupyter notebook)~
+        - ~Test that the plotting code works (train some small networks one time for say 200 iter)~
+    - ~Add to this readme: description of the high level overview - i.e. the folders + plotting code description (like MSFT work)~
+- ~Test that everything works~
 - Update the docs directory, to include the historical docs from the class, and the up to date docs when they're written
 
 
@@ -208,6 +208,18 @@ TODO: clean this next bullet up into more concise ideas
 - In the introduction
     - Look at all the papers about R2R and how people are using it
     - Mention the many uses that it has
+- Net2Net
+    - Requires idempotent activation functions
+        - Because when they deepen they require $\phi(I\phi(x)) = \phi(x)$
+        - This is avoided by building the deepening operation using a residual connection
+    - Requires a forward pass, and complex allocation of variables in batch norm
+        - Equality only holds in eval mode (for batch norm) and only in expectation (because of batch norm)
+        - Scale and shift have to undo the (random) mean and variance of a batch
+    - This all means that we're "exactly" a function preserving transform, whereas Net2Net is just an approxate preserving transform
+        - In practise this will make little to no difference
+- Math
+    - Write up the math about symmetry breaking
+    - Write up the math for guiding the initialization of further parameters
 - Our contributions:
     - A new set of function preserving transforms
         - Deepen works with residual connections, whereas net2deepernet works without residual connections
