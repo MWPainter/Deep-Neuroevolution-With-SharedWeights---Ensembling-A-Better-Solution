@@ -19,9 +19,9 @@ __all__ = ['Mnist_Resnet']
 
 class Mnist_Resnet(nn.Module):
     """
-    A small residual network to be used for mnist/cifar10 tests.
-    
-    For v2 the only real change to v1 is that we've made all of the layers iterable.
+    A small residual network to be used for mnist tests.
+
+    Implements the R2R interface.
     """
     def __init__(self, identity_initialize=True):
         # Superclass initializer
@@ -48,6 +48,9 @@ class Mnist_Resnet(nn.Module):
         
         
     def conv_forward(self, x):
+        """
+        Conv part of forward, part of R2R interface.
+        """
         x = self.resblock1(x)
         x = self.pool1(x)
         x = self.resblock2(x)
@@ -59,6 +62,9 @@ class Mnist_Resnet(nn.Module):
         
         
     def fc_forward(self, x):
+        """
+        Fully connected part of forward, part of R2R interface.
+        """
         x = flatten(x)
         x = self.linear1(x)
         x = F.relu(x)
@@ -68,11 +74,17 @@ class Mnist_Resnet(nn.Module):
         
         
     def out_forward(self, x):
+        """
+        Output part of forward, part of R2R interface.
+        """
         return x
     
     
     
     def forward(self, x):
+        """
+        nn.Module's forward function
+        """
         x = self.conv_forward(x)
         x = self.fc_forward(x)
         return self.out_forward(x)
@@ -81,7 +93,9 @@ class Mnist_Resnet(nn.Module):
     
     def lle_or_hvg(self):
         """
-        Return if we're using the lle or hvg interface
+        Return if we're using the lle or hvg interface.
+
+        Part of the R2R interface.
         """
         return "lle"
     
@@ -95,6 +109,8 @@ class Mnist_Resnet(nn.Module):
     def conv_lle(self):
         """
         Enumerate through all the conv layers (from network input to output), returning (shape, batch_norm, nn.Module) tuples
+
+        Part of the R2R interface.
         """
         return chain(self.resblock1.conv_lle(), 
                      chain(self.resblock2.conv_lle(), 
@@ -105,6 +121,8 @@ class Mnist_Resnet(nn.Module):
     def fc_lle(self):
         """
         Enumerate through all the fc layers (from network input to output), returning (shape, batch_norm, nn.Module) tuples
+
+        Part of the R2R interface.
         """
         yield ((self.linear1.in_features,), None, self.linear1)
         yield ((self.linear1.out_features,), None, self.linear2)
@@ -115,6 +133,8 @@ class Mnist_Resnet(nn.Module):
     def lle(self):
         """
         Implement the linear layer enumeration (lle), to be able to interface with the wider transforms.
+
+        Part of the R2R interface.
         """
         return chain(self.conv_lle(), self.fc_lle())
         

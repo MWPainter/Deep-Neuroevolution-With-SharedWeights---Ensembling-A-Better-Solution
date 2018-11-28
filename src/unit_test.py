@@ -40,7 +40,7 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
 
-    # widen (scaled) and check that the outputs are (almost) identical
+    # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = make_deeper_network_(model, layer2)
     
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
@@ -67,9 +67,9 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
-    # widen (scaled) and check that the outputs are (almost) identical
+    # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He', 
-                           function_preserving=function_preserving, scaled=True)
+                           function_preserving=function_preserving, multiplicative_widen=True)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -85,9 +85,9 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
 
-    # widen (scaled) and check that the outputs are (almost) identical
+    # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He', 
-                           function_preserving=function_preserving, scaled=True)
+                           function_preserving=function_preserving, multiplicative_widen=True)
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -113,10 +113,10 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
-    # widen (scaled) and check that the outputs are (almost) identical
+    # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = make_deeper_network_(model, layer)
     model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He', 
-                           function_preserving=function_preserving, scaled=True)
+                           function_preserving=function_preserving, multiplicative_widen=True)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -147,9 +147,9 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
-    # widen (scaled) and check that the outputs are (almost) identical
+    # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He', 
-                           function_preserving=function_preserving, scaled=True)
+                           function_preserving=function_preserving, multiplicative_widen=True)
     model = make_deeper_network_(model, layer)
     
     for i in range(10):

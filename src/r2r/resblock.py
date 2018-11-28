@@ -17,16 +17,13 @@ __all__ = ['Res_Block']
 
 class _R2R_Block(nn.Module):
     """
-    Defines a residual block to be used in our mnist and cifar tests.
-    This really just aggregates a lot of the work found in the 'tutorial' notebook, and allows us to identity initialize.
+    Defines a small convolutional block, with 2 layers, which can be initialized such that .
+    That is, if this block is represented by the function f, then for all x, we can set f(x)=0.
     """
     def __init__(self, input_channels, intermediate_channels, output_channels, add_batch_norm=True, zero_initialize=True):
         """
-        Initializes each of the layers in the R2R module, and initializes the variables appropriately. That is 
-        if zero_initialize == True, then we initialize the network to have a constant zero output.
-        
-        In the 'shape analysis' above, input_channels, intermediate_channels and output_channels correspond to 
-        the variables D, 2*C, O respectively.
+        Creates a nn.Module with 2 convolutional layers. If 'zero_initialize' is true, then we initialize the
+        convolutions such that the output is a constant zero.
         
         :param input_channels: The number of input channels provided to the conv2d layer
         :param intermediate_channels: The number of output channels from the first conv2d layer, and the number 
@@ -42,7 +39,6 @@ class _R2R_Block(nn.Module):
         self.has_batch_norm = add_batch_norm
     
         # Make the layers
-        self.opt_max_pool = lambda x: x
         self.conv1 = nn.Conv2d(input_channels, intermediate_channels, kernel_size=3, padding=1)
         self.opt_batch_norm = lambda x: x 
         if add_batch_norm:
@@ -50,7 +46,7 @@ class _R2R_Block(nn.Module):
         self.activation_function = F.relu
         self.conv2 = nn.Conv2d(intermediate_channels, output_channels, kernel_size=3, padding=1)
 
-        # If providing a zero initialization, do all of our repeated weight trickery!
+        # To provide a zero initialization, initialize weights symmetrically such that the function is identically zero.
         if zero_initialize:
             # Initialize the conv weights as appropriate, using the helpers and adding a small amount of noise
             conv1_filter_shape = (intermediate_channels, input_channels, 3, 3)
@@ -75,13 +71,11 @@ class _R2R_Block(nn.Module):
     def forward(self, x):
         """
         Forward pass of the module.
-        If max pool and batch norm were not specified to be used, then self.opt_max_pool and/or self.opt_batch_norm 
-        is a lambda identity function.
+        If we chose not to add batch_norm, then self.opt_batch_norm is an identity lambda function.
         
         :param x: The input tensor
         :return: The output from the module
         """
-        x = self.opt_max_pool(x)
         x = self.conv1(x)
         x = self.opt_batch_norm(x)
         x = self.activation_function(x)
@@ -94,8 +88,7 @@ class _R2R_Block(nn.Module):
     
 class Res_Block(nn.Module):
     """
-    A small residual block to be used for mnist/cifar10 tests. This is reletively simple, and is just the same 
-    as building a small network in PyTorch, using "R2R_Block_v1" as one of the layers.
+    A small residual block to be used for mnist/cifar10 tests.
     
     It consists one set of convolutional layers (not multiple sizes of convolutions like Inception ResNet)
     It has the following architecture:
@@ -105,16 +98,16 @@ class Res_Block(nn.Module):
         Conv2D
         BatchNorm
         ReLU
-        _R2R_Block            <- can chose to initialize so that the output is zero (and this block is an identity transform)
-            Conv2D          
+        _R2R_Block              <- can chose to initialize so that the output is zero (making this entire resblock is an identity transform)
+            Conv2D
             BatchNorm
             ReLU
             Conv2D
             (implicit linear activation)
-        
+
         + residual connection
-        
-    To deal with dimensionality issues, we use zero padding for the residual connection. We also use a 
+
+    To deal with dimensionality issues, we use zero padding for the residual connection. We also use a
     bit of masking in the zero padding, so that the residual connection is always the same shape.
     
     It would be good to fix this limitation of not being able to increase the residual connection size.
@@ -122,8 +115,14 @@ class Res_Block(nn.Module):
     def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, 
                  input_spatial_shape=None):
         """
-        Initialize the filters, optionally making this identity initialized.
-        All convolutional filters have the same number of output channels
+        Initialize the conv layers and so on, optionally making this identity initialized.
+
+        :param input_channels: The number of channels input to the res block
+        :param intermediate_channels: A list of 3 numbers, specifying the intermedaite numbers of channels for the 3
+            intermediate volumes.
+        :param output_channels: The number of channels for the volume output by the resblock.
+        :param identity_initialize: If the resblock should be initialized such that it represents an identity function.
+        :param input_spatial_shape: The spatial dimensions of the input shape.
         """
         # Superclass initializer
         super(Res_Block, self).__init__()
@@ -150,7 +149,8 @@ class Res_Block(nn.Module):
         self.r2r = _R2R_Block(intermediate_channels[1], intermediate_channels[2], output_channels,
                               zero_initialize=identity_initialize)
         
-        
+
+
     def forward(self, x):
         """
         Forward pass through this residual block
@@ -176,11 +176,12 @@ class Res_Block(nn.Module):
     
     
 
-
-
     def conv_lle(self):
         """
-        Conv part of the 'lle' function (see below)
+        Conv part of the 'lle' function.
+        Part of the R2DeeperRBlock interface.
+
+        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
         """
         height, width = self.input_spatial_shape
 
@@ -193,11 +194,10 @@ class Res_Block(nn.Module):
 
 
 
-    def lle(self, input_shape=None):
+    def lle(self):
         """
         Implement the lle (linear layer enum) to iterate through layers for widening.
-        Input shape must either not be none here or not be none from before
-        :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
+
         :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
         """
         return self.conv_lle()
@@ -207,8 +207,9 @@ class Res_Block(nn.Module):
     def conv_hvg(self, cur_hvg):
         """
         Extends a hidden volume graph 'hvg'.
+        Part of the R2DeeperRBlock interface.
+
         :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
-        :param input_nodes: The node that this module takes as input
         :return: The hvn for the output from the resblock
         """
         # First hidden 

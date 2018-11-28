@@ -30,7 +30,7 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
     
     :param conv: An instance of nn.Conv2d to assign the kernel to
     :param kernel: A numpy tensor to assign to nn.Conv2d.weight (the kernel parameter)
-    :return: A reference to the updated conv
+    :return: A reference to the updated conv module
     """
     # If bias is none, we can safely re-assign the old bias
     if bias is None:
@@ -66,6 +66,13 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
 def _assign_to_batch_norm_(batch_norm, scale, bias, run_mean, run_var):
     """
     Update 'batch_norm' with a new scale, bias and running mean and running variance
+
+    :param batch_norm: An instance of nn.BatchNorm to assign the scale/bias/mean/var to
+    :param scale: A numpy tensor to assign to nn.BatchNorm.weight (the scale parameter of batch norm)
+    :param bias: A numpy tensor to assign to nn.BatchNorm.bias (the shift parameter of batch norm)
+    :param run_mean: A numpy tensor to assign to nn.BatchNorm.running_mean (the exp running mean of batch norm)
+    :param run_var: A numpy tensor to assign to nn.BatchNorm.running_var (the exp running var of batch norm)
+    :return: A reference to the updated batch norm module.
     """
     # Assign new params
     batch_norm.weight = Parameter(t.tensor(scale))
@@ -98,7 +105,7 @@ def _assign_weights_and_bias_to_linear_(linear, matrix, bias=None):
     :param linear: An instance of nn.Linear to assign the kernel to
     :param matrix: A numpy tensor to assign to linear.weight
     :param bias: A numpy tensor to assign to linear.bias.
-    :return: A reference to the updated linear layer
+    :return: A reference to the updated linear module
     """
     # If bias is none, we assume we can safely re-assign the old bias
     if bias is None:
