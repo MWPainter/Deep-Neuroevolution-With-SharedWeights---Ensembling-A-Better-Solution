@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
 from r2r.init_utils import *
+from r2r.residual_connection import Residual_Connection
 
 
 
@@ -20,7 +21,8 @@ class _R2R_Block(nn.Module):
     Defines a small convolutional block, with 2 layers, which can be initialized such that .
     That is, if this block is represented by the function f, then for all x, we can set f(x)=0.
     """
-    def __init__(self, input_channels, intermediate_channels, output_channels, add_batch_norm=True, zero_initialize=True):
+    def __init__(self, input_channels, intermediate_channels, output_channels, add_batch_norm=True,
+                 zero_initialize=True):
         """
         Creates a nn.Module with 2 convolutional layers. If 'zero_initialize' is true, then we initialize the
         convolutions such that the output is a constant zero.
@@ -113,7 +115,7 @@ class Res_Block(nn.Module):
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
     def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, 
-                 input_spatial_shape=None):
+                 input_spatial_shape=None, input_volume_slices_indices=None):
         """
         Initialize the conv layers and so on, optionally making this identity initialized.
 
@@ -123,6 +125,10 @@ class Res_Block(nn.Module):
         :param output_channels: The number of channels for the volume output by the resblock.
         :param identity_initialize: If the resblock should be initialized such that it represents an identity function.
         :param input_spatial_shape: The spatial dimensions of the input shape.
+        :param input_volume_slices: The slices of the input volume to the residual block (i.e. if the input to this
+                block is the concatenation of two volumes, with 10 channels and 20 channels respectively, then we should
+                have input_volume_slices_indices = [0,10,30]). If None, then we will assume
+                input_volume_slices_indices=[0,input_channels], which means that the input is from a single volume.
         """
         # Superclass initializer
         super(Res_Block, self).__init__()
@@ -130,10 +136,12 @@ class Res_Block(nn.Module):
         # Check that we gave the correct number of intermediate channels
         if len(intermediate_channels) != 3:
             raise Exception("Need to specify 3 intemediate channels in the resblock")
-    
-        # The amount of channels to use (forever :( ) in the residual connection
-        self.residual_channels = input_channels
-        
+
+        # Make the residual connection object (using the input_volume_slices_inddices)
+        if input_volume_slices_indices is None:
+            input_volume_slices_indices = [0, input_channels]
+        self.residual_connection = Residual_Connection(input_volume_slices_indices)
+
         # Stuff that we need to remember
         self.input_spatial_shape = input_spatial_shape
         self.intermediate_channels = intermediate_channels
@@ -169,8 +177,7 @@ class Res_Block(nn.Module):
         x = self.r2r(x)
         
         # add residual connection (implicit zero padding)
-        out = x
-        out[:, :self.residual_channels] += res[:, :self.residual_channels]
+        out = self.residual_connection(x, res)
         
         return out
     
@@ -186,10 +193,10 @@ class Res_Block(nn.Module):
         height, width = self.input_spatial_shape
 
         # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
-        yield ((self.conv1.weight.data.size(1), height, width), None, self.conv1)
-        yield ((self.conv2.weight.data.size(1), height, width), self.bn1, self.conv2)
-        yield ((self.r2r.conv1.weight.data.size(1), height, width), self.bn2, self.r2r.conv1)
-        yield ((self.r2r.conv2.weight.data.size(1), height, width), self.r2r.opt_batch_norm, self.r2r.conv2)
+        yield ((self.conv1.weight.data.size(1), height, width), None, self.conv1, self.residual_connection)
+        yield ((self.conv2.weight.data.size(1), height, width), self.bn1, self.conv2, None)
+        yield ((self.r2r.conv1.weight.data.size(1), height, width), self.bn2, self.r2r.conv1, None)
+        yield ((self.r2r.conv2.weight.data.size(1), height, width), self.r2r.opt_batch_norm, self.r2r.conv2, None)
 
 
 
@@ -212,6 +219,16 @@ class Res_Block(nn.Module):
         :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
         :return: The hvn for the output from the resblock
         """
+        # Raise an error if the cur_hvg has more than one output hidden volume node. It must necessarily be one
+        # to be able to apply a residual connection.
+        output_nodes = cur_hvg.get_output_nodes()
+        if len(output_nodes) > 1:
+            raise Exception("Input to residual block when making HVG was multiple volumes.")
+
+        # Add the residual connection object to the current hvg output node
+        output_node = output_nodes[0]
+        output_node.residual_connection = self.residual_connection
+
         # First hidden 
         cur_hvg.add_hvn((self.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
                         input_modules=[self.conv1], batch_norm=self.bn1)

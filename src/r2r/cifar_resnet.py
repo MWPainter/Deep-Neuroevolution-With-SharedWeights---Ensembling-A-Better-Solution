@@ -109,9 +109,9 @@ class Cifar_Resnet(nn.Module):
 
         Part of the R2R interface.
         """
-        yield ((self.linear1.in_features,), None, self.linear1)
-        yield ((self.linear1.out_features,), None, self.linear2)
-        yield ((self.linear2.out_features,), None, None)
+        yield ((self.linear1.in_features,), None, self.linear1, None)
+        yield ((self.linear1.out_features,), None, self.linear2, None)
+        yield ((self.linear2.out_features,), None, None, None)
 
     def lle(self):
         """

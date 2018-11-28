@@ -155,8 +155,8 @@ Widening hidden volumes
 
 
 
-def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels=0, init_type="He", 
-                 function_preserving=True, multiplicative_widen=True):
+def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm=None, residual_connection=None, extra_channels=0,
+                 init_type="He", function_preserving=True, multiplicative_widen=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
     
@@ -182,6 +182,9 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chann
             concatenated out)
     :param volume_shape: 
     :param batch_norm: The batch norm function associated with the volume being widened (None if there is no batch norm)
+    :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
+            used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
+            This should be none if it's not used as part of a residual connection.
     :param input_shape: The shape of the input
     :param extra_channels: The number of new conv channels/hidden units to add
     :param init_type: The type of initialization to use ('He' or 'Xavier')
@@ -195,15 +198,15 @@ def r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chann
     if type(next_layers) != list:
         next_layers = [next_layers]
         
-    _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving,
-                  multiplicative_widen)
+    _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, residual_connection, extra_channels, init_type,
+                  function_preserving, multiplicative_widen)
 
 
 
 
 
-def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, init_type, function_preserving,
-                  multiplicative_widen):
+def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, residual_connection, extra_channels, init_type,
+                  function_preserving, multiplicative_widen):
     """  
     The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
     More helper functions are used.
@@ -239,16 +242,16 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
         raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
     
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
-    volume_slices_indxs = [0]
+    volume_slices_indices = [0]
     for prev_layer in prev_layers:
-        new_slice_indx = volume_slices_indxs[-1] + prev_layer.weight.size(0)
-        volume_slices_indxs.append(new_slice_indx)
+        new_slice_indx = volume_slices_indices[-1] + prev_layer.weight.size(0)
+        volume_slices_indices.append(new_slice_indx)
     
     # Sanity check that our slices are covering the entire volume that is being widened
     # There is some complexity when conv volumes are flattened as input to a linear layer
     # We effectively check that the input is consistent with the volume shape here
-    if ((_is_conv_volume(volume_shape) and volume_slices_indxs[-1] != volume_shape[0]) or 
-        (_is_linear_volume(volume_shape) and volume_slices_indxs[-1] * new_hidden_units_per_new_channel != volume_shape[0])):
+    if ((_is_conv_volume(volume_shape) and volume_slices_indices[-1] != volume_shape[0]) or
+        (_is_linear_volume(volume_shape) and volume_slices_indices[-1] * new_hidden_units_per_new_channel != volume_shape[0])):
         raise Exception("The shape output from the input layers is inconsistent with the hidden volume provided in R2WiderR.")
     
     # Iterate through all of the prev layers, and widen them appropraitely
@@ -257,25 +260,29 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, extra_chan
     
     # Widen batch norm appropriately 
     if batch_norm:
-        _extend_bn_(batch_norm, extra_channels, volume_slices_indxs, multiplicative_widen)
+        _extend_bn_(batch_norm, extra_channels, volume_slices_indices, multiplicative_widen)
+
+    # Widen the residual connection appropriately
+    if residual_connection:
+        residual_connection.widen_(volume_slices_indices, extra_channels, multiplicative_widen)
     
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for next_layer in next_layers:
-        _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indxs, input_is_linear, 
+        _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                                new_hidden_units_per_new_channel, multiplicative_widen, function_preserving)
         
         
         
 
 
-def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, multiplicative_widen):
+def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicative_widen):
     """
     Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
     Really this is just a helper function for R2WiderR
     
     :param bn: The batch norm layer to be extended
     :param new_channels_per_slice: The number of new channels to add, per slice
-    :param volume_slice_indx: The indices to be able to slice the volume (so that we can add new  
+    :param volume_slices_indices: The indices to be able to slice the volume (so that we can add new
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs (rather than additive)
     """
@@ -289,9 +296,9 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, multiplicative_w
     old_running_mean = bn.running_mean.data.cpu().numpy()
     old_running_var = bn.running_var.data.cpu().numpy()
     
-    for i in range(1,len(volume_slice_indxs)):
-        beg = volume_slice_indxs[i-1]
-        end = volume_slice_indxs[i]
+    for i in range(1,len(volume_slices_indices)):
+        beg = volume_slices_indices[i-1]
+        end = volume_slices_indices[i]
         
         # to triple number of channels, *add* 2x the current num
         new_channels = new_channels_per_slice if not multiplicative_widen else (new_channels_per_slice - 1) * (end-beg)
@@ -365,7 +372,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
                             
                             
                             
-def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_indxs, input_is_linear,
+def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                            new_hidden_units_per_new_channel, multiplicative_widen, function_preserving):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
@@ -373,7 +380,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
     :param next_layer: A layer after the hidden volume/units being widened
     :param extra_channels: The number of new conv channels/hidden units to add
     :param init_type: The type of initialization to use ('He' or 'Xavier')
-    :param volume_slice_indx: The indices to be able to slice the volume 
+    :param volume_slices_indices: The indices to be able to slice the volume
     :param input_is_linear: If input is from a linear layer previously
     :param new_hidden_units_per_new_channel: The number of new hidden units in the volume per channel output from 
             'prev_layers'. Conssider a linear 'prev_layer' to be a 1x1 conv, on a volume with 1x1 spatial dimensions.
@@ -394,8 +401,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
         alpha = -1.0 if function_preserving else 1.0
         out_channels, old_in_channels, width, height = next_kernel.shape 
         next_kernel_parts = []
-        for i in range(1, len(volume_slice_indxs)):
-            beg, end = volume_slice_indxs[i-1], volume_slice_indxs[i]
+        for i in range(1, len(volume_slices_indices)):
+            beg, end = volume_slices_indices[i-1], volume_slices_indices[i]
             if multiplicative_widen:
                 slice_extra_channels = (end-beg) * (extra_channels - 1) # to triple num channels, *add* 2x the current num
             kernel_extra_shape = (out_channels, slice_extra_channels, width, height)
@@ -416,9 +423,9 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slice_i
         alpha = -1.0 if function_preserving else 1.0
         n_out, old_n_in = next_matrix.shape 
         next_matrix_parts = []
-        for i in range(1, len(volume_slice_indxs)):
-            beg = volume_slice_indxs[i-1] * new_hidden_units_per_new_channel
-            end = volume_slice_indxs[i] * new_hidden_units_per_new_channel
+        for i in range(1, len(volume_slices_indices)):
+            beg = volume_slices_indices[i-1] * new_hidden_units_per_new_channel
+            end = volume_slices_indices[i] * new_hidden_units_per_new_channel
             if multiplicative_widen:
                 extra_params_per_input_layer = (end-beg) * (extra_channels - 1) # triple num outputs = *add* 2x the current num
             matrix_extra_shape = (n_out, extra_params_per_input_layer)
@@ -459,18 +466,20 @@ class HVG(object):
     track of the order in which nodes were made to be able to iterate over them correctly (from the nodes representing the 
     networks input, to the nodes representing the networks output).
     """
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, residual_connection=None):
         """
         Creates a graph object, with an initial node and no edges.
 
         :param input_shape: The input shape to the network this will be a HVG for.
+        :param residual_connection: The Residual_Connection object associated with the input volume, if any.
+                This should be none if the input shape is not used as part of a residual connection.
         """
-        self.root_hvn = HVN(input_shape)
+        self.root_hvn = HVN(input_shape, residual_connection=residual_connection)
         self.nodes = [self.root_hvn]
     
     
     
-    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None):
+    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None, residual_connection=None):
         """
         Creates a new hvn node, and is just a wrapper around the HVN constructor. 
         THe wrapper allows the graph object to keep track of the nodes that have been added.
@@ -482,11 +491,14 @@ class HVG(object):
         :param input_hvns: A list of HVN objects in this HVG to be the parent nodes from this volume. If None, then we
                 take all of the current 'output nodes' in the graph (those without any children currently).
         :param batch_norm: Any batch norm nn.Module that is associated with this hidden volume.
+        :param residual_connection: The Residual_Connection object associated with the volume. (I.e. if this volume x is
+                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
+                This should be none if it's not used as part of a residual connection.
         """
         if input_hvns is None:
             input_hvns = self.get_output_nodes()
         
-        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm)
+        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm, residual_connection)
         self.nodes.append(hvn)
         return hvn
     
@@ -504,7 +516,7 @@ class HVG(object):
         """
         for node in self.nodes:
             if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
-                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node._get_child_modules())
+                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node.residual_connection, node._get_child_modules())
             
             
             
@@ -542,7 +554,7 @@ class HVN(object):
     """
     Class representing a node in the hidden volume graph.
     """
-    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None):
+    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None, residual_connection=None):
         """
         Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any 
         associated batch norm layers.
@@ -552,12 +564,16 @@ class HVN(object):
                 concatenated for this hidden volume (node).
         :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm
+        :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
+                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
+                This should be none if it's not used as part of a residual connection.
         """
         # Keep track of the state
         self.hv_shape = hv_shape
         self.child_edges = []
         self.parent_edges = []
         self.batch_norm = batch_norm
+        self.residual_connection = residual_connection
         
         # Make the edges between this node and it's parents/inputs
         self._link_nodes(input_modules, input_hvns)
@@ -643,13 +659,13 @@ def _hvg_from_lle(network):
     hvg = None
     prev_node = None
     prev_module = None
-    for shape, batch_norm, module in network.lle():
+    for shape, batch_norm, module, residual_connection in network.lle():
         if not hvg:
-            hvg = HVG(shape)
+            hvg = HVG(shape, residual_connection=residual_connection)
             prev_node = hvg.root_hvn
         else:
-            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module], 
-                                    input_hvns=[prev_node], batch_norm=batch_norm)
+            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module], input_hvns=[prev_node],
+                                    batch_norm=batch_norm, residual_connection=residual_connection)
         prev_module = module
     return hvg
         
@@ -682,13 +698,13 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
         hvg = network.hvg()
         
     # Iterate through the hvg, widening appropriately in each place
-    for prev_layers, shape, batch_norm, next_layers in  hvg.node_iterator():
+    for prev_layers, shape, batch_norm, residual_connection, next_layers in  hvg.node_iterator():
         feeding_to_linear = (type(prev_layers[0]) is nn.Linear) or (type(next_layers[0]) is nn.Linear)
         channels_or_nodes_to_add = new_hidden_nodes if feeding_to_linear else new_channels
         if channels_or_nodes_to_add == 0:
             continue
-        r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, init_type, 
-                     function_preserving, multiplicative_widen)
+        r_2_wider_r_(prev_layers, next_layers, shape, batch_norm, residual_connection, channels_or_nodes_to_add,
+                     init_type, function_preserving, multiplicative_widen)
         
     # Return model for if someone want to use this in an assignment form etc
     return network
