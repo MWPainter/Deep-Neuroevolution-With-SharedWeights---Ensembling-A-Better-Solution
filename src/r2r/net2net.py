@@ -149,7 +149,7 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
     for (layer_index, next_layer) in enumerate(next_layers):
         _net2net_widen_input_channels_(next_layer, extra_channels, volume_slices_indxs, input_is_linear,
                                        new_hidden_units_per_new_channel,
-                                       extra_channels_mappings[layer_index], scaled)
+                                       extra_channels_mappings, scaled)
 
 
 def _net2net_extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, extra_channels_mappings, scaled):
@@ -196,8 +196,8 @@ def _net2net_extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, extra_ch
         for index in range(out_channels, new_width):
             new_scale[index] = old_scale[beg:end][extra_channels_mapping[index]]
             new_shift[index] = old_shift[beg:end][extra_channels_mapping[index]]
-            new_running_mean[index] = old_running_var[beg:end][extra_channels_mapping[index]]
-            new_running_var[index] = old_running_mean[beg:end][extra_channels_mapping[index]]
+            new_running_mean[index] = old_running_mean[beg:end][extra_channels_mapping[index]]
+            new_running_var[index] = old_running_var[beg:end][extra_channels_mapping[index]]
 
         new_scale_slices.append(new_scale)
         new_shift_slices.append(new_shift)
@@ -212,7 +212,7 @@ def _net2net_extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, extra_ch
     _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
 
 
-def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_mapping, scaled, noise=True):
+def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_mapping, scaled, noise=False):
     """
     Helper function for net2widernet. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -294,7 +294,7 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
 
 def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indxs, input_linear,
                                    new_hidden_units_per_new_channel,
-                                   extra_channels_mapping, scaled):
+                                   extra_channels_mappings, scaled):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -313,11 +313,12 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
 
         # Compute the new kernel for 'next_kernel' (extending each slice carefully)
 
-        out_channels, in_channels, width, height = next_kernel.shape
+        out_channels, _, width, height = next_kernel.shape
         next_kernel_parts = []
 
         for i in range(1, len(volume_slice_indxs)):
             beg, end = volume_slice_indxs[i - 1], volume_slice_indxs[i]
+            in_channels = end-beg
             volume_extra_channels = extra_channels
 
             if scaled:
@@ -328,7 +329,7 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
             kernel_part = original_kernel.clone()
             kernel_part.resize_(out_channels, in_channels + volume_extra_channels, width, height)
             kernel_part = _net2net_extend_filter_input_channels(original_kernel, kernel_part,
-                                                                in_channels, volume_extra_channels, extra_channels_mapping)
+                                                                in_channels, volume_extra_channels, extra_channels_mappings[i-1])
 
             next_kernel_parts.append(kernel_part)
 
@@ -363,12 +364,13 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
             matrix_part = _net2net_extend_filter_input_channels(original_matrix, matrix_part,
                                                                 int(n_in / new_hidden_units_per_new_channel),
                                                                 int(volume_extra_channels/new_hidden_units_per_new_channel),
-                                                                extra_channels_mapping)
+                                                                extra_channels_mappings[i-1])
 
             matrix_part.resize_(n_out, (n_in + volume_extra_channels))
 
             next_matrix_parts.append(matrix_part)
         next_matrix = np.concatenate(next_matrix_parts, axis=1)
+
 
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
@@ -740,7 +742,7 @@ class Deepened_Network(nn.Module):
 
 
 
-def net2net_make_deeper_network_(network, layer):
+def net2net_make_deeper_network_(network, layer, batch):
     """
     Given a network 'network', create a deeper network adding in a new layer 'layer'.
 
@@ -749,7 +751,24 @@ def net2net_make_deeper_network_(network, layer):
     if type(network) is not Deepened_Network:
         network = Deepened_Network(network)
     network.deepen(layer)
+    network(batch)
+
+    bn = layer.bn
+    new_weights = np.sqrt(bn.running_var.numpy() + 1e-05 )
+
+    bn.momentum = 0.1
+    _assign_to_batch_norm_(bn, new_weights, bn.running_mean.numpy(),
+                           bn.running_mean.numpy(), bn.running_var.numpy())
+
     return network
+
+
+def printbn(self, input, output):
+    print('Inside ' + self.__class__.__name__ + ' forward')
+    mean = input[0].mean(dim=0)
+    var = input[0].var(dim=0)
+    print(mean.shape)
+    print (mean)
 
 
 
@@ -778,13 +797,13 @@ class Net2Net_conv_identity(nn.Module):
 
         # Actual nn.Modules for the network
         self.conv = nn.Conv2d(input_channels, input_channels, kernel_size=kernel_size, padding=pad_h)
-        self.bn = nn.BatchNorm2d(num_features=input_channels)
+        self.bn = nn.BatchNorm2d(num_features=input_channels, momentum=1)
 
         self.update_conv()
-        self.update_batch_norm()
+        #self.update_batch_norm()
 
 
-    def update_conv(self, noise=True):
+    def update_conv(self, noise=False):
 
         conv_kernel = self.conv.weight.data.cpu()
         conv_bias = self.conv.bias.data.cpu()
@@ -808,8 +827,8 @@ class Net2Net_conv_identity(nn.Module):
 
     def update_batch_norm(self):
 
-        new_scale = self.bn.weight.data.fill_(1)
-        new_bias = self.bn.bias.data.fill_(0)
+        new_scale = self.bn.weight.data.fill_(0)
+        new_bias = self.bn.bias.data.fill_(1)
         new_running_mean = self.bn.running_mean.fill_(0)
         new_running_var = self.bn.running_var.fill_(1)
 
@@ -826,12 +845,12 @@ class Net2Net_conv_identity(nn.Module):
         """
         # Forward pass through residual part of the network
 
-        x = self.conv(x)
-        x = self.bn(x)
+        x1 = self.conv(x)
+        x2 = self.bn(x1)
         #print ("After BN")
         #print (x2-x1)
 
-        out = x
+        out = x2
 
         return out
 

@@ -58,7 +58,13 @@ def test_function_preserving_net2deepernet(model, thresh, data_channels=1, layer
         rand_outs.append(rand_out)
 
     # deepen and check that the outputs are (almost) identical
-    model = net2net_make_deeper_network_(model, layer1)
+
+    batch = t.Tensor(np.random.uniform(low=-1.0, high=1.0, size=(500, data_channels, 32, 32)))
+    batch_out = model(batch)
+    model = net2net_make_deeper_network_(model, layer1, batch)
+    batch_out_new = model(batch)
+    print("BATCH Average output difference before and after transform is: {val}".format(
+        val=t.mean(batch_out_new - batch_out)))
 
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -71,7 +77,7 @@ def test_function_preserving_net2deepernet(model, thresh, data_channels=1, layer
     print("Params after the transform is: {param}".format(param=params_after))
 
     # widen (scaled) and check that the outputs are (almost) identical
-    model = net2net_make_deeper_network_(model, layer2)
+    model = net2net_make_deeper_network_(model, layer2, batch)
 
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
@@ -153,12 +159,15 @@ class _Baby_Siamese(nn.Module):
 
 if __name__ == "__main__":
     print("Testing R2WiderR for Mnist Resnet:")
-    #test_function_preserving_net2widernet(Mnist_Resnet(), 0.0001)
+    test_function_preserving_net2widernet(Mnist_Resnet(), 0.0001)
 
     print("\n"*4)
     print("Testing R2DeeperR for Mnist Resnet:")
     model = _Baby_Siamese()
-    #model.eval()
     rblock = Net2Net_conv_identity(input_channels=40, kernel_size=(3, 3), input_spatial_shape=(32,32))
     rblock2 = Net2Net_conv_identity(input_channels=40, kernel_size=(3, 3), input_spatial_shape=(32,32))
     test_function_preserving_net2deepernet(model, 0.0001, layer1=rblock, layer2=rblock2)
+
+    print("\n" * 4)
+    print("Testing R2WiderR for siamese network:")
+    test_function_preserving_net2widernet(_Baby_Siamese(), 0.0001)
