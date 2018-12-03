@@ -125,10 +125,10 @@ class Res_Block(nn.Module):
         :param output_channels: The number of channels for the volume output by the resblock.
         :param identity_initialize: If the resblock should be initialized such that it represents an identity function.
         :param input_spatial_shape: The spatial dimensions of the input shape.
-        :param input_volume_slices: The slices of the input volume to the residual block (i.e. if the input to this
-                block is the concatenation of two volumes, with 10 channels and 20 channels respectively, then we should
-                have input_volume_slices_indices = [0,10,30]). If None, then we will assume
-                input_volume_slices_indices=[0,input_channels], which means that the input is from a single volume.
+        :param input_volume_slices_indices: The slices of the input volume to the residual block (i.e. if the input to
+                this block is the concatenation of two volumes, with 10 channels and 20 channels respectively, then we
+                should have input_volume_slices_indices = [0,10,30]). If None, then we will assume
+                    input_volume_slices_indices=[0,input_channels], which means that the input is from a single volume.
         """
         # Superclass initializer
         super(Res_Block, self).__init__()

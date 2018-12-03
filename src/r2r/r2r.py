@@ -38,8 +38,8 @@ R2WiderR interface (required by nn.Modules that wish to use R2WiderR):
     and the definition of the HVG object for how to use this. (Todo at some point: add some sort of diagram).
 - network_instance.lle()
     This can be implemented *instead* of 'hvg'. A linear layer enumeration (lle), that returns an iterator that 
-    sequentially gives (shape, batch_norm, nn.Module) tuples, through the network. This can only be used by networks 
-    that are completely linear and have one computation path through the network.  
+    sequentially gives (shape, batch_norm, nn.Module, Residual_Connection object) tuples, through the network. This can 
+    only be used by networks that are completely linear and have one computation path through the network.  
 Example implementations: Mnist_Resnet, Cifar_Resnet
     
     
@@ -264,7 +264,7 @@ def _r_2_wider_r_(prev_layers, next_layers, volume_shape, batch_norm, residual_c
 
     # Widen the residual connection appropriately
     if residual_connection:
-        residual_connection.widen_(volume_slices_indices, extra_channels, multiplicative_widen)
+        residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen)
     
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for next_layer in next_layers:
@@ -476,6 +476,15 @@ class HVG(object):
         """
         self.root_hvn = HVN(input_shape, residual_connection=residual_connection)
         self.nodes = [self.root_hvn]
+
+
+
+    def add_hvn_object(self, hvn):
+        """
+        Adds a HVN ovbject directly to the graph
+        :param hvn: A HVN typed object that should be part of this graph
+        """
+        self.nodes.append(hvn)
     
     
     
@@ -506,13 +515,14 @@ class HVG(object):
     
     def node_iterator(self):
         """
-        Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm, [next_layer_modules]),
-        ready to be fed into a volume widening function.
-        
-        Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input 
+        Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm,
+        residual connection object, [next_layer_modules]), ready to be fed into a volume widening function.
+
+        Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input
         to another layer.
 
-        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, batch norm, [list of child nn.Modules (edges)]) tuples.
+        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, batch norm, residual connection object,
+                    [list of child nn.Modules (edges)]) tuples.
         """
         for node in self.nodes:
             if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
@@ -557,7 +567,8 @@ class HVN(object):
     def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None, residual_connection=None):
         """
         Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any 
-        associated batch norm layers.
+        associated batch norm layers, and any associated Residual_Connection objects (which mean that this volume
+        is used over a residual connection).
         
         :param hv_shape: The shape of the volume being represented
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
@@ -630,8 +641,8 @@ class HVN(object):
     
 class HVE(object):
     """
-    Class representing an edge in the hidden volume graph. It's basically a glorified pair object, with some reference to 
-    a nn.Module as well
+    Class representing an edge in the hidden volume graph. It's basically a glorified pair object, with some reference
+    to a nn.Module as well
     """
     def __init__(self, parent_node, child_node, module):
         """
@@ -829,7 +840,8 @@ class Deepened_Network(nn.Module):
         It also assumes that each of the conv modules 'module' implements the following:
         module.lle()
 
-        :yields: Tuples of (shape, batchnorm, nn.Module) from linearly scanning over the network.
+        :yields: Tuples of (shape, batchnorm, nn.Module, Residual_Connection object) from linearly scanning over the
+                network.
         """
         itr = self.base_network.conv_lle()
         for conv_module in self.conv_extensions:

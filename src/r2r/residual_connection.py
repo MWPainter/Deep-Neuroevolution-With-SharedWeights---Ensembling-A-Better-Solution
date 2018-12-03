@@ -2,20 +2,72 @@
 
 
 
-
 class Residual_Connection(object):
     """
-    TODO
-        - especially differentiate between input slice, residual slice and output_slice
+    This file defines a class that wraps a residual connection. As a residual connection will propogate (by addition) a
+    hidden volume to further up the network, we need to make residual connections aware of the widening's that are
+    taking place.
 
-    If "out = residual_connection(x)", then for each self.slice_map[(a,b)] = (k, (c,d)) we have:
-    out[c:d] = k * x[a:b]
+    Examples of where residual connections will break function preserving transforms, unless handled carefully, are:
+    1. Widening volume v (from a single conv module) to [v; w; -w], where [v] is later used in a residual connection
+        upstream in the network.
+    2. If the volume forming the residual connection is a concatenation of two volumes, say [v1; v2], and it is then
+        widened to [v1; w1; -w1; v2; w2; -w2].
+
+    In 1, we observe that if we just copy all of [v; w; -w] in a residual connection that it will break function
+    preserving transforms. This is because to widen volume v in a function preserving way, we alter the conv module that
+    outputs v, and any conv modules that take v as input. However, consider a volume x, who's input includes a residual
+    connection from v, i.e. x += v, which then becomes x += [v; w; -w] immediately after the widening. The modules forming
+    the input and output of x will not have been changed, and therefore, the w and -w will change the output.
+
+    One potential (unsatisfactory and incorrect) solution would be to limit the number of channels in the residual
+    connection. For this solution, we should consider that happens in example 2. Let c_v1 be the number of channels in
+    the voluem v1 and so on. And suppose that we limit the number of channels to k: "x[:,:k] += residual_volume[:,:k]".
+    Either we have k <= c_v1, which means that the capacity of the residual channel is extremely limited, or, if we try to
+    have k > c_v1, then the residual connection breaks the residual transform, as described in the paragraph above.
+
+    Therefore, working with example 2, we consider conceptually replacing this psuedocode:
+    res = [a; b; c; d; e; f] # A widened volume, from example 2
+    ...
+    x += res
+
+
+    for the following:
+    res = [a; b; c; d; e; f] # A widened volume, from example 2
+    ...
+    idx = [c_v1, c_v1+c_v2, c_v1+c_v2+c_w1, c_v1+c_v2+c_w1+c_w2]
+    x[:idx[0]] += a
+    x[idx[0]:idx[1]] += d
+    x[idx[1]:idx[2]] += b
+    x[idx[1]:idx[2]] -= c
+    x[idx[2]:idx[3]] += e
+    x[idx[2]:idx[3]] -= f
+
+
+    The generalize logic for the above solution is precisely the logic that this class contains, so that actually, we can
+    write in code:
+    res = [a; b; c; d; e; f] # A widened volume, from example 2
+    ...
+    assert isinstance(res_con, Residual_Connection)
+    x = res_con(x, res).
+
+
+    To be able to do this, the class will keep track of a "slice_map" which we define in the following way:
+    if slice_map[(a,b)] = (k, (c,d)), and out = res_con(x, res), then we must have out[c:d] = x[c:d] + k * res[a:b].
     """
+
     def __init__(self, initial_residual_slice_indices):
         """
-        TODO
+        Initializes the slice map, where the following holds:
+        if slice_map[(a,b)] = (k, (c,d)), and out = res_con(x, res), then we must have out[c:d] = x[c:d] + k * res[a:b].
 
-        :param initial_residual_channels:
+        We need to give the initial slicings into the residual connection, that is, if the volume which is being used for
+        the residual connection is the concatenation of 3 volumes, with 10, 20 and 15 channels respectively, then we need
+        to initialize with indices [0, 10, 30, 45].
+
+        :param initial_residual_slice_indices: The indices that define the edges of the initial slices of the volume being
+            used over the residual connection. This should be a list of the form [0, num_channels] if there is a single
+            conv module that outputs the volume used in the residual connection.
         """
         self.residual_slice_map = {}
         for i in range(1, len(initial_residual_slice_indices)):
@@ -27,8 +79,16 @@ class Residual_Connection(object):
 
 
 
-    def widen_(self, volume_slice_indices, extra_channels, multiplicative_widen):
+    def _widen_(self, volume_slice_indices, extra_channels, multiplicative_widen):
         """
+        A function that will widen the residual connection, and is strongly tied to R2WiderR's implementation. It made
+        more sense to keep the implementation of this as part of the class however.
+
+        This function will alter self.residual_slice_map, to account for the widening of the volume that is propogated
+        over the residual connection.
+
+        The inputs give the number of channels from different modules who's outputs are concatenated together
+
         TODO: identify in r2widerr when we have the problem where the volume recieving the residual connection isn't widended enough to fit the residual connection
 
         TODO
@@ -39,7 +99,6 @@ class Residual_Connection(object):
         :param multiplicative_widen:
         :return:
         """
-        # print(self.residual_slice_map)
         # Check for erroneous indices
         for slice_indx in volume_slice_indices:
             for (beg, end) in self.residual_slice_map:
@@ -52,7 +111,8 @@ class Residual_Connection(object):
         for i in range(1, len(volume_slice_indices)):
             vs_beg, vs_end = volume_slice_indices[i-1], volume_slice_indices[i]
 
-            # For each residual slice in the current volume slice, copy the mapping to the new residual slice
+            # For each residual slice in the current volume slice, copy the mapping to the new residual slice indices
+            # We need to shift the indexing in 'res' in '__call__', as 'res' is currently being made larger
             for beg, end in self.residual_slice_map:
                 if vs_beg <= beg and end <= vs_end:
                     new_beg, new_end = beg + current_residual_channel_offset, end + current_residual_channel_offset
@@ -109,12 +169,26 @@ class Residual_Connection(object):
 
     def __call__(self, x, res):
         """
-        The forward for residual connection. This should apply the slice mapping to a volume
+        The forward for residual connection. This should apply the slice mapping to a volume. Which, we recall, is
+        defined with the intention that:
+        if slice_map[(a,b)] = (k, (c,d)), and out = res_con(x, res), then we must have out[c:d] = x[c:d] + k * res[a:b].
 
-        TODO: properly describe + params description
-        res = residual connection
-        x = input to add to
+        :param x: The volume that we should be adding to. (Note that this is technically the "residual volume" if we
+            strictly follow the definitions in the ResNet paper).
+        :param res: The volume for the residual connection (the identity part of the residual connection in the ResNet
+            paper).
+        :returns: The result of applying the residual connection (propogating 'res') to the volume x.
         """
+        # Check that the residual volume (res) being added hasn't been widened so much that it can't fit in x
+        # Assumes x.size() = (batch_size, channels, height, width)
+        # (Easier to do than you think)
+        channel_capacity = x.size(1)
+        for _, end in self.residual_slice_map:
+            if end > channel_capacity:
+                raise Exception("Residual connection being applied to a volume without a large enough channel " +
+                                "capacity for the residual connection.")
+
+        # Compute the result of the residual connection and return
         for ((res_beg, res_end), (k, (out_beg, out_end))) in self.residual_slice_map.items():
             x[:, out_beg:out_end] += k * res[:, res_beg:res_end]
         return x
