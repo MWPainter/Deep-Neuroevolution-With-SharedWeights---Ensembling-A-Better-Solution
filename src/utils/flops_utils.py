@@ -16,16 +16,15 @@ __all__ = ['model_flops']
 
 
 # Compute the flops of a model
-def model_flops(model, dataset):
+def model_flops(model, xs):
     """
     Computing the number of flops a model uses for 2 * forward_pass
     (approx forward_pass + backward_pass)
     
     :param model: The nn.Module that we wish to count the flops of
-    :param dataset: The dataset that we are typcially using for training
-    :return: The number of flops for
+    :param xs: A minibatch of data
+    :returns: The number of flops that the model requires to run a forward and backward pass
     """
-    xs, _ = dataset.next_batch(32)
     model = add_flops_counting_methods(model)
     model.start_flops_count()
     _ = model(xs)

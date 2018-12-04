@@ -51,15 +51,16 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         can support optimizations with multiple losses). Args is used to provide any parameters that are specific to the
         model. (E.g. the number of discriminator steps per generator step in a GAN).
         Note that the minibatch data could be just "x's" for a generative model, but for some supervised learning task
-        it may be "(x,y,meta)'s". And so on.
-        Usage "train_losses = update_op(model, optimizer, minibatch, iter, args)"
+        it may be "(x,y,meta)'s". And so on. It should return a reference to the model and optimizer, for the case where
+        we wish to make architectural changes to the model and optimizer.
+        Usage "model, optimizer, train_losses = update_op(model, optimizer, minibatch, iter, args)"
     :param validation_loss: Given a model and a minibatch, compute a validation loss, returns losses corresponding to
         (some) of the training losses. Only validation losses will be plotted for epoch averages.
         Usage "validations_loss = validation_loss(model, minibatch)"
     :param args: Argparser arguments to use, required to contain the values mentioned above.
     """
     # Tensorboard summary writer, and progress bar (for babysitting training)
-    log_file = "{folder}/{model_name}_{exp}_tb_log".format(folder=args.tb_dir, model_name=model.model_name, exp=args.exp)
+    log_file = "{folder}/{exp}_tb_log".format(folder=args.tb_dir, exp=args.exp)
     writer = SummaryWriter(log_dir=log_file)
 
     # Load models/make optimizers, and restore the state of training if loading from a checkpoint
@@ -71,17 +72,29 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         model, optimizer, start_epoch, best_val_loss = load_fn(model, optimizer, args.load)
         print("Loaded checkpoint!")
 
+    # Run a validation epoch on the randomly initialized network
+    print("Epoch {epoch} validation:".format(epoch=start_epoch))
+    model.eval()
+    validation_op = lambda model, _a, mbatch, _b, _c: validation_loss(model, mbatch)
+    avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
+                                       writer, "/val", args)
+
+    # Log the initial validation stats
+    for key in avg_val_losses:
+        scalar_name = string.join(['data/epoch/', key], '')
+        writer.add_scalars(scalar_name, {'test': avg_val_losses[key]}, start_epoch)
+
     # Main train loop
     for epoch in range(start_epoch, args.epochs):
         # Training epoch
-        print("Epoch {epoch} training:".format(epoch=epoch))
+        print("Epoch {epoch} training:".format(epoch=epoch+1))
         model.train()
         cur_global_iter = epoch * len(train_loader)
         avg_losses = _train_loop_epoch(model, train_loader, update_op, optimizer, cur_global_iter, writer, "/train", args)
 
         # Validation epoch (same as train, but replace 'update_op' and 'train_loader' appropriately and run network in eval 
         # mode)
-        print("Epoch {epoch} validation:".format(epoch=epoch))
+        print("Epoch {epoch} validation:".format(epoch=epoch+1))
         model.eval()
         validation_op = lambda model, _a, mbatch, _b, _c: validation_loss(model, mbatch)
         avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, cur_global_iter, writer, "/val", args)
@@ -132,8 +145,8 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
         # Compute the time needed to load the minibatch
         data_load_time.update(time.time() - iter_end_time)
 
-        # Make a step
-        losses = step_op(model, optimizer, minibatch_data, global_iter, args)
+        # Make a step (allow for the step
+        model, optimizer, losses = step_op(model, optimizer, minibatch_data, global_iter, args)
         global_iter += 1
         iter += 1
         batch_total_time.update(time.time() - iter_end_time)

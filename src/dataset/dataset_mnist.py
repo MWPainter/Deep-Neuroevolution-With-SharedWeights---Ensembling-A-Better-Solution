@@ -1,92 +1,59 @@
-from dataset import *
-from tensorflow.examples.tutorials.mnist import input_data
+import torchvision.datasets as dset
+import torchvision.transforms as transforms
+
 import os
-import numpy as np
-import torch as t
 
 
-class MnistDataset(Dataset):
-    def __init__(self, batch_size=32, subtract_mean=True, binary=False):
+class MnistDataset(dset.MNIST):
+    """
+    A wrapper around PyTorch's MNIST dataset implementation, making it useful for us
+    """
+    def __init__(self, train=True, normalize=True, subtract_mean=True):
+        """
+        Make the PyTorch MNIST dataset instance and
+
+        :param train: If this is a training dataset (else this is a test set)
+        :param normalize: If samples should be normalized
+        :param subtract_mean: If samples should be mean subtrracted (so that mean sample from dataset is zero).
+        """
         Dataset.__init__(self)
-        data_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'mnist')
-        self.mnist = input_data.read_data_sets(data_file, one_hot=True)
-        self.name = "mnist"
-        
-        self.data_dims = [1, 32, 32] # actually 28x28, but added padding so it's a power of 2 and nice for the LVAE
-        self.train_size = 50000
-        self.val_size = 10000
-        self.width = 32
-        self.height = 32
-        self.binary = binary
-        
-        self.range = [0.0, 1.0]
-        self.batch_size = batch_size
-        self.subtract_mean = subtract_mean
-        
-        if self.subtract_mean:
-            xs, _ = self.mnist.train.next_batch(self.train_size)
-            self.mean = np.mean(xs)
 
-    def next_batch(self, batch_size=None):
-        if batch_size is None: 
-            batch_size = self.batch_size
-        
-        xs, labels = self.mnist.train.next_batch(batch_size)
-        images = np.reshape(xs, (-1, 1, 28, 28))
-        images = np.reshape(images, (-1, 1, 28, 28))
-        images = np.pad(images, ((0,0),(0,0),(2,2),(2,2)), 'edge') # pads images to be 32x32 vs 28x28
-        
-        if self.subtract_mean:
-            images -= self.mean
-        
-        if self.binary:
-            return t.tensor(np.rint(images)), t.tensor(labels, dtype=t.float)
-        else:
-            return t.tensor(images), t.tensor(labels, dtype=t.float)
+        # Files for the data, and make sure that the path exists
+        mnist_dir = os.path.join(__file__, "data", "mnist")
+        train_file = os.path.join(mnist_dir, "training.pt")
+        val_file = os.path.join(mnist_dir, "test.pt")
 
-    def next_val_batch(self, batch_size=None):
-        if batch_size is None: 
-            batch_size = self.batch_size
-            
-        xs, labels = self.mnist.test.next_batch(batch_size)
-        images = np.reshape(xs, (-1, 1, 28, 28))
-        images = np.pad(images, ((0,0),(0,0),(2,2),(2,2)), 'edge') # pads images to be 32x32 vs 28x28
-        
-        if self.subtract_mean:
-            images -= self.mean
-        
-        if self.binary:
-            return t.tensor(np.rint(images)), t.tensor(labels, dtype=t.float)
-        else:
-            return t.tensor(images), t.tensor(labels, dtype=t.float)
-        
-    
-    def next_test_batch(self, batch_size):
+        if not os.path.exists(mnist_dir):
+            os.mkdir(mnist_dir)
+
+        # If files dont exists, download them
+        self.data_file = train_file if train else val_file
+        download = not os.path.isfile(train_file) or not os.path.isfile(val_file)
+
+        # Apply torchvision transforms appropriately to be able to normalize and/or subtract means
+        # Also apply a transform to pad to (32,32) images, rather than (28,28), because power of two
+        trans = transforms.Compose([transforms.ToTensor(), transforms.Pad(2)])
+        if normalize:
+            mean = 0.0 if subtract_mean else 0.5
+            trans = transforms.Compose([trans, transforms.Normalize((mean,), (1.0,))])
+
+        # Finally make the MNIST instance
+        self.dataset = dset.MNIST(root=self.data_file, train=train, transform=trans, download=download)
+
+
+
+    def __getitem__(self, index):
         """
-        DON'T USE MNIST FOR TESTING... IT'S TOO SMALL OF A DATASET...
+        Gets item at 'index' from the dataset
         """
-        self.handle_unsupported_op()
-        return None
-
-    def display(self, image):
-        return np.clip(image, a_min=0.0, a_max=1.0)
-
-    def reset(self):
-        self.mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-        
-    def __iter__(self):
-        raise NotImplementedError()
+        print(self.dataset[index])
+        raise Exception("Need to debug and pad to make it (32,32) rather than (28,28)... and so on") # TODO: sanity check
+        return self.dataset[index]
 
 
-if __name__ == '__main__':
-    binary_data = MnistDataset(binary=True)
-    float_data = MnistDataset(binary=False)
-    while True:
-        binary_sample = binary_data.next_batch(100)
-        float_sample = float_data.next_batch(100)
-        for index in range(9):
-            plt.subplot(3, 6, 2 * index + 1)
-            plt.imshow(float_sample[index, :, :, 0].astype(np.float), cmap=plt.get_cmap('Greys'))
-            plt.subplot(3, 6, 2 * index + 2)
-            plt.imshow(binary_sample[index, :, :, 0].astype(np.float), cmap=plt.get_cmap('Greys'))
-        plt.show()
+
+    def __len__(self):
+        """
+        Gets length of the dataset.
+        """
+        return len(self.dataset)
