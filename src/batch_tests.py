@@ -1,3 +1,5 @@
+import os
+import copy
 import torch as t
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -9,7 +11,7 @@ from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import model_flops
 
-from r2r import widen_network_, make_deeper_network_, Mnist_Resnet, Cifar_Resnet
+from r2r import widen_network_, make_deeper_network_, Mnist_Resnet, Cifar_Resnet, Res_Block
 
 
 
@@ -41,10 +43,10 @@ def _make_optimizer_fn(model, lr, weight_decay):
     :param model: The model to make an optimizer for.
     :param lr: The learning rate to use
     :param weight_decay: THe weight decay to use
-    :return: The optimizer for the network (discr_optimizer, gen_optimizer), which is passed into the remaining
+    :return: The optimizer for the network optimizer, which is passed into the remaining
         training loop functions
     """
-    return t.optim.Adam(model.discr.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
 
 
 
@@ -100,11 +102,17 @@ def _checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_be
 
     # Save it as the most up to date checkpoint
     filename = os.path.join(checkpoint_dir, 'checkpoint.pth.tar'.format(epoch=epoch))
+    dirname = os.path.dirname(filename)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     t.save(checkpoint, filename)
 
     # Save it as the "best" checkpoint if we are the best
     if is_best_so_far:
         best_filename = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        best_dirname = os.path.dirname(filename)
+        if not os.path.exists(best_dirname):
+            os.makedirs(best_dirname)
         t.save(checkpoint, best_filename)
 
 
@@ -120,9 +128,6 @@ def _update_op(model, optimizer, minibatch, iter, args):
     and are returned in a dictionary of PyTorch scalar Variables. The dictionary is used to log TensorBoard
     summaries, by the main training loop.
 
-    The WGAN update will alternate between updating the discriminator and generator. Parameter clipping and
-    gradient penalties are applied to the discriminator, ontop of a non-saturating Gan loss.
-
     :param model: A nn.Module object to take a gradient step
     :param optimizer: The optimizer object (as defined by make_optimizer_fn)
     :param minibatch: A minibatch of data to use for this update
@@ -137,15 +142,16 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     # Switch model to training mode, and cudafy minibatch
     model.train()
-    xs, ys = minibatch
-    xs, ys = cudafy(xs), cudafy(ys)
+    xs, ys = cudafy(minibatch[0]), cudafy(minibatch[1])
 
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
-            model = widen_network_() # TODO
+            model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                                   function_preserving=args.function_preserving, multiplicative_widen=True)
         elif iter in args.deepen_times:
-            model = make_deeper_network_() # TODO
+            model = make_deeper_network_(model, args.get_deepen_block(args.function_preserving))
+            model = make_deeper_network_(model, args.get_deepen_block(args.function_preserving))
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
@@ -158,7 +164,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     loss.backward()
     optimizer.step()
 
-    # Compute the generator or discriminator loss, and make an appropriate step, clipping discriminator weights
+    # Compute loss and accuracy
     losses = {}
     losses['loss'] = loss
     losses['accuracy'] = _accuracy(ys_pred, ys)
@@ -167,9 +173,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     if not hasattr(args, "total_flops"):
         args.total_flops = 0
     if not hasattr(args, "cur_model_flops_per_update") or iter in args.widen_times or iter in args.deepen_times:
-        args.cur_model_flops_per_update = model_flops(model, minibatch)
+        args.cur_model_flops_per_update = model_flops(model, xs)
     args.total_flops += args.cur_model_flops_per_update
-    losses['iter_flops'] = args.cur_model_flops
+    losses['iter_flops'] = args.cur_model_flops_per_update
     losses['total_flops'] = args.total_flops
 
     # Losses about weight norms etc. Only compute occasionally because this is heavyweight
@@ -225,7 +231,7 @@ def _validation_loss(model, minibatch):
     :param model: The model to compute the validation loss for.
     :param minibatch: A PyTorch Varialbe of shape (N,D) to compute the validation loss over.
     :return: A PyTorch scalar Variable with value of the validation loss.
-        Returns the discriminator and generator losses.
+        Returns validation loss and validation accuracy.
     """
     # Put in eval mode
     model.eval()
@@ -248,7 +254,7 @@ def _validation_loss(model, minibatch):
 
 
 
-def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, use_random_padding=False):
+def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
     """
     Train a mnist resnet, widening and deepening at some points
 
@@ -256,13 +262,13 @@ def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     :param model: Optionally pass in a model (that may have been trained already)
     :param widen_times: The timesteps to widen at
     :param deepen_times: The timesteps to deepen at
-    :param use_random_padding: If any paddings should be random initialiations or identity/zero initialized
+    :param function_preserving: If any paddings should be random initialiations or identity/zero initialized
     :returns: The trained model
     """
     # Add widening times and deepening times into the args object
     args.widen_times = widen_times
     args.deepen_times = deepen_times
-    args.use_random_padding = use_random_padding
+    args.function_preserving = function_preserving
 
     # Make the data loader objects
     train_dataset = MnistDataset(train=True)
@@ -287,7 +293,7 @@ def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init
 
 
 
-def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, use_random_padding=False):
+def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
     """
     Train a mnist resnet, widening and deepening at some points
 
@@ -295,13 +301,13 @@ def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     :param model: Optionally pass in a model (that may have been trained already)
     :param widen_times: The timesteps to widen at
     :param deepen_times: The timesteps to deepen at
-    :param use_random_padding: If any paddings should be random initialiations or identity/zero initialized
+    :param function_preserving: If any paddings should be random initialiations or identity/zero initialized
     :returns: The trained model
     """
     # Add widening times and deepening times into the args object
     args.widen_times = widen_times
     args.deepen_times = deepen_times
-    args.use_random_padding = use_random_padding
+    args.function_preserving = function_preserving
 
     # Make the data loader objects
     train_dataset = CifarDataset(mode="train")
@@ -320,7 +326,6 @@ def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init
 
     # return the model in case we want to do anything else with it
     return model
-
 
 
 
@@ -347,9 +352,6 @@ def mnist_identity_init_test(args):
     zero/identity function.
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
-    args.epochs = 6000/len(MnistDataset()) # TODO: move this to the defaults, and set defaults properly
-    print(args.epochs)
-    raise Exception("Remove this once checked")
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
@@ -377,7 +379,7 @@ def cifar_identity_init_test(args):
     Training runs to confirm that a network initialized so that it's trainable despite being initialized to a constant
     zero/identity function.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
+    # Fix some args for the test (shouldn't ever be loading anything)
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
@@ -418,12 +420,12 @@ def mnist_widen_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2WiderR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
-    _mnist_test(args, widen_times=args.widen_times, use_random_padding=False)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _mnist_test(args, widen_times=args.widen_times, use_random_padding=True)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
 
@@ -447,12 +449,12 @@ def cifar_widen_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2WiderR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
-    _cifar_test(args, widen_times=args.widen_times, use_random_padding=False)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _cifar_test(args, widen_times=args.widen_times, use_random_padding=True)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
 
@@ -476,12 +478,12 @@ def mnist_widen_with_budget_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2WiderR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
-    _mnist_test(args, widen_times=args.widen_times, use_random_padding=False)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _mnist_test(args, widen_times=args.widen_times, use_random_padding=True)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
 
@@ -505,12 +507,12 @@ def cifar_widen_with_budget_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2WiderR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
-    _cifar_test(args, widen_times=args.widen_times, use_random_padding=False)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _cifar_test(args, widen_times=args.widen_times, use_random_padding=True)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
 
@@ -527,6 +529,11 @@ def mnist_deepen_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
+    # Create a resblock that can be used for deepening
+    args.get_deepen_block = lambda identity: Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                                                       output_channels=32, identity_initialize=identity,
+                                                       input_spatial_shape=(4, 4))
+
     # Add subdirectories to our tb logging and checkpoint
     tb_dir = os.path.join(args.tb_dir, "{shard}")
     checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
@@ -534,12 +541,12 @@ def mnist_deepen_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2DeeperR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
-    _mnist_test(args, deepen_times=args.deepen_times, use_random_padding=False)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _mnist_test(args, deepen_times=args.deepen_times, use_random_padding=True)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
 
@@ -556,6 +563,11 @@ def cifar_deepen_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
+    # Create a resblock that can be used for deepening
+    args.get_deepen_block = lambda identity: Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                                                       output_channels=64, identity_initialize=identity,
+                                                       input_spatial_shape=(4, 4))
+
     # Add subdirectories to our tb logging and checkpoint
     tb_dir = os.path.join(args.tb_dir, "{shard}")
     checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
@@ -563,12 +575,12 @@ def cifar_deepen_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="R2DeeperR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
-    _cifar_test(args, deepen_times=args.deepen_times, use_random_padding=False)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _cifar_test(args, deepen_times=args.deepen_times, use_random_padding=True)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
 
@@ -585,19 +597,24 @@ def mnist_deepen_with_budget_test(args):
     args.load = ""
     raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
+    # Create a resblock that can be used for deepening
+    args.get_deepen_block = lambda identity: Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                                                       output_channels=32, identity_initialize=identity,
+                                                       input_spatial_shape=(4, 4))
+
     # Add subdirectories to our tb logging and checkpoint
     tb_dir = os.path.join(args.tb_dir, "{shard}")
     checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
 
-    # identity initialize loop
+    # identity initialize loopv
     args.tb_dir = tb_dir.format(shard="R2DeeperR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
-    _mnist_test(args, deepen_times=args.deepen_times, use_random_padding=False)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _mnist_test(args, deepen_times=args.deepen_times, use_random_padding=True)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
 
@@ -614,6 +631,11 @@ def cifar_deepen_with_budget_test(args):
     args.load = ""
     raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
+    # Create a resblock that can be used for deepening
+    args.get_deepen_block = lambda identity: Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                                                       output_channels=64, identity_initialize=identity,
+                                                       input_spatial_shape=(4, 4))
+
     # Add subdirectories to our tb logging and checkpoint
     tb_dir = os.path.join(args.tb_dir, "{shard}")
     checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
@@ -621,12 +643,12 @@ def cifar_deepen_with_budget_test(args):
     # identity initialize loop
     args.tb_dir = tb_dir.format(shard="RDeeperR")
     args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
-    _cifar_test(args, deepen_times=args.deepen_times, use_random_padding=False)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
     args.tb_dir = tb_dir.format(shard="random_padding")
     args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
-    _cifar_test(args, deepen_times=args.deepen_times, use_random_padding=True)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
 

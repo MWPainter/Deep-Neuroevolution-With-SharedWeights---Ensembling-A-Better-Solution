@@ -1,5 +1,3 @@
-import torch
-
 from tqdm import tqdm as Bar
 
 from utils.plotting_utils import AverageMeter
@@ -75,13 +73,13 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
     # Run a validation epoch on the randomly initialized network
     print("Epoch {epoch} validation:".format(epoch=start_epoch))
     model.eval()
-    validation_op = lambda model, _a, mbatch, _b, _c: validation_loss(model, mbatch)
+    validation_op = lambda model, _optimizer, mbatch, _b, _c: (model, optimizer, validation_loss(model, mbatch))
     avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
-                                       writer, "/val", args)
+                                       writer, "val/", args)
 
     # Log the initial validation stats
     for key in avg_val_losses:
-        scalar_name = string.join(['data/epoch/', key], '')
+        scalar_name = ''.join(['epoch/', key])
         writer.add_scalars(scalar_name, {'test': avg_val_losses[key]}, start_epoch)
 
     # Main train loop
@@ -90,18 +88,18 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         print("Epoch {epoch} training:".format(epoch=epoch+1))
         model.train()
         cur_global_iter = epoch * len(train_loader)
-        avg_losses = _train_loop_epoch(model, train_loader, update_op, optimizer, cur_global_iter, writer, "/train", args)
+        avg_losses = _train_loop_epoch(model, train_loader, update_op, optimizer, cur_global_iter, writer, "train/", args)
 
         # Validation epoch (same as train, but replace 'update_op' and 'train_loader' appropriately and run network in eval 
         # mode)
         print("Epoch {epoch} validation:".format(epoch=epoch+1))
         model.eval()
-        validation_op = lambda model, _a, mbatch, _b, _c: validation_loss(model, mbatch)
-        avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, cur_global_iter, writer, "/val", args)
+        validation_op = lambda model, _optimizer, mbatch, _b, _c: (model, optimizer, validation_loss(model, mbatch))
+        avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, cur_global_iter, writer, "val/", args)
 
         # Logging per epoch
         for key in avg_val_losses:
-            scalar_name = string.join(['data/epoch/', key], '')
+            scalar_name = ''.join(['epoch/', key])
             writer.add_scalars(scalar_name, {'train': avg_losses[key], 'test': avg_val_losses[key]}, epoch)
 
         # Checkpointing (depending on the model the "best" model may or may not make sense (e.g. GAN it will not))
@@ -116,7 +114,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
 
 
 
-def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, writer, tb_suffix, args):
+def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, writer, tb_prefix, args):
     """
     The inner training loop of an epoch.
 
@@ -128,7 +126,7 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
     :param global_iter: The current global step (n.b. this is a local variable)
     :param bar: A progress bar to update the CLI on training
     :param writer: A tensorboardX summary writer
-    :param tb_suffix: A suffix to append to any tensorboard logging (to differentiate between train and val plots in
+    :param tb_prefix: A prefix to prepend to any tensorboard logging (to differentiate between train and val plots in
         tensorboard).
     :return: A dictionary of losses, keyed by strings, the 'name' for each loss.
     :param args: Argparser arguments, used to provide model specific parameters.
@@ -145,30 +143,30 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
         # Compute the time needed to load the minibatch
         data_load_time.update(time.time() - iter_end_time)
 
-        # Make a step (allow for the step
+        # Make a step
         model, optimizer, losses = step_op(model, optimizer, minibatch_data, global_iter, args)
-        global_iter += 1
-        iter += 1
         batch_total_time.update(time.time() - iter_end_time)
 
-        # Tensorboard plotting, logging per minibatch
-        if global_iter % args.tb_log_freq == 0:
-            for key in losses:
-                scalar_name = string.join([key, tb_suffix], '')
-                writer.add_scalar(scalar_name, losses[key], global_iter)
+        # Tensorboard plotting, logging per minibatch and updating averages
+        # if global_iter % args.tb_log_freq == 0:
+        for key in losses:
+            scalar_name = ''.join(['iter/', tb_prefix, key])
+            writer.add_scalar(scalar_name, losses[key], global_iter)
+            minibatch_size = minibatch_data[0].size(0)
+            avg_losses_dict[key].update(losses[key], n=minibatch_size)
 
         # Update averages and progress bar
         prog_stats = {
             "batch": "{cb}/{tb}".format(cb=iter+1, tb=len(data_loader)),
-            "data": "{s}sec".format(s=data_load_time.val),
-            "batch": "{s}sec".format(s=batch_total_time.val),
-            "total": bar.elapsed_td,
-            "eta": bar.eta_td
+            "data_time": "{s:.2f}sec".format(s=data_load_time.val),
+            "batch_time": "{s:.2f}sec".format(s=batch_total_time.val),
         }
         bar.set_postfix(prog_stats)
         bar.update()
 
-        # update the time for the next iteration
+        # update the time and indices for the next iteration
+        global_iter += 1
+        iter += 1
         iter_end_time = time.time()
 
     bar.close()

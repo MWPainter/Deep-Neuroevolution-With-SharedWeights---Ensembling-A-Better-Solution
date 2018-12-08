@@ -23,7 +23,7 @@ You need to run the get_cifar shell script in the data directory first, and this
 
 
 
-ROOT = os.path.abspath(os.path.join(__file__, 'data', 'cifar10'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'cifar10'))
 
 
 
@@ -44,7 +44,7 @@ def load_CIFAR_batch(filename):
         X = datadict['data']
         Y = datadict['labels']
         X = X.reshape(10000, 3, 32, 32).transpose(0,2,3,1).astype("float")
-        Y = np.array(Y)
+        Y = np.array(Y).astype("float")
         return X, Y
 
 
@@ -129,10 +129,10 @@ class CifarDataset(Dataset):
         if mode.lower() == "train":
             self.xs = data['X_train']
             self.ys = data['y_train']
-        if mode.lower() in ["val", "validation"]:
+        elif mode.lower() in ["val", "validation"]:
             self.xs = data['X_val']
             self.ys = data['y_val']
-        if mode.lower() == "test":
+        elif mode.lower() == "test":
             self.xs = data['X_test']
             self.ys = data['y_test']
         else:
@@ -147,8 +147,11 @@ class CifarDataset(Dataset):
         """
         Get the 'index'th item from the dataset.
         """
-        return {'image': t.tensor(self.xs[index]),
-                'label': t.tensor(self.ys[index])}
+        xs = t.tensor(self.xs[index]).float()
+        ys = t.tensor(self.ys[index]).long()
+        ys_onehot = t.zeros((10,))
+        ys_onehot.scatter_(0, ys, 1)
+        return (xs, ys_onehot)
 
 
 
@@ -156,4 +159,5 @@ class CifarDataset(Dataset):
         """
         Get the length of the dataset
         """
+        return 320
         return self.xs.shape[0]

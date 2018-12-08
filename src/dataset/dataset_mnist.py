@@ -1,10 +1,13 @@
+import torch as t
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 
 import os
 
+from torch.utils.data import Dataset
 
-class MnistDataset(dset.MNIST):
+
+class MnistDataset(Dataset):
     """
     A wrapper around PyTorch's MNIST dataset implementation, making it useful for us
     """
@@ -19,23 +22,25 @@ class MnistDataset(dset.MNIST):
         Dataset.__init__(self)
 
         # Files for the data, and make sure that the path exists
-        mnist_dir = os.path.join(__file__, "data", "mnist")
+        this_files_dir = os.path.dirname(__file__)
+        mnist_dir = os.path.join(this_files_dir, "data", "mnist")
         train_file = os.path.join(mnist_dir, "training.pt")
         val_file = os.path.join(mnist_dir, "test.pt")
 
         if not os.path.exists(mnist_dir):
-            os.mkdir(mnist_dir)
+            os.makedirs(mnist_dir)
 
         # If files dont exists, download them
         self.data_file = train_file if train else val_file
-        download = not os.path.isfile(train_file) or not os.path.isfile(val_file)
+        download = not os.path.isdir(train_file) or not os.path.isdir(val_file)
 
         # Apply torchvision transforms appropriately to be able to normalize and/or subtract means
         # Also apply a transform to pad to (32,32) images, rather than (28,28), because power of two
-        trans = transforms.Compose([transforms.ToTensor(), transforms.Pad(2)])
+        transs = [transforms.Pad(2), transforms.ToTensor()]
         if normalize:
             mean = 0.0 if subtract_mean else 0.5
-            trans = transforms.Compose([trans, transforms.Normalize((mean,), (1.0,))])
+            transs.append(transforms.Normalize((mean,), (1.0,)))
+        trans = transforms.Compose(transs)
 
         # Finally make the MNIST instance
         self.dataset = dset.MNIST(root=self.data_file, train=train, transform=trans, download=download)
@@ -46,9 +51,10 @@ class MnistDataset(dset.MNIST):
         """
         Gets item at 'index' from the dataset
         """
-        print(self.dataset[index])
-        raise Exception("Need to debug and pad to make it (32,32) rather than (28,28)... and so on") # TODO: sanity check
-        return self.dataset[index]
+        x, y = self.dataset[index]
+        y_onehot = t.zeros((10,))
+        y_onehot.scatter_(0, y, 1)
+        return (x, y_onehot)
 
 
 
@@ -56,4 +62,5 @@ class MnistDataset(dset.MNIST):
         """
         Gets length of the dataset.
         """
+        return 640
         return len(self.dataset)
