@@ -1,6 +1,13 @@
+# Directories that do/will contain large files in the repo (and are dynamically made)
+src/checkpoints/*
+src/tb_logs/*
+src/dataset/data/*
+
+# Random stuff from IDE's and/or operating systems.
 .idea/
 *.gz
-.DS_Store
+*.DS_Store
+src/*.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
