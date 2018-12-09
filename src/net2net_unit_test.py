@@ -35,7 +35,7 @@ def test_function_preserving_net2widernet(model, thresh, function_preserving=Tru
     print("Params after the transform is: {param}".format(param=params_after))
 
     # widen (scaled) and check that the outputs are (almost) identical
-    model = widen_network_(model, new_channels=4, new_hidden_nodes=2, scaled=True)
+    model = net2net_widen_network_(model, new_channels=4, new_hidden_nodes=2, scaled=True)
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -159,7 +159,7 @@ class _Baby_Siamese(nn.Module):
 
 if __name__ == "__main__":
     print("Testing R2WiderR for Mnist Resnet:")
-    test_function_preserving_net2widernet(Mnist_Resnet(), 0.0001)
+    test_function_preserving_net2widernet(Mnist_Resnet(add_residual=False), 0.0001)
 
     print("\n"*4)
     print("Testing R2DeeperR for Mnist Resnet:")

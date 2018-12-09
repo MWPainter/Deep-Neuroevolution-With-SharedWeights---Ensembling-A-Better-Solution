@@ -24,18 +24,18 @@ class Cifar_Resnet(nn.Module):
     Implements the R2R interface.
     """
 
-    def __init__(self, identity_initialize=True):
+    def __init__(self, identity_initialize=True, add_residual=True):
         # Superclass initializer
         super(Cifar_Resnet, self).__init__()
 
         # Make the three conv layers, with three max pools
         self.resblock1 = Res_Block(input_channels=3, intermediate_channels=[16,16,16],
                                    output_channels=16, identity_initialize=identity_initialize,
-                                   input_spatial_shape=(32,32))                                  # [-1, 8, 32, 32]
+                                   input_spatial_shape=(32,32), add_residual=add_residual)                                  # [-1, 8, 32, 32]
         self.pool1 = nn.MaxPool2d(kernel_size=2)                                                 # [-1, 8, 16, 16]
         self.resblock2 = Res_Block(input_channels=16, intermediate_channels=[32,32,32],
                                    output_channels=32, identity_initialize=identity_initialize,
-                                   input_spatial_shape=(16,16))                                  # [-1, 16, 16, 16]
+                                   input_spatial_shape=(16,16), add_residual=add_residual)                                  # [-1, 16, 16, 16]
         self.pool2 = nn.MaxPool2d(kernel_size=2)                                                 # [-1, 16, 8, 8]
         self.resblock3 = Res_Block(input_channels=32, intermediate_channels=[64,64,64],
                                    output_channels=64, identity_initialize=identity_initialize,
