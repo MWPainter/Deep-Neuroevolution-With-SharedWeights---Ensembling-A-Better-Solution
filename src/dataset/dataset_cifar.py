@@ -159,5 +159,4 @@ class CifarDataset(Dataset):
         """
         Get the length of the dataset
         """
-        return 320
         return self.xs.shape[0]
