@@ -339,12 +339,6 @@ Defining instances of the mnist and cifar tests.
 
 
 
-# 2 stage widening, under the fixed number of epochs + flops budget
-# copying tests from net2net, and net2deepernet
-
-
-
-
 
 def mnist_identity_init_test(args):
     """
@@ -355,6 +349,8 @@ def mnist_identity_init_test(args):
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
 
     # identity initialize loop
     args.shard = "identity_initialized"
@@ -377,6 +373,8 @@ def cifar_identity_init_test(args):
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
 
     # identity initialize loop
     args.shard = "identity_initialized"
@@ -604,6 +602,8 @@ def mnist_net_to_net_style_test(args, widen=True):
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
 
     # Teacher network training loop
     args.shard = "teacher"
@@ -647,6 +647,8 @@ def cifar_net_to_net_style_test(args, widen=True):
     args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
 
     # Teacher network training loop
     args.shard = "teacher"
