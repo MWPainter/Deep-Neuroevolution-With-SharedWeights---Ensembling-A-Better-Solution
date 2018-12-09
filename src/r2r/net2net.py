@@ -419,41 +419,68 @@ class HVG(object):
     networks input, to the nodes representing the networks output).
     """
 
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, residual_connection=None):
         """
         Creates a graph object, with an initial node and no edges.
+
+        :param input_shape: The input shape to the network this will be a HVG for.
+        :param residual_connection: The Residual_Connection object associated with the input volume, if any.
+                This should be none if the input shape is not used as part of a residual connection.
         """
-        self.root_hvn = HVN(input_shape)
+        self.root_hvn = HVN(input_shape, residual_connection=residual_connection)
         self.nodes = [self.root_hvn]
 
-    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None):
+    def add_hvn_object(self, hvn):
+        """
+        Adds a HVN ovbject directly to the graph
+        :param hvn: A HVN typed object that should be part of this graph
+        """
+        self.nodes.append(hvn)
+
+    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None, residual_connection=None):
         """
         Creates a new hvn node, and is just a wrapper around the HVN constructor.
         THe wrapper allows the graph object to keep track of the nodes that have been added.
         If input_hvn's aren't specified, assume that its the current set of output nodes from this graph.
+
+        :param hv_shape: The shape of the hidden volume we are adding as a node now
+        :param input_modules: A list of nn.Modules that are to be associated to the with the edges to the parent nodes.
+                input_modules[i] should correspond to input_hvns[i].
+        :param input_hvns: A list of HVN objects in this HVG to be the parent nodes from this volume. If None, then we
+                take all of the current 'output nodes' in the graph (those without any children currently).
+        :param batch_norm: Any batch norm nn.Module that is associated with this hidden volume.
+        :param residual_connection: The Residual_Connection object associated with the volume. (I.e. if this volume x is
+                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
+                This should be none if it's not used as part of a residual connection.
         """
         if input_hvns is None:
             input_hvns = self.get_output_nodes()
 
-        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm)
+        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm, residual_connection)
         self.nodes.append(hvn)
         return hvn
 
     def node_iterator(self):
         """
-        Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm, [next_layer_modules]),
-        ready to be fed into a volume widening function.
+        Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm,
+        residual connection object, [next_layer_modules]), ready to be fed into a volume widening function.
 
         Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input
         to another layer.
+
+        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, batch norm, residual connection object,
+                    [list of child nn.Modules (edges)]) tuples.
         """
         for node in self.nodes:
             if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
-                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node._get_child_modules())
+                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node.residual_connection,
+                       node._get_child_modules())
 
     def get_output_nodes(self):
         """
         Gets a list of nodes that have no output edges
+
+        :returns: A list of 'output nodes' (the HVN's in the graph that have no children)
         """
         output_nodes = []
         for node in self.nodes:
@@ -481,22 +508,27 @@ class HVN(object):
     Class representing a node in the hidden volume graph.
     """
 
-    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None):
+    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None, residual_connection=None):
         """
         Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any
-        associated batch norm layers.
+        associated batch norm layers, and any associated Residual_Connection objects (which mean that this volume
+        is used over a residual connection).
 
         :param hv_shape: The shape of the volume being represented
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be
                 concatenated for this hidden volume (node).
         :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
         :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm
+        :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
+                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
+                This should be none if it's not used as part of a residual connection.
         """
         # Keep track of the state
         self.hv_shape = hv_shape
         self.child_edges = []
         self.parent_edges = []
         self.batch_norm = batch_norm
+        self.residual_connection = residual_connection
 
         # Make the edges between this node and it's parents/inputs
         self._link_nodes(input_modules, input_hvns)
@@ -541,8 +573,8 @@ class HVN(object):
 
 class HVE(object):
     """
-    Class representing an edge in the hidden volume graph. It's basically a glorified pair object, with some reference to
-    a nn.Module as well
+    Class representing an edge in the hidden volume graph. It's basically a glorified pair object, with some reference
+    to a nn.Module as well
     """
 
     def __init__(self, parent_node, child_node, module):
@@ -563,17 +595,18 @@ def _hvg_from_lle(network):
     """
     Creates a HVG graph from the conv enum
     :param network: A nn.Module that implements the 'lle' (linear layer enum) interface
+    :returns: A HVG object created using the lle() interface.
     """
     hvg = None
     prev_node = None
     prev_module = None
-    for shape, batch_norm, module in network.lle():
+    for shape, batch_norm, module, residual_connection in network.lle():
         if not hvg:
-            hvg = HVG(shape)
+            hvg = HVG(shape, residual_connection=residual_connection)
             prev_node = hvg.root_hvn
         else:
-            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module],
-                                    input_hvns=[prev_node], batch_norm=batch_norm)
+            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module], input_hvns=[prev_node],
+                                    batch_norm=batch_norm, residual_connection=residual_connection)
         prev_module = module
     return hvg
 
@@ -602,7 +635,7 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, scaled=T
         hvg = network.hvg()
 
     # Iterate through the hvg, widening appropriately in each place
-    for prev_layers, shape, batch_norm, next_layers in hvg.node_iterator():
+    for prev_layers, shape, batch_norm, _, next_layers in hvg.node_iterator():
         linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
         channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_hidden_nodes
         if channels_or_nodes_to_add == 0:

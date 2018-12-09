@@ -39,7 +39,7 @@ class _R2R_Block(nn.Module):
         super(_R2R_Block, self).__init__()
 
         self.has_batch_norm = add_batch_norm
-    
+
         # Make the layers
         self.conv1 = nn.Conv2d(input_channels, intermediate_channels, kernel_size=3, padding=1)
         self.opt_batch_norm = lambda x: x 
@@ -115,7 +115,7 @@ class Res_Block(nn.Module):
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
     def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, 
-                 input_spatial_shape=None, input_volume_slices_indices=None):
+                 input_spatial_shape=None, input_volume_slices_indices=None, add_residual=True):
         """
         Initialize the conv layers and so on, optionally making this identity initialized.
 
@@ -132,6 +132,8 @@ class Res_Block(nn.Module):
         """
         # Superclass initializer
         super(Res_Block, self).__init__()
+
+        self.add_residual = add_residual
         
         # Check that we gave the correct number of intermediate channels
         if len(intermediate_channels) != 3:
@@ -177,7 +179,10 @@ class Res_Block(nn.Module):
         x = self.r2r(x)
         
         # add residual connection (implicit zero padding)
-        out = self.residual_connection(x, res)
+        if self.add_residual:
+            out = self.residual_connection(x, res)
+        else:
+            out = x
         
         return out
     
@@ -227,7 +232,9 @@ class Res_Block(nn.Module):
 
         # Add the residual connection object to the current hvg output node
         output_node = output_nodes[0]
-        output_node.residual_connection = self.residual_connection
+
+        if (self.add_residual):
+            output_node.residual_connection = self.residual_connection
 
         # First hidden 
         cur_hvg.add_hvn((self.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
