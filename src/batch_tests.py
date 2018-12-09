@@ -167,7 +167,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Compute loss and accuracy
     losses = {}
     losses['loss'] = loss
-    losses['accuracy'] = _accuracy(ys_pred, ys)
+    losses['accuracy'] = _accuracy(ys_pred.cpu(), ys.cpu())
 
     # Hackily keep track of model flops using the args/options dictionary
     if not hasattr(args, "total_flops"):
@@ -237,13 +237,13 @@ def _validation_loss(model, minibatch):
     model.eval()
 
     # Unpack minibatch
-    xs, ys = cudafy(minibatch[0]), cudafy(minibatch[1])
+    xs, ys = cudafy(minibatch[0]), minibatch[1]
 
     # Compute loss and accuracy
     loss_fn = _make_loss_fn()
     ys_pred = model(xs)
-    loss = loss_fn(ys_pred, ys)
-    accuracy = _accuracy(ys_pred, ys)
+    loss = loss_fn(ys_pred, ys).cpu()
+    accuracy = _accuracy(ys_pred.cpu(), ys)
 
     # Return the dictionary of losses
     return {'loss': loss,
