@@ -232,8 +232,7 @@ class Res_Block(nn.Module):
 
         # Add the residual connection object to the current hvg output node
         output_node = output_nodes[0]
-
-        if (self.add_residual):
+        if self.add_residual:
             output_node.residual_connection = self.residual_connection
 
         # First hidden 
