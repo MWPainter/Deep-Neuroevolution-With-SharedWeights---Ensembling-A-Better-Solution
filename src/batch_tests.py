@@ -147,11 +147,11 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
-            model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
-                                   function_preserving=args.function_preserving, multiplicative_widen=True)
+            model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                                   function_preserving=args.function_preserving, multiplicative_widen=True))
         elif iter in args.deepen_times:
             model = make_deeper_network_(model, args.get_deepen_block(args.function_preserving))
-            model = make_deeper_network_(model, args.get_deepen_block(args.function_preserving))
+            model = cudafy(make_deeper_network_(model, args.get_deepen_block(args.function_preserving)))
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
