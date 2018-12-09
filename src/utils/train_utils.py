@@ -1,6 +1,7 @@
 from tqdm import tqdm as Bar
 
 from utils.plotting_utils import AverageMeter
+from utils.pytorch_utils import cudafy
 
 from collections import defaultdict
 import string
@@ -57,6 +58,9 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         Usage "validations_loss = validation_loss(model, minibatch)"
     :param args: Argparser arguments to use, required to contain the values mentioned above.
     """
+    # Move the model to the GPU if it is available
+    model = cudafy(model)
+
     # Tensorboard summary writer, and progress bar (for babysitting training)
     log_file = "{folder}/{exp}_tb_log".format(folder=args.tb_dir, exp=args.exp)
     writer = SummaryWriter(log_dir=log_file)

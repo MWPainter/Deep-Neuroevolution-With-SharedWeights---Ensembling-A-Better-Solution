@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from r2r.init_utils import *
 from r2r.module_utils import *
+from utils.pytorch_utils import cudafy
 
 from itertools import chain
 
@@ -871,12 +872,16 @@ def make_deeper_network_(network, layer):
     
     We assume the our network is build into a conv stack, which feeds into a fully connected stack.
 
+    We also make sure that if the network was already on the GPU, then the new network is also on the GPU.
+
     :param network: The nn.Module to be deepened, that implements the R2DeeperR interface.
     :param layer: A nn.Module to be used in the deepening, that implements the R2DeeperRBlock interface.
     :returns: A nn.Module for the deepened network (this may be new object, but still possibly clobbers 'network' input)
     """
     if type(network) is not Deepened_Network:
         network = Deepened_Network(network)
+        if next(network.parameters()).is_cuda:
+            network = cudafy(network)
     network.deepen(layer)
     return network
 
