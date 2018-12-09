@@ -3,9 +3,10 @@ from tqdm import tqdm as Bar
 from utils.plotting_utils import AverageMeter
 from utils.pytorch_utils import cudafy
 
-from collections import defaultdict
+import os
 import string
 import time
+from collections import defaultdict
 
 from tensorboardX import SummaryWriter
 
@@ -63,7 +64,14 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
 
     # Tensorboard summary writer, and progress bar (for babysitting training)
     log_file = "{folder}/{exp}_tb_log".format(folder=args.tb_dir, exp=args.exp)
+    if hasattr(args, 'shard'):
+        log_file = os.path.join(log_file, args.shard)
     writer = SummaryWriter(log_dir=log_file)
+
+    # Add same directory structure for checkpoints
+    checkpoint_dir = "{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp)
+    if hasattr(args, 'shard'):
+        checkpoint_dir = os.path.join(checkpoint_dir, args.shard)
 
     # Load models/make optimizers, and restore the state of training if loading from a checkpoint
     start_epoch = 0
@@ -110,7 +118,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         avg_val_loss = sum(list(avg_val_losses.values()))
         is_best_model = avg_val_loss < best_val_loss
         best_val_loss = max(avg_val_loss, best_val_loss)
-        checkpoint_fn(model, optimizer, epoch, best_val_loss, args.checkpoint_dir, is_best_model)
+        checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_best_model)
 
     print("Fin.")
 

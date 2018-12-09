@@ -165,7 +165,7 @@ def get_defaults(script_name):
             "batch_size": 64,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [30], #[3000],
+            "deepen_times": [3000],
             "flops_budget": 0 #unused
         }
     elif script == "cifar_deepen":

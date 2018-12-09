@@ -356,17 +356,12 @@ def mnist_identity_init_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="identity_initialized")
-    args.checkpoint_dir = checkpoint_dir.format(shard="identity_initialized")
+    args.shard = "identity_initialized"
     _mnist_test(args, identity_init_network=True)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="randomly_initialized")
+    args.shard = "randomly_initialized"
     args.checkpoint_dir = checkpoint_dir.format(shard="randomly_initialized")
     _mnist_test(args, identity_init_network=False)
 
@@ -384,18 +379,12 @@ def cifar_identity_init_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="identity_initialized")
-    args.checkpoint_dir = checkpoint_dir.format(shard="identity_initialized")
+    args.shard = "identity_initialized"
     _cifar_test(args, identity_init_network=True)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="randomly_initialized")
-    args.checkpoint_dir = checkpoint_dir.format(shard="randomly_initialized")
+    args.shard = "randomly_initialized"
     _cifar_test(args, identity_init_network=False)
 
 
@@ -413,18 +402,12 @@ def mnist_widen_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2WiderR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
+    args.shard = "R2WiderR"
     _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
@@ -442,18 +425,12 @@ def cifar_widen_test(args):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2WiderR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
+    args.shard = "R2WiderR"
     _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
@@ -471,18 +448,12 @@ def mnist_widen_with_budget_test(args):
     args.load = ""
     raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2WiderR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
+    args.shard = "R2WiderR"
     _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
@@ -500,18 +471,12 @@ def cifar_widen_with_budget_test(args):
     args.load = ""
     raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2WiderR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2WiderR")
+    args.shard = "R2WiderR"
     _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
 
@@ -534,18 +499,12 @@ def mnist_deepen_test(args):
                                                        output_channels=32, identity_initialize=identity,
                                                        input_spatial_shape=(4, 4))
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2DeeperR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
+    args.shard = "R2DeeperR"
     _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
@@ -568,18 +527,12 @@ def cifar_deepen_test(args):
                                                        output_channels=64, identity_initialize=identity,
                                                        input_spatial_shape=(4, 4))
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="R2DeeperR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
+    args.shard = "R2DeeperR"
     _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
@@ -602,18 +555,12 @@ def mnist_deepen_with_budget_test(args):
                                                        output_channels=32, identity_initialize=identity,
                                                        input_spatial_shape=(4, 4))
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loopv
-    args.tb_dir = tb_dir.format(shard="R2DeeperR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
+    args.shard = "R2DeeperR"
     _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
@@ -636,18 +583,12 @@ def cifar_deepen_with_budget_test(args):
                                                        output_channels=64, identity_initialize=identity,
                                                        input_spatial_shape=(4, 4))
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # identity initialize loop
-    args.tb_dir = tb_dir.format(shard="RDeeperR")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2DeeperR")
+    args.shard = "R2DeeperR"
     _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
     # randomly initialized loop
-    args.tb_dir = tb_dir.format(shard="random_padding")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding")
+    args.shard = "random_padding"
     _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
 
@@ -665,13 +606,8 @@ def mnist_net_to_net_style_test(args, widen=True):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # Teacher network training loop
-    args.tb_dir = tb_dir.format(shard="Teacher")
-    args.checkpoint_dir = checkpoint_dir.format(shard="Teacher")
+    args.shard = "teacher"
     teacher_model = _mnist_test(args)
 
     # Make an R2R transformed model
@@ -683,8 +619,7 @@ def mnist_net_to_net_style_test(args, widen=True):
         model = make_deeper_network_()  # TODO
 
     # R2R transformed model training
-    args.tb_dir = tb_dir.format(shard="R2R_student")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2R_student")
+    args.shard = "r2r_student"
     _mnist_test(args, model=model)
 
     # Make an randomly padded model
@@ -696,8 +631,7 @@ def mnist_net_to_net_style_test(args, widen=True):
         model = make_deeper_network_()  # TODO
 
     # R2R transformed model training
-    args.tb_dir = tb_dir.format(shard="random_padding_student")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding_student")
+    args.shard = "random_padding_student"
     _mnist_test(args, model=model)
 
 
@@ -715,14 +649,9 @@ def cifar_net_to_net_style_test(args, widen=True):
     if hasattr(args, "flops_budget"):
         del args.flops_budget
 
-    # Add subdirectories to our tb logging and checkpoint
-    tb_dir = os.path.join(args.tb_dir, "{shard}")
-    checkpoint_dir = os.path.join(args.checkpoint_dir, "{shard}")
-
     # Teacher network training loop
-    args.tb_dir = tb_dir.format(shard="Teacher")
-    args.checkpoint_dir = checkpoint_dir.format(shard="Teacher")
-    teacher_model = _mnist_test(args)
+    args.shard = "teacher"
+    teacher_model = _cifar_test(args)
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
@@ -733,9 +662,8 @@ def cifar_net_to_net_style_test(args, widen=True):
         model = make_deeper_network_()  # TODO
 
     # R2R transformed model training
-    args.tb_dir = tb_dir.format(shard="R2R_student")
-    args.checkpoint_dir = checkpoint_dir.format(shard="R2R_student")
-    _mnist_test(args, model=model)
+    args.shard = "r2r_student"
+    _cifar_test(args, model=model)
 
     # Make an randomly padded model
     model = copy.deepcopy(teacher_model)
@@ -746,9 +674,8 @@ def cifar_net_to_net_style_test(args, widen=True):
         model = make_deeper_network_()  # TODO
 
     # R2R transformed model training
-    args.tb_dir = tb_dir.format(shard="random_padding_student")
-    args.checkpoint_dir = checkpoint_dir.format(shard="random_padding_student")
-    _mnist_test(args, model=model)
+    args.shard = "random_padding_student"
+    _cifar_test(args, model=model)
 
 
 
