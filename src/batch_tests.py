@@ -101,7 +101,7 @@ def _checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_be
     checkpoint['optimizer_state_dict'] = optimizer.state_dict()
 
     # Save it as the most up to date checkpoint
-    filename = os.path.join(checkpoint_dir, 'checkpoint.pth.tar'.format(epoch=epoch))
+    filename = os.path.join(checkpoint_dir, 'checkpoint.pth.tar')
     dirname = os.path.dirname(filename)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -362,7 +362,6 @@ def mnist_identity_init_test(args):
 
     # randomly initialized loop
     args.shard = "randomly_initialized"
-    args.checkpoint_dir = checkpoint_dir.format(shard="randomly_initialized")
     _mnist_test(args, identity_init_network=False)
 
 

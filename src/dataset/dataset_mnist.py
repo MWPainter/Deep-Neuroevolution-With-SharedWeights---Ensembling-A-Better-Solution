@@ -62,4 +62,5 @@ class MnistDataset(Dataset):
         """
         Gets length of the dataset.
         """
+        return 320
         return len(self.dataset)
