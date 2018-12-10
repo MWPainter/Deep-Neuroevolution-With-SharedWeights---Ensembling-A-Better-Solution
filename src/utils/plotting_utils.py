@@ -75,7 +75,7 @@ def gradient_magnitude(model):
     """
     mag = 0
     for p in model.parameters():
-        if p.requires_grad:
+        if p.requires_grad and p.grad is not None:
             mag += torch.sum(torch.abs(p.grad.data.cpu()))
     return mag
 
