@@ -233,21 +233,22 @@ def _validation_loss(model, minibatch):
     :return: A PyTorch scalar Variable with value of the validation loss.
         Returns validation loss and validation accuracy.
     """
-    # Put in eval mode
-    model.eval()
+    with t.no_grad():
+        # Put in eval mode
+        model.eval()
 
-    # Unpack minibatch
-    xs, ys = cudafy(minibatch[0]), minibatch[1]
+        # Unpack minibatch
+        xs, ys = cudafy(minibatch[0]), minibatch[1]
 
-    # Compute loss and accuracy
-    loss_fn = _make_loss_fn()
-    ys_pred = model(xs).cpu()
-    loss = loss_fn(ys_pred, ys)
-    accuracy = _accuracy(ys_pred, ys)
+        # Compute loss and accuracy
+        loss_fn = _make_loss_fn()
+        ys_pred = model(xs).cpu()
+        loss = loss_fn(ys_pred, ys)
+        accuracy = _accuracy(ys_pred, ys)
 
-    # Return the dictionary of losses
-    return {'loss': loss,
-            'accuracy': accuracy}
+        # Return the dictionary of losses
+        return {'loss': loss,
+                'accuracy': accuracy}
 
 
 
