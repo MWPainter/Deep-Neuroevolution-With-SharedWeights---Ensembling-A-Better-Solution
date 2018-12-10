@@ -6,9 +6,22 @@ from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deep
 from utils import flatten
 
 
-    
-    
-    
+
+def test_res_block_identity_initialize(thresh=1.0e-5):
+    rblock = Res_Block(input_channels=4, intermediate_channels=[4,4,4], output_channels=4,
+                       identity_initialize=True, input_spatial_shape=(4,4))
+    for _ in range(10):
+        rand_in = t.Tensor(np.random.uniform(low=-1.0, high=1.0, size=(1,4,4,4)))
+        rand_out = rblock(rand_in)
+        err = t.mean(rand_out - rand_in)
+        if verbose:
+            print("Average difference between input and output of res block is: {val}".format(val=err))
+        if t.abs(err) > thresh:
+            raise Exception("Unit test failed.")
+
+
+
+
 def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, data_channels=1, layer1=None,
                                        layer2=None, verbose=False):
     # Count params before widening
@@ -31,7 +44,7 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -42,14 +55,13 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = make_deeper_network_(model, layer2)
-    
-    params_after = sum([np.prod(p.size()) for p in model.parameters()])
+
     for i in range(10):
         rand_out = model(rand_ins[i])
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Avg output difference before and after ANOTHER transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
 
 
@@ -68,7 +80,7 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         rand_outs.append(rand_out)
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He', 
+    model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
                            function_preserving=function_preserving, multiplicative_widen=True)
     
     for i in range(10):
@@ -76,7 +88,7 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -88,13 +100,13 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
     model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
                            function_preserving=function_preserving, multiplicative_widen=True)
-    params_after = sum([np.prod(p.size()) for p in model.parameters()])
+
     for i in range(10):
         rand_out = model(rand_ins[i])
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Avg output difference before and after ANOTHER transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
         
         
@@ -123,7 +135,7 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -148,7 +160,7 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
         rand_outs.append(rand_out)
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He', 
+    model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
                            function_preserving=function_preserving, multiplicative_widen=True)
     model = make_deeper_network_(model, layer)
     
@@ -157,7 +169,7 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
         err = t.mean(rand_out - rand_outs[i])
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
-        if err > thresh:
+        if t.abs(err) > thresh:
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -178,7 +190,6 @@ class _Baby_Siamese(nn.Module):
         self.c12 = nn.Conv2d(1, 10, kernel_size=3, padding=1)
         self.c21 = nn.Conv2d(20, 20, kernel_size=3, padding=1)
         self.c22 = nn.Conv2d(20, 20, kernel_size=3, padding=1)
-        # self.c31 = nn.Conv2d(40, 40, kernel_size=3, padding=1)
         self.linear1 = nn.Linear((20+20)*32*32, 2)
         self.linear2 = nn.Linear(2, 2)
         
@@ -189,7 +200,6 @@ class _Baby_Siamese(nn.Module):
         x1 = self.c21(x)
         x2 = self.c22(x)
         x = t.cat((x1,x2), 1)
-        # x = self.c31(x)
         return x
         
     def fc_forward(self, x):
@@ -206,9 +216,6 @@ class _Baby_Siamese(nn.Module):
         x = self.fc_forward(x)
         return self.out_forward(x)
     
-    def lle_or_hvg(self):
-        return "hvg"
-    
     def input_shape(self):
         return (1,32,32)
     
@@ -220,8 +227,6 @@ class _Baby_Siamese(nn.Module):
         cur_node = cur_hvg.add_hvn(hv_shape=(self.c21.weight.size(0)+self.c22.weight.size(0), 32, 32), 
                                    input_modules=[self.c21, self.c22], 
                                    input_hvns=[cur_node, cur_node])
-        # cur_node = cur_hvg.add_hvn(hv_shape=(self.c31.weight.size(0), 32, 32),
-        #                            input_modules=[self.c31])
         return cur_hvg
     
     def fc_hvg(self, cur_hvg):
@@ -244,6 +249,11 @@ if __name__ == "__main__":
     verbose = True
 
     if verbose:
+        print("Testing Res_Block identity initialize:")
+    test_res_block_identity_initialize()
+
+    if verbose:
+        print("\n"*4)
         print("Testing R2WiderR for Mnist Resnet:")
     test_function_preserving_r2widerr(Mnist_Resnet(), 1e-5, verbose=verbose)
 
@@ -267,36 +277,36 @@ if __name__ == "__main__":
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+    rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=True, input_spatial_shape=(4,4))
     test_function_preserving_r2deeperr(Mnist_Resnet(), 1e-5, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding deepening for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=False, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+    rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=False, input_spatial_shape=(4,4))
     test_function_preserving_r2deeperr(Mnist_Resnet(), 1e5, False, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
     test_function_preserving_r2deeperr(Cifar_Resnet(), 1e-5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding deepening for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=False, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=False, input_spatial_shape=(4,4))
     test_function_preserving_r2deeperr(Cifar_Resnet(), 1e5, False, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
     
@@ -305,14 +315,14 @@ if __name__ == "__main__":
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR + R2WiderR for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[2,2,2], output_channels=32, 
+    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=True, input_spatial_shape=(4,4))
     test_function_preserving_deepen_then_widen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR + R2WiderR for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
     test_function_preserving_deepen_then_widen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
 
@@ -320,7 +330,7 @@ if __name__ == "__main__":
         print("\n"*4)
         print("Testing R2WiderR + R2DeeperR for Mnist Resnet:")
     # insert wider resblock, because widen before deepen this time
-    rblock = Res_Block(input_channels=64, intermediate_channels=[2,2,2], output_channels=64, 
+    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4)) 
     test_function_preserving_widen_then_deepen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
 
@@ -328,7 +338,7 @@ if __name__ == "__main__":
         print("\n"*4)
         print("Testing R2WiderR + R2DeeperR for Cifar Resnet:")
     # insert wider resblock, because widen before deepen this time
-    rblock = Res_Block(input_channels=128, intermediate_channels=[2,2,2], output_channels=128, 
+    rblock = Res_Block(input_channels=128, intermediate_channels=[32,32,32], output_channels=128,
                        identity_initialize=True, input_spatial_shape=(4,4))
     test_function_preserving_widen_then_deepen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
     
@@ -347,18 +357,18 @@ if __name__ == "__main__":
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR for siamese network:")
-    rblock1 = Res_Block(input_channels=40, intermediate_channels=[2,2,2], output_channels=40, 
+    rblock1 = Res_Block(input_channels=40, intermediate_channels=[10,10,10], output_channels=40,
                        identity_initialize=True, input_spatial_shape=(32,32), input_volume_slices_indices=[0,20,40])
-    rblock2 = Res_Block(input_channels=40, intermediate_channels=[2,2,2], output_channels=40, 
+    rblock2 = Res_Block(input_channels=40, intermediate_channels=[10,10,10], output_channels=40,
                        identity_initialize=True, input_spatial_shape=(32,32))
     test_function_preserving_r2deeperr(_Baby_Siamese(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding deepening for siamese network:")
-    rblock1 = Res_Block(input_channels=40, intermediate_channels=[2,2,2], output_channels=40, 
+    rblock1 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
                        identity_initialize=False, input_spatial_shape=(32,32), input_volume_slices_indices=[0,20,40])
-    rblock2 = Res_Block(input_channels=40, intermediate_channels=[2,2,2], output_channels=40, 
+    rblock2 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
                        identity_initialize=False, input_spatial_shape=(32,32))
     test_function_preserving_r2deeperr(_Baby_Siamese(), 1e5, False, layer1=rblock1, layer2=rblock2, verbose=verbose)
 

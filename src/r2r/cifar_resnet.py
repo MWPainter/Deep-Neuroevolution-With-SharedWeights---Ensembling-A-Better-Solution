@@ -2,6 +2,7 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 
+from r2r.r2r import HVG
 from r2r.resblock import *
 from utils import flatten
 
@@ -23,7 +24,6 @@ class Cifar_Resnet(nn.Module):
 
     Implements the R2R interface.
     """
-
     def __init__(self, identity_initialize=True, add_residual=True):
         # Superclass initializer
         super(Cifar_Resnet, self).__init__()
@@ -46,6 +46,8 @@ class Cifar_Resnet(nn.Module):
         self.linear1 = nn.Linear(4*4*64, 256)
         self.linear2 = nn.Linear(256, 10)
 
+
+
     def conv_forward(self, x):
         """
         Conv part of forward, part of R2R interface.
@@ -58,6 +60,8 @@ class Cifar_Resnet(nn.Module):
         x = self.pool3(x)
         return x
 
+
+
     def fc_forward(self, x):
         """
         Fully connected part of forward, part of R2R interface.
@@ -68,11 +72,15 @@ class Cifar_Resnet(nn.Module):
         x = self.linear2(x)
         return x
 
+
+
     def out_forward(self, x):
         """
         Output part of forward, part of R2R interface.
         """
         return x
+
+
 
     def forward(self, x):
         """
@@ -82,44 +90,49 @@ class Cifar_Resnet(nn.Module):
         x = self.fc_forward(x)
         return self.out_forward(x)
 
-    def lle_or_hvg(self):
-        """
-        Return if we're using the lle or hvg interface.
 
-        Part of the R2R interface.
-        """
-        return "lle"
 
     def input_shape(self):
         return (3, 32, 32)
 
-    def conv_lle(self):
-        """
-        Enumerate through all the conv layers (from network input to output), returning (shape, batch_norm, nn.Module) tuples
 
-        Part of the R2R interface.
-        """
-        return chain(self.resblock1.conv_lle(),
-                     chain(self.resblock2.conv_lle(),
-                           self.resblock3.conv_lle()))
 
-    def fc_lle(self):
+    def hvg(self):
         """
-        Enumerate through all the fc layers (from network input to output), returning (shape, batch_norm, nn.Module) tuples
-
-        Part of the R2R interface.
+        Build a hvg representing this network
+        :return: The HVG for this network
         """
-        yield ((self.linear1.in_features,), None, self.linear1, None)
-        yield ((self.linear1.out_features,), None, self.linear2, None)
-        yield ((self.linear2.out_features,), None, None, None)
+        hvg = HVG(self.input_shape())
+        hvg = self.conv_hvg(hvg)
+        hvg = self.fc_hvg(hvg)
+        return hvg
 
-    def lle(self):
+
+
+    def conv_hvg(self, cur_hvg):
         """
-        Implement the linear layer enumeration (lle), to be able to interface with the wider transforms.
-
-        Part of the R2R interface.
+        Extend the hvg (containing just the input hvn) with the conv part of the hvg
+        :param cur_hvg: The hvg containing just the input hvn
+        :return: A hvg representing the entire conv part of this network
         """
-        return chain(self.conv_lle(), self.fc_lle())
+        cur_hvg = self.resblock1.conv_hvg(cur_hvg)
+        cur_hvg.add_hvn((self.resblock1.r2r.conv2.weight.data.size(0), 16, 16), input_modules=[self.pool1], non_paramtric=True)
+        cur_hvg = self.resblock2.conv_hvg(cur_hvg)
+        cur_hvg.add_hvn((self.resblock2.r2r.conv2.weight.data.size(0),  8,  8), input_modules=[self.pool2], non_paramtric=True)
+        cur_hvg = self.resblock3.conv_hvg(cur_hvg)
+        cur_hvg.add_hvn((self.resblock3.r2r.conv2.weight.data.size(0),  4,  4), input_modules=[self.pool3], non_paramtric=True)
+        return cur_hvg
 
+
+
+    def fc_hvg(self, cur_hvg):
+        """
+        Adds the linear part of the hvg ontop of the conv part of the hvg
+        :param cur_hvg: The hvg which contains the input hvn and the conv hvn
+        :return: A complete hvg for the network
+        """
+        cur_hvg.add_hvn(hv_shape=(self.linear1.out_features,), input_modules=[self.linear1])
+        cur_hvg.add_hvn(hv_shape=(self.linear2.out_features,), input_modules=[self.linear2])
+        return cur_hvg
 
         

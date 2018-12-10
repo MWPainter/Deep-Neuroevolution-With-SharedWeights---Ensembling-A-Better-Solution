@@ -42,10 +42,10 @@ class _R2R_Block(nn.Module):
 
         # Make the layers
         self.conv1 = nn.Conv2d(input_channels, intermediate_channels, kernel_size=3, padding=1)
-        self.opt_batch_norm = lambda x: x 
+        self.opt_bn1 = lambda x: x
         if add_batch_norm:
-            self.opt_batch_norm = nn.BatchNorm2d(num_features=intermediate_channels)
-        self.activation_function = F.relu
+            self.opt_bn1 = nn.BatchNorm2d(num_features=intermediate_channels)
+        self.relu = F.relu
         self.conv2 = nn.Conv2d(intermediate_channels, output_channels, kernel_size=3, padding=1)
 
         # To provide a zero initialization, initialize weights symmetrically such that the function is identically zero.
@@ -58,16 +58,15 @@ class _R2R_Block(nn.Module):
             self.conv1.bias.data *= 0.0
             
             conv2_filter_shape = (output_channels, intermediate_channels, 3, 3)
-            conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', 
-                                                                       alpha=-1.0)
+            conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', alpha=-1.0)
             
             self.conv2.weight.data = Parameter(t.Tensor(conv2_filter_init))
             self.conv2.bias.data *= 0.0
             
             # Initialize the batch norm variables so that the scale is one and the mean is zero
             if add_batch_norm:
-                self.opt_batch_norm.weight.data = Parameter(t.Tensor(t.ones(intermediate_channels)))
-                self.opt_batch_norm.bias.data = Parameter(t.Tensor(t.zeros(intermediate_channels)))
+                self.opt_bn1.weight.data = Parameter(t.Tensor(t.ones(intermediate_channels)))
+                self.opt_bn1.bias.data = Parameter(t.Tensor(t.zeros(intermediate_channels)))
                 
             
     def forward(self, x):
@@ -79,9 +78,10 @@ class _R2R_Block(nn.Module):
         :return: The output from the module
         """
         x = self.conv1(x)
-        x = self.opt_batch_norm(x)
-        x = self.activation_function(x)
+        x = self.opt_bn1(x)
+        x = self.relu(x)
         x = self.conv2(x)
+        x = self.relu(x)
         return x
     
     
@@ -185,34 +185,6 @@ class Res_Block(nn.Module):
             out = x
         
         return out
-    
-    
-
-    def conv_lle(self):
-        """
-        Conv part of the 'lle' function.
-        Part of the R2DeeperRBlock interface.
-
-        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
-        """
-        height, width = self.input_spatial_shape
-
-        # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
-        yield ((self.conv1.weight.data.size(1), height, width), None, self.conv1, self.residual_connection)
-        yield ((self.conv2.weight.data.size(1), height, width), self.bn1, self.conv2, None)
-        yield ((self.r2r.conv1.weight.data.size(1), height, width), self.bn2, self.r2r.conv1, None)
-        yield ((self.r2r.conv2.weight.data.size(1), height, width), self.r2r.opt_batch_norm, self.r2r.conv2, None)
-
-
-
-
-    def lle(self):
-        """
-        Implement the lle (linear layer enum) to iterate through layers for widening.
-
-        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
-        """
-        return self.conv_lle()
         
         
         
@@ -245,7 +217,7 @@ class Res_Block(nn.Module):
         
         # Third hidden volume (first of r2r block)
         cur_hvg.add_hvn((self.r2r.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
-                        input_modules=[self.r2r.conv1], batch_norm=self.r2r.opt_batch_norm)
+                        input_modules=[self.r2r.conv1], batch_norm=self.r2r.opt_bn1)
         
         # Fourth (output) hidden volume (second of r2r block)
         cur_hvg.add_hvn((self.r2r.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
