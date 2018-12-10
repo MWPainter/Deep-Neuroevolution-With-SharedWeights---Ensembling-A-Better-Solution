@@ -47,6 +47,9 @@ class _R2R_Block(nn.Module):
             self.opt_bn1 = nn.BatchNorm2d(num_features=intermediate_channels)
         self.relu = F.relu
         self.conv2 = nn.Conv2d(intermediate_channels, output_channels, kernel_size=3, padding=1)
+        self.opt_bn2 = lambda x: x
+        if add_batch_norm:
+            self.opt_bn2 = nn.BatchNorm2d(num_features=output_channels)
 
         # To provide a zero initialization, initialize weights symmetrically such that the function is identically zero.
         if zero_initialize:
@@ -67,6 +70,8 @@ class _R2R_Block(nn.Module):
             if add_batch_norm:
                 self.opt_bn1.weight.data = Parameter(t.Tensor(t.ones(intermediate_channels)))
                 self.opt_bn1.bias.data = Parameter(t.Tensor(t.zeros(intermediate_channels)))
+                self.opt_bn2.weight.data = Parameter(t.Tensor(t.ones(output_channels)))
+                self.opt_bn2.bias.data = Parameter(t.Tensor(t.zeros(output_channels)))
                 
             
     def forward(self, x):
@@ -221,7 +226,7 @@ class Res_Block(nn.Module):
         
         # Fourth (output) hidden volume (second of r2r block)
         cur_hvg.add_hvn((self.r2r.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
-                         input_modules=[self.r2r.conv2])
+                         input_modules=[self.r2r.conv2], batch_norm=self.r2r.opt_bn2)
         return cur_hvg
         
                    
