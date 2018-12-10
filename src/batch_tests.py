@@ -167,7 +167,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Compute loss and accuracy
     losses = {}
     losses['loss'] = loss
-    losses['accuracy'] = _accuracy(ys_pred.cpu(), ys.cpu())
+    losses['accuracy'] = _accuracy(ys_pred, ys)
 
     # Hackily keep track of model flops using the args/options dictionary
     if not hasattr(args, "total_flops"):
