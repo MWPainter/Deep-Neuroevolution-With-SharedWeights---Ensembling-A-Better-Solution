@@ -3,7 +3,7 @@ import torch as t
 import torch.nn as nn
 
 from r2r import Mnist_Resnet, Cifar_Resnet, widen_network_
-from r2r.net2net import net2net_widen_network_, net2net_make_deeper_network_, Net2Net_conv_identity, HVG
+from r2r.net2net import net2net_widen_network_, net2net_make_deeper_network_, Net2Net_conv_identity, HVG, Net2Net_ResBlock_identity
 from utils import flatten
 
 
@@ -22,7 +22,7 @@ def test_function_preserving_net2widernet(model, thresh, function_preserving=Tru
 
     # widen (scaled) and check that the outputs are (almost) identical
     print ("Widening network")
-    model = net2net_widen_network_(model, new_channels=4, new_hidden_nodes=2, scaled=True)
+    model = net2net_widen_network_(model, new_channels=4, new_hidden_nodes=2, multiplicative_widen=True)
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -35,7 +35,7 @@ def test_function_preserving_net2widernet(model, thresh, function_preserving=Tru
     print("Params after the transform is: {param}".format(param=params_after))
 
     # widen (scaled) and check that the outputs are (almost) identical
-    model = net2net_widen_network_(model, new_channels=4, new_hidden_nodes=2, scaled=True)
+    model = net2net_widen_network_(model, new_channels=4, new_hidden_nodes=2, multiplicative_widen=True)
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -59,7 +59,7 @@ def test_function_preserving_net2deepernet(model, thresh, data_channels=1, layer
 
     # deepen and check that the outputs are (almost) identical
 
-    batch = t.Tensor(np.random.uniform(low=-1.0, high=1.0, size=(500, data_channels, 32, 32)))
+    batch = t.Tensor(np.random.uniform(low=-1.0, high=1.0, size=(100, data_channels, 32, 32)))
     batch_out = model(batch)
     model = net2net_make_deeper_network_(model, layer1, batch)
     batch_out_new = model(batch)
@@ -163,11 +163,19 @@ if __name__ == "__main__":
 
     print("\n"*4)
     print("Testing R2DeeperR for Mnist Resnet:")
-    model = _Baby_Siamese()
-    rblock = Net2Net_conv_identity(input_channels=40, kernel_size=(3, 3), input_spatial_shape=(32,32))
-    rblock2 = Net2Net_conv_identity(input_channels=40, kernel_size=(3, 3), input_spatial_shape=(32,32))
+    model = Mnist_Resnet(identity_initialize=False, add_residual=False)
+
+    rblock = Net2Net_ResBlock_identity(input_channels=32, intermediate_channels=[32, 32, 32], output_channels=32,
+                       identity_initialize=True, input_spatial_shape=(4, 4))
+    rblock2 = Net2Net_ResBlock_identity(input_channels=32, intermediate_channels=[32, 32, 32], output_channels=32,
+                        identity_initialize=True, input_spatial_shape=(4, 4))
+
+    #rblock = Net2Net_conv_identity(input_channels=32, kernel_size=(3, 3), input_spatial_shape=(4, 4))
+    #rblock2 = Net2Net_conv_identity(input_channels=32, kernel_size=(3, 3), input_spatial_shape=(4, 4))
+
+
     test_function_preserving_net2deepernet(model, 0.0001, layer1=rblock, layer2=rblock2)
 
     print("\n" * 4)
     print("Testing R2WiderR for siamese network:")
-    test_function_preserving_net2widernet(_Baby_Siamese(), 0.0001)
+    test_function_preserving_net2widernet(Mnist_Resnet(add_residual=False), 0.0001)
