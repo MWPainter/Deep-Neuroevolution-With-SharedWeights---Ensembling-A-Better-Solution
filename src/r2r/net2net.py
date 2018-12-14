@@ -126,6 +126,7 @@ def _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume
         mapping = dict()
         out_channels = prev_layer.weight.size(0)
 
+        map_extra_channels = extra_channels
         if scaled:
             map_extra_channels = out_channels * (
                     extra_channels - 1)  # to triple number of channels, *add* 2x the current num
