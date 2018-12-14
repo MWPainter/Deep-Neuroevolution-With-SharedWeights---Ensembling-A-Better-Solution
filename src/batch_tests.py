@@ -402,11 +402,11 @@ def mnist_widen_test(args):
 
     # identity initialize loop
     args.shard = "R2WiderR"
-    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
 
 
@@ -425,11 +425,11 @@ def cifar_widen_test(args):
 
     # identity initialize loop
     args.shard = "R2WiderR"
-    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
 
 
@@ -448,11 +448,11 @@ def mnist_widen_with_budget_test(args):
 
     # identity initialize loop
     args.shard = "R2WiderR"
-    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _mnist_test(args, widen_times=args.widen_times, function_preserving=True)
+    _mnist_test(args, widen_times=args.widen_times, function_preserving=False)
 
 
 
@@ -471,11 +471,11 @@ def cifar_widen_with_budget_test(args):
 
     # identity initialize loop
     args.shard = "R2WiderR"
-    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _cifar_test(args, widen_times=args.widen_times, function_preserving=True)
+    _cifar_test(args, widen_times=args.widen_times, function_preserving=False)
 
 
 
@@ -499,11 +499,11 @@ def mnist_deepen_test(args):
 
     # identity initialize loop
     args.shard = "R2DeeperR"
-    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
 
 
@@ -527,11 +527,11 @@ def cifar_deepen_test(args):
 
     # identity initialize loop
     args.shard = "R2DeeperR"
-    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
 
 
@@ -555,11 +555,11 @@ def mnist_deepen_with_budget_test(args):
 
     # identity initialize loopv
     args.shard = "R2DeeperR"
-    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=True)
+    _mnist_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
 
 
@@ -583,11 +583,11 @@ def cifar_deepen_with_budget_test(args):
 
     # identity initialize loop
     args.shard = "R2DeeperR"
-    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
 
     # randomly initialized loop
     args.shard = "random_padding"
-    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=True)
+    _cifar_test(args, deepen_times=args.deepen_times, function_preserving=False)
 
 
 
