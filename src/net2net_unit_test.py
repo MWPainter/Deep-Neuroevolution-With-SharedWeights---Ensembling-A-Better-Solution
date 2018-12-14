@@ -27,8 +27,11 @@ def test_function_preserving_net2widernet(model, thresh, function_preserving=Tru
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
     for i in range(10):
         rand_out = model(rand_ins[i])
-        print("Average output difference before and after transform is: {val}".format(
-            val=t.mean(rand_out - rand_outs[i])))
+        err = t.mean(rand_out - rand_outs[i])
+        if verbose:
+            print("Avg output difference before and after ANOTHER transform is: {val}".format(val=err))
+        if t.abs(err) > thresh:
+            raise Exception("Unit test failed.")
 
     # Count params after widening
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
@@ -202,10 +205,9 @@ class _Baby_Siamese(nn.Module):
         return hvg
 
 
+
 if __name__ == "__main__":
     verbose = True
-
-    """
     
     if verbose:
         print("\n" * 4)
@@ -273,7 +275,6 @@ if __name__ == "__main__":
     test_function_preserving_widen_then_deepen(Cifar_Resnet(identity_initialize=False, add_residual=False), 1e-5,
                                                data_channels=3, layer=rblock, verbose=verbose)
 
-    """
     """
     Testing Baby Siamese
     """

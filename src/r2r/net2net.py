@@ -340,15 +340,16 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
         # assign new conv (don't need to change bias)
         _assign_kernel_and_bias_to_conv_(next_layer, next_kernel)
 
-    elif type(next_layer) is nn.Linear:
 
+    elif type(next_layer) is nn.Linear:
         # unpack linear params to numpy tensors
         next_matrix = next_layer.weight.data.cpu()
+
         # Compute the new matrix for 'next_matrix' (extending each slice carefully)
         n_out, _ = next_matrix.shape
+        next_matrix.resize_(n_out, volume_slice_indxs[-1], new_hidden_units_per_new_channel)
 
         next_matrix_parts = []
-        print (volume_slice_indxs)
         for i in range(1, len(volume_slice_indxs)):
             beg = volume_slice_indxs[i - 1]
             end = volume_slice_indxs[i]
@@ -359,24 +360,17 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
                 volume_extra_channels = (end - beg)  * (extra_channels - 1)
                 # to triple number of channels, *add* 2x the current num
 
-            original_matrix = next_matrix[:, beg*new_hidden_units_per_new_channel:end*new_hidden_units_per_new_channel]
-            print (original_matrix.shape)
-            original_matrix.resize_(n_out, n_in, new_hidden_units_per_new_channel)
-            print(original_matrix.shape)
-
+            original_matrix = next_matrix[:, beg:end]
             matrix_part = original_matrix.clone()
-            matrix_part.resize_(n_out, (n_in + volume_extra_channels),
-                                new_hidden_units_per_new_channel)
 
+            matrix_part.resize_(n_out, (n_in + volume_extra_channels), new_hidden_units_per_new_channel)
             matrix_part = _net2net_extend_filter_input_channels(original_matrix, matrix_part,
-                                                                n_in,
-                                                                volume_extra_channels,
+                                                                n_in, volume_extra_channels,
                                                                 extra_channels_mappings[i - 1])
-
-            matrix_part.resize_(n_out, (n_in + volume_extra_channels) * new_hidden_units_per_new_channel)
             next_matrix_parts.append(matrix_part)
 
         next_matrix = np.concatenate(next_matrix_parts, axis=1)
+        next_matrix = np.reshape(next_matrix, newshape=(n_out, -1))
 
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
@@ -392,8 +386,6 @@ def _net2net_extend_filter_input_channels(original_kernel, kernel_part,
 
     kernel_part.narrow(0, 0, in_channels).copy_(original_kernel)
 
-    print (original_kernel.shape)
-    print (kernel_part.shape)
     for index in range(in_channels, in_channels + extra_channels):
         kernel_part.select(0, index).copy_(original_kernel.select(0, extra_channels_mapping[index]).clone())
 
@@ -402,7 +394,6 @@ def _net2net_extend_filter_input_channels(original_kernel, kernel_part,
         original_channels_mapping[index] = [index]
     for key in extra_channels_mapping.keys():
         original_channels_mapping[extra_channels_mapping[key]].append(key)
-
     for _, values in original_channels_mapping.items():
         for value in values:
             kernel_part[value].div_(len(values))
