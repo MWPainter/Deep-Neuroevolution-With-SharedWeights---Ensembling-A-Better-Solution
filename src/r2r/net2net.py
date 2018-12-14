@@ -345,36 +345,37 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
         # unpack linear params to numpy tensors
         next_matrix = next_layer.weight.data.cpu()
         # Compute the new matrix for 'next_matrix' (extending each slice carefully)
-        n_out, n_in = next_matrix.shape
+        n_out, _ = next_matrix.shape
 
         next_matrix_parts = []
+        print (volume_slice_indxs)
         for i in range(1, len(volume_slice_indxs)):
-            beg = volume_slice_indxs[i - 1] * new_hidden_units_per_new_channel
-            end = volume_slice_indxs[i] * new_hidden_units_per_new_channel
+            beg = volume_slice_indxs[i - 1]
+            end = volume_slice_indxs[i]
+            n_in = end-beg
             volume_extra_channels = extra_channels
 
             if scaled:
-                volume_extra_channels = (end - beg) * (
-                            extra_channels - 1)  # to triple number of channels, *add* 2x the current num
+                volume_extra_channels = (end - beg)  * (extra_channels - 1)
+                # to triple number of channels, *add* 2x the current num
 
-            original_matrix = next_matrix[:, beg:end]
-
-            original_matrix.resize_(n_out, int(n_in / new_hidden_units_per_new_channel),
-                                    new_hidden_units_per_new_channel)
+            original_matrix = next_matrix[:, beg*new_hidden_units_per_new_channel:end*new_hidden_units_per_new_channel]
+            print (original_matrix.shape)
+            original_matrix.resize_(n_out, n_in, new_hidden_units_per_new_channel)
+            print(original_matrix.shape)
 
             matrix_part = original_matrix.clone()
-            matrix_part.resize_(n_out, int((n_in + volume_extra_channels) / new_hidden_units_per_new_channel),
+            matrix_part.resize_(n_out, (n_in + volume_extra_channels),
                                 new_hidden_units_per_new_channel)
 
             matrix_part = _net2net_extend_filter_input_channels(original_matrix, matrix_part,
-                                                                int(n_in / new_hidden_units_per_new_channel),
-                                                                int(
-                                                                    volume_extra_channels / new_hidden_units_per_new_channel),
+                                                                n_in,
+                                                                volume_extra_channels,
                                                                 extra_channels_mappings[i - 1])
 
-            matrix_part.resize_(n_out, (n_in + volume_extra_channels))
-
+            matrix_part.resize_(n_out, (n_in + volume_extra_channels) * new_hidden_units_per_new_channel)
             next_matrix_parts.append(matrix_part)
+
         next_matrix = np.concatenate(next_matrix_parts, axis=1)
 
         # assign new linear params (don't need to change bias)
@@ -391,6 +392,8 @@ def _net2net_extend_filter_input_channels(original_kernel, kernel_part,
 
     kernel_part.narrow(0, 0, in_channels).copy_(original_kernel)
 
+    print (original_kernel.shape)
+    print (kernel_part.shape)
     for index in range(in_channels, in_channels + extra_channels):
         kernel_part.select(0, index).copy_(original_kernel.select(0, extra_channels_mapping[index]).clone())
 
@@ -438,8 +441,9 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multipli
 
     # Iterate through the hvg, widening appropriately in each place
     for prev_layers, shape, batch_norm, _, pseudo_next_volume_spatial_ratio, next_layers in hvg.node_iterator():
-        linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
-        channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_hidden_nodes
+        feeding_to_linear = (type(prev_layers[0]) is nn.Linear) or (type(next_layers[0]) is nn.Linear)
+        channels_or_nodes_to_add = new_hidden_nodes if feeding_to_linear else new_channels
+
         if channels_or_nodes_to_add == 0:
             continue
         net_2_wider_net_(prev_layers, next_layers, pseudo_next_volume_spatial_ratio, shape, batch_norm,
@@ -472,8 +476,6 @@ def net2net_make_deeper_network_(network, layer, batch):
         bn_layer.momentum = 0.1
         _assign_to_batch_norm_(bn_layer, new_weights, bn_layer.running_mean.numpy(),
                                bn_layer.running_mean.numpy(), bn_layer.running_var.numpy())
-
-    print("Fixing Batch Norm")
 
     return network
 
@@ -514,11 +516,11 @@ class Net2Net_ResBlock_identity(nn.Module):
         self.update_conv(self.conv2)
 
         self.conv3 = nn.Conv2d(intermediate_channels[1], intermediate_channels[2], kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm2d(num_features=intermediate_channels[1], momentum=1)
+        self.bn3 = nn.BatchNorm2d(num_features=intermediate_channels[2], momentum=1)
         self.update_conv(self.conv3)
 
         self.conv4 = nn.Conv2d(intermediate_channels[2], output_channels, kernel_size=3, padding=1)
-        self.bn4 = nn.BatchNorm2d(num_features=intermediate_channels[2], momentum=1)
+        self.bn4 = nn.BatchNorm2d(num_features=output_channels, momentum=1)
         self.update_conv(self.conv4)
 
         self.relu = F.relu
@@ -537,7 +539,7 @@ class Net2Net_ResBlock_identity(nn.Module):
         center_height = (height - 1) // 2
         center_width = (width - 1) // 2
 
-        for i in range(0, in_channels):
+        for i in range(0, out_channels):
             conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
 
         if noise:
@@ -601,16 +603,40 @@ class Net2Net_ResBlock_identity(nn.Module):
         """
         return self.conv_lle()
 
+
     def conv_hvg(self, cur_hvg):
         """
         Extends a hidden volume graph 'hvg'.
+
         :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
-        :param input_nodes: The node that this module takes as input
         :return: The hvn for the output from the resblock
         """
+        # Raise an error if the cur_hvg has more than one output hidden volume node. It must necessarily be one
+        # to be able to apply a residual connection.
+        output_nodes = cur_hvg.get_output_nodes()
+        if len(output_nodes) > 1:
+            raise Exception("Input to residual block when making HVG was multiple volumes.")
+
+        # Add the residual connection object to the current hvg output node
+        output_node = output_nodes[0]
+
         # First hidden
-        cur_hvg.add_hvn((self.conv.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
-                        input_modules=[self.conv], batch_norm=self.bn)
+        cur_hvg.add_hvn((self.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv1], batch_norm=self.bn1)
+
+        # Second hidden volume
+        cur_hvg.add_hvn((self.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv2], batch_norm=self.bn2)
+
+        # Third hidden volume
+        cur_hvg.add_hvn((self.conv3.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv3], batch_norm=self.bn3)
+
+        # Fourth (output) hidden volume (second of r2r block)
+        cur_hvg.add_hvn((self.conv4.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv4], batch_norm=self.bn4)
+
+        return cur_hvg
 
     def hvg(self):
         raise Exception("hvg() not implemented directly for net2net conv identity block.")
@@ -682,7 +708,7 @@ class Net2Net_conv_identity(nn.Module):
 
         x = self.conv(x)
         x = self.bn(x)
-        x = self.relu(x)
+        #x = self.relu(x)
         out = x
 
         return out
@@ -718,6 +744,7 @@ class Net2Net_conv_identity(nn.Module):
         # First hidden
         cur_hvg.add_hvn((self.conv.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
                         input_modules=[self.conv], batch_norm=self.bn)
+        return cur_hvg
 
     def hvg(self):
         raise Exception("hvg() not implemented directly for net2net conv identity block.")
