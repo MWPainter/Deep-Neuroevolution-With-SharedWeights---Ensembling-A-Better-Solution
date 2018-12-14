@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from r2r.init_utils import *
 from r2r.module_utils import *
+from r2r.r2r import HVN, HVG, HVE, Deepened_Network
 
 ###############################################
 ##### Net2Net implementation adapted from #####
@@ -14,20 +15,16 @@ from r2r.module_utils import *
 
 # Only export things that actually widen/deepen volumes, and not helper functions
 all = ['net_2_wider_net_',
-       'HVG',
-       'HVN',
-       'HVE',
        'net2net_widen_network_',
        'net2net_make_deeper_network_'
-       'Net2Net_conv_identity'
-       'Deepened_Network']  # make_deeper_network = r2deeperr if add identity initialized module
+       'Net2Net_conv_identity']  # make_deeper_network = r2deeperr if add identity initialized module
 
 """
 Widening hidden volumes
 """
 
 
-def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
+def net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm,
                      extra_channels=0, scaled=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
@@ -66,10 +63,12 @@ def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
     if type(next_layers) != list:
         next_layers = [next_layers]
 
-    _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, scaled)
+    _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm, extra_channels,
+                      scaled)
 
 
-def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels, scaled):
+def _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm, extra_channels,
+                      scaled):
     """  
     The full internal implementation of net_2_wider_net_. See description of net_2_wider_net_.
     More helper functions are used.
@@ -103,14 +102,16 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
     # (for fc pretend 1x1 spatial resolution, so 1 per channel) (for conv this is width*height)
     # For conv -> linear layers this can be a little complex. But we always know the number of channels from the prev kernels
 
-
     channels_in_volume = np.sum([layer.weight.size(0) for layer in prev_layers])
     total_hidden_units = np.prod(volume_shape)
     new_hidden_units_per_new_channel = total_hidden_units // channels_in_volume
+    new_hidden_units_in_next_layer_per_new_channel = new_hidden_units_per_new_channel // (next_layer_spatial_ratio ** 2)
 
     # Sanity check
     if is_linear_input and new_hidden_units_per_new_channel != 1:
         raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
+    if new_hidden_units_per_new_channel % (next_layer_spatial_ratio ** 2) != 0:
+        raise Exception("new_hidden_units_per_new_channel and next_layer_spatial_ratio are incompatable.")
 
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
     volume_slices_indxs = [0]
@@ -127,7 +128,7 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
 
         if scaled:
             map_extra_channels = out_channels * (
-                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
+                    extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
         for extra_channel_index in range(out_channels, out_channels + map_extra_channels):
             original_channel_index = np.random.randint(0, out_channels)
@@ -148,7 +149,7 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for (layer_index, next_layer) in enumerate(next_layers):
         _net2net_widen_input_channels_(next_layer, extra_channels, volume_slices_indxs, input_is_linear,
-                                       new_hidden_units_per_new_channel,
+                                       new_hidden_units_in_next_layer_per_new_channel,
                                        extra_channels_mappings, scaled)
 
 
@@ -230,8 +231,8 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
         layer_extra_channels = extra_channels
 
         if scaled:
-            layer_extra_channels = out_channels * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
-
+            layer_extra_channels = out_channels * (
+                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
         new_kernel = prev_kernel.clone()
         new_kernel.resize_(out_channels + layer_extra_channels, in_channels, width, height)
@@ -264,14 +265,14 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
         layer_extra_channels = extra_channels
 
         if scaled:
-            layer_extra_channels = n_out * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
+            layer_extra_channels = n_out * (
+                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
         new_matrix = prev_matrix.clone()
         new_matrix.resize_(n_out + layer_extra_channels, n_in)
 
         new_bias = prev_bias.clone()
         new_bias.resize_(n_out + layer_extra_channels)
-
 
         new_matrix.narrow(0, 0, n_out).copy_(prev_matrix)
         new_bias.narrow(0, 0, n_out).copy_(prev_bias)
@@ -318,18 +319,19 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
 
         for i in range(1, len(volume_slice_indxs)):
             beg, end = volume_slice_indxs[i - 1], volume_slice_indxs[i]
-            in_channels = end-beg
+            in_channels = end - beg
             volume_extra_channels = extra_channels
 
             if scaled:
-                volume_extra_channels = (end-beg) * (
+                volume_extra_channels = (end - beg) * (
                         extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
-            original_kernel = next_kernel[:,beg:end]
+            original_kernel = next_kernel[:, beg:end]
             kernel_part = original_kernel.clone()
             kernel_part.resize_(out_channels, in_channels + volume_extra_channels, width, height)
             kernel_part = _net2net_extend_filter_input_channels(original_kernel, kernel_part,
-                                                                in_channels, volume_extra_channels, extra_channels_mappings[i-1])
+                                                                in_channels, volume_extra_channels,
+                                                                extra_channels_mappings[i - 1])
 
             next_kernel_parts.append(kernel_part)
 
@@ -352,25 +354,28 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
             volume_extra_channels = extra_channels
 
             if scaled:
-                volume_extra_channels = (end-beg) * (extra_channels - 1)  # to triple number of channels, *add* 2x the current num
+                volume_extra_channels = (end - beg) * (
+                            extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
-            original_matrix = next_matrix[:,beg:end]
+            original_matrix = next_matrix[:, beg:end]
 
-            original_matrix.resize_(n_out, int(n_in/new_hidden_units_per_new_channel), new_hidden_units_per_new_channel)
+            original_matrix.resize_(n_out, int(n_in / new_hidden_units_per_new_channel),
+                                    new_hidden_units_per_new_channel)
 
             matrix_part = original_matrix.clone()
-            matrix_part.resize_(n_out, int((n_in + volume_extra_channels)/new_hidden_units_per_new_channel), new_hidden_units_per_new_channel)
+            matrix_part.resize_(n_out, int((n_in + volume_extra_channels) / new_hidden_units_per_new_channel),
+                                new_hidden_units_per_new_channel)
 
             matrix_part = _net2net_extend_filter_input_channels(original_matrix, matrix_part,
                                                                 int(n_in / new_hidden_units_per_new_channel),
-                                                                int(volume_extra_channels/new_hidden_units_per_new_channel),
-                                                                extra_channels_mappings[i-1])
+                                                                int(
+                                                                    volume_extra_channels / new_hidden_units_per_new_channel),
+                                                                extra_channels_mappings[i - 1])
 
             matrix_part.resize_(n_out, (n_in + volume_extra_channels))
 
             next_matrix_parts.append(matrix_part)
         next_matrix = np.concatenate(next_matrix_parts, axis=1)
-
 
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
@@ -410,208 +415,7 @@ Widening entire networks (by building graphs over the networks)
 """
 
 
-class HVG(object):
-    """
-    Class representing a hidden volume graph.
-
-    As nodes have no option to add edges, each node must only be created after all of it's parents. Therefore, we can keep
-    track of the order in which nodes were made to be able to iterate over them correctly (from the nodes representing the
-    networks input, to the nodes representing the networks output).
-    """
-
-    def __init__(self, input_shape, residual_connection=None):
-        """
-        Creates a graph object, with an initial node and no edges.
-
-        :param input_shape: The input shape to the network this will be a HVG for.
-        :param residual_connection: The Residual_Connection object associated with the input volume, if any.
-                This should be none if the input shape is not used as part of a residual connection.
-        """
-        self.root_hvn = HVN(input_shape, residual_connection=residual_connection)
-        self.nodes = [self.root_hvn]
-
-    def add_hvn_object(self, hvn):
-        """
-        Adds a HVN ovbject directly to the graph
-        :param hvn: A HVN typed object that should be part of this graph
-        """
-        self.nodes.append(hvn)
-
-    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None, residual_connection=None):
-        """
-        Creates a new hvn node, and is just a wrapper around the HVN constructor.
-        THe wrapper allows the graph object to keep track of the nodes that have been added.
-        If input_hvn's aren't specified, assume that its the current set of output nodes from this graph.
-
-        :param hv_shape: The shape of the hidden volume we are adding as a node now
-        :param input_modules: A list of nn.Modules that are to be associated to the with the edges to the parent nodes.
-                input_modules[i] should correspond to input_hvns[i].
-        :param input_hvns: A list of HVN objects in this HVG to be the parent nodes from this volume. If None, then we
-                take all of the current 'output nodes' in the graph (those without any children currently).
-        :param batch_norm: Any batch norm nn.Module that is associated with this hidden volume.
-        :param residual_connection: The Residual_Connection object associated with the volume. (I.e. if this volume x is
-                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
-                This should be none if it's not used as part of a residual connection.
-        """
-        if input_hvns is None:
-            input_hvns = self.get_output_nodes()
-
-        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm, residual_connection)
-        self.nodes.append(hvn)
-        return hvn
-
-    def node_iterator(self):
-        """
-        Iterates through the nodes, returning tuples of ([prev_layer_modules], shape, batch_norm,
-        residual connection object, [next_layer_modules]), ready to be fed into a volume widening function.
-
-        Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input
-        to another layer.
-
-        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, batch norm, residual connection object,
-                    [list of child nn.Modules (edges)]) tuples.
-        """
-        for node in self.nodes:
-            if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
-                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node.residual_connection,
-                       node._get_child_modules())
-
-    def get_output_nodes(self):
-        """
-        Gets a list of nodes that have no output edges
-
-        :returns: A list of 'output nodes' (the HVN's in the graph that have no children)
-        """
-        output_nodes = []
-        for node in self.nodes:
-            if len(node.child_edges) == 0:
-                output_nodes.append(node)
-        return output_nodes
-
-    def get_edge_associated_with_module(self, module):
-        """
-        Gets the HVE associated with some pytorch module 'module'. We return the first edge found, and assume that every
-        module is associated with at most one HVE edge.
-
-        :param module: The module to get the associated edge for
-        :returns: The HVE object associated with the module given
-        """
-        for node in self.nodes:
-            for edge in node.parent_edges:
-                if edge.pytorch_module is module:
-                    return edge
-        return None
-
-
-class HVN(object):
-    """
-    Class representing a node in the hidden volume graph.
-    """
-
-    def __init__(self, hv_shape, input_modules=[], input_hvns=[], batch_norm=None, residual_connection=None):
-        """
-        Initialize a node to be used in the hidden volume graph (HVG). It keeps track of a hidden volume shape and any
-        associated batch norm layers, and any associated Residual_Connection objects (which mean that this volume
-        is used over a residual connection).
-
-        :param hv_shape: The shape of the volume being represented
-        :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be
-                concatenated for this hidden volume (node).
-        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
-        :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm
-        :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
-                used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
-                This should be none if it's not used as part of a residual connection.
-        """
-        # Keep track of the state
-        self.hv_shape = hv_shape
-        self.child_edges = []
-        self.parent_edges = []
-        self.batch_norm = batch_norm
-        self.residual_connection = residual_connection
-
-        # Make the edges between this node and it's parents/inputs
-        self._link_nodes(input_modules, input_hvns)
-
-    def _link_nodes(self, input_modules, input_hvns):
-        """
-        Links a list of hvn's to this hvn, with edges that correspond to PyTorch nn.Modules
-
-        :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be
-                concatenated for this hidden volume (node).
-        :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
-        """
-        # Check for invalid input
-        if len(input_hvns) != len(input_modules):
-            raise Exception("When linking nodes in HVG need to provide the same number of input nodes as modules")
-
-        # Iterate through all of the inputs, make an edge and update it in the input HVN and this HVN appropriately
-        for i in range(len(input_hvns)):
-            parent_hvn = input_hvns[i]
-            edge = HVE(parent_node=parent_hvn, child_node=self, module=input_modules[i])
-            parent_hvn.child_edges.append(edge)
-            self.parent_edges.append(edge)
-
-    def _get_parent_modules(self):
-        """
-        Gets a list of nn.Modules from the parent edges (in the same order)
-        """
-        return [edge.pytorch_module for edge in self.parent_edges]
-
-    def _get_child_modules(self):
-        """
-        Gets a list of nn.Modules from the child edges (in the same order)
-        """
-        return [edge.pytorch_module for edge in self.child_edges]
-
-    def _is_conv_volume(self):
-        """
-        Volumes output by conv layers are 3D, and linear are 1D.
-        """
-        return len(self.hv_shape) == 3
-
-
-class HVE(object):
-    """
-    Class representing an edge in the hidden volume graph. It's basically a glorified pair object, with some reference
-    to a nn.Module as well
-    """
-
-    def __init__(self, parent_node, child_node, module):
-        """
-        Defines an edge running from the 'parent_node' to the 'child_node'
-
-        :param parent_node: The parent HVN object
-        :param child_node: The child HVN object
-        :param module: The nn.Module that takes input from the parent node's hidden volume, and produces it's contribution
-                to the child node's volume (note that a node may have multiple parents, who's contributions are concatenated)
-        """
-        self.parent_node = parent_node
-        self.child_node = child_node
-        self.pytorch_module = module
-
-
-def _hvg_from_lle(network):
-    """
-    Creates a HVG graph from the conv enum
-    :param network: A nn.Module that implements the 'lle' (linear layer enum) interface
-    :returns: A HVG object created using the lle() interface.
-    """
-    hvg = None
-    prev_node = None
-    prev_module = None
-    for shape, batch_norm, module, residual_connection in network.lle():
-        if not hvg:
-            hvg = HVG(shape, residual_connection=residual_connection)
-            prev_node = hvg.root_hvn
-        else:
-            prev_node = hvg.add_hvn(hv_shape=shape, input_modules=[prev_module], input_hvns=[prev_node],
-                                    batch_norm=batch_norm, residual_connection=residual_connection)
-        prev_module = module
-    return hvg
-
-
-def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, scaled=True):
+def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multiplicative_widen=True):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the
     enum_layers interface. The interface should return, for every hidden volume, the layer before it and
@@ -625,154 +429,30 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, scaled=T
     :param new_hidden_nodes: The number of new hidden nodes to add in fully connected layers
     :param init_type: The initialization type to use for new variables
     :param function_preserving: If we want the widening to be function preserving
-    :param scaled: If we want to extend channels by scaling (multiplying num channels) rather than adding
+    :param multiplicative_widen: If we want to extend channels by scaling (multiplying num channels) rather than adding
     :return: A reference to the widened network
     """
     #  Create the hidden volume graph
-    if network.lle_or_hvg() == "lle":
-        hvg = _hvg_from_lle(network)
-    else:
-        hvg = network.hvg()
+
+    hvg = network.hvg()
 
     # Iterate through the hvg, widening appropriately in each place
-    for prev_layers, shape, batch_norm, _, next_layers in hvg.node_iterator():
+    for prev_layers, shape, batch_norm, _, pseudo_next_volume_spatial_ratio, next_layers in hvg.node_iterator():
         linear_to_linear = type(prev_layers[0]) is nn.Linear and type(next_layers[0]) is nn.Linear
         channels_or_nodes_to_add = new_hidden_nodes if linear_to_linear else new_hidden_nodes
         if channels_or_nodes_to_add == 0:
             continue
-        net_2_wider_net_(prev_layers, next_layers, shape, batch_norm, channels_or_nodes_to_add, scaled)
+        net_2_wider_net_(prev_layers, next_layers, pseudo_next_volume_spatial_ratio, shape, batch_norm,
+                         channels_or_nodes_to_add, multiplicative_widen)
 
     # Return model for if someone want to use this in an assignment form etc
     return network
 
 
+
 """
 Deepening networks.
 """
-
-
-class Deepened_Network(nn.Module):
-    """
-    A heper class that encapsulates a "base" network and allows layers to be "inserted" into the middle of the
-    base network.
-
-    The base network must implement the following functions:
-
-    Additionally, if we wish to maintain the ability to be widened, then the base network must implement the following:
-    - base_network.conv_lle()
-    - base_network.fc_lle()
-    OR
-    - base_network.conv_hvg()
-    - base_network.fc_hvg(cur_hvg)
-    """
-
-    def __init__(self, base_network):
-        """
-        :param base_network: The base network that is to be "deepened"
-        """
-        super(Deepened_Network, self).__init__()
-
-        if type(base_network) is Deepened_Network:
-            raise Exception(
-                "We shouldn't be recursively create Deepened_Network instances, it should instead be extended.")
-
-        self.base_network = base_network
-        self.conv_extensions = []
-        self.fc_extensions = []
-
-    def forward(self, x):
-        """
-        The forward pass of the network, whcih basically interleves the new extensions with the base networks forward pass
-        :param x: The input to the network
-        :return: The output from the deepened network
-        """
-        x = self.base_network.conv_forward(x)
-        for conv_module in self.conv_extensions:
-            x = conv_module(x)
-        x = self.base_network.fc_forward(x)
-        for fc_module in self.fc_extensions:
-            x = fc_module(x)
-            x = F.relu(x)
-        return self.base_network.out_forward(x)
-
-    def deepen(self, module):
-        """
-        Extends the network with nn.Module 'module'. We assume that the layer is to be applied between the convolutional
-        stack and the fc stack, unless 'module' is of type nn.Linear.
-
-        To register the parameters for autograd computation, we need to use "add_module", which is similar to
-        "register_parameter".
-
-        'module' should also be able to extend a hvg with a function 'conv_hvg(cur_hvg)'.
-
-        Note: we take the liberty to assume that the shapings of layer are correct to just work.
-        """
-        if type(module) is nn.Linear:
-            self.fc_extensions.append(module)
-            self.add_module("fc_ext_{n}".format(n=len(self.fc_extensions)), module)
-        else:
-            self.conv_extensions.append(module)
-            self.add_module("conv_ext_{n}".format(n=len(self.conv_extensions)), module)
-
-    def lle_or_hvg(self):
-        """
-        To decide to use lle or hvg interface, just propogate what the base network was using.
-
-        :return: String indicating if we're using "lle" or "hvg"
-        """
-        return self.base_network.lle_or_hvg()
-
-    def hvg(self):
-        """
-        Implements the hvg interface, assuming that all components of the deepened network do too (base network and new
-        modules).
-
-        Assumes that the base network implements the following functions:
-        self.base_network.input_shape()
-        self.base_network.conv_hvg(cur_hvg)
-        self.base_network.fc_hvg(cur_hvg)
-
-        And assumes that all layers 'module' in self.conv_extensions implement:
-        module.conv_hvg(cur_hvg)
-
-        This function builds a hidden volume graph for the deepened network.
-        """
-        hvg = HVG(self.base_network.input_shape())
-        hvg = self.base_network.conv_hvg(hvg)
-        for conv_module in self.conv_extensions:
-            hvg = conv_module.conv_hvg(hvg)
-        hvg = self.base_network.fc_hvg(hvg)
-        for fc_layer in self.fc_extensions:
-            hvg.add_hvn((fc_layer.out_features,)[fc_layer])
-        return hvg
-
-    def lle(self):
-        """
-        Implements the lle interface, assuming that all components of the deepened network do too (base network and new
-        modules).
-
-        Assumes that the base network implements the following functions:
-        self.base_network.conv_lle()
-        self.base_network.fc_lle()
-
-        It also assumes that each of the conv modules 'module' implements the following:
-        module.lle()
-        """
-        itr = self.base_network.conv_lle()
-        for conv_module in self.conv_extensions:
-            itr = chain(itr, conv_module.conv_lle())
-        itr = chain(itr, self.base_network.fc_lle())
-        itr = chain(itr, self._fc_lle())
-        return itr
-
-    def _fc_lle(self):
-        """
-        Iterates through all of the fc additions in the deepening
-        """
-        for fc_layer in self.fc_extensions:
-            yield ((fc_layer.in_features,), None, fc_layer)
-
-
 
 
 def net2net_make_deeper_network_(network, layer, batch):
@@ -784,70 +464,80 @@ def net2net_make_deeper_network_(network, layer, batch):
     if type(network) is not Deepened_Network:
         network = Deepened_Network(network)
     network.deepen(layer)
-    network(batch)
 
-    bn = layer.bn
-    new_weights = np.sqrt(bn.running_var.numpy() + 1e-05 )
 
-    bn.momentum = 0.1
-    _assign_to_batch_norm_(bn, new_weights, bn.running_mean.numpy(),
-                           bn.running_mean.numpy(), bn.running_var.numpy())
+    for bn_layer in layer.bn_ble():
+        network(batch)
+        new_weights = np.sqrt(bn_layer.running_var.numpy())
+        bn_layer.momentum = 0.1
+        _assign_to_batch_norm_(bn_layer, new_weights, bn_layer.running_mean.numpy(),
+                               bn_layer.running_mean.numpy(), bn_layer.running_var.numpy())
+
+    print("Fixing Batch Norm")
 
     return network
 
 
-def printbn(self, input, output):
-    print('Inside ' + self.__class__.__name__ + ' forward')
-    mean = input[0].mean(dim=0)
-    var = input[0].var(dim=0)
-    print(mean.shape)
-    print (mean)
+class Net2Net_ResBlock_identity(nn.Module):
 
-
-
-
-class Net2Net_conv_identity(nn.Module):
-
-    def __init__(self, input_channels, kernel_size, activation_function='ReLU',
-                 input_spatial_shape=None):
+    def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True,
+                 input_spatial_shape=None, input_volume_slices_indices=None):
         """
         Initialize the filters, optionally making this identity initialized.
         All convolutional filters have the same number of output channels
         """
         # Superclass initializer
-        super(Net2Net_conv_identity, self).__init__()
+        super(Net2Net_ResBlock_identity, self).__init__()
 
         self.input_channel = input_channels
-        self.kernel_size = kernel_size
+
+        # Check that we gave the correct number of intermediate channels
+        if len(intermediate_channels) != 3:
+            raise Exception("Need to specify 3 intemediate channels in the resblock")
+
+        # Make the residual connection object (using the input_volume_slices_inddices)
+        if input_volume_slices_indices is None:
+            input_volume_slices_indices = [0, input_channels]
 
         # Stuff that we need to remember
         self.input_spatial_shape = input_spatial_shape
-
-
-        assert kernel_size[0] % 2 == 1, "Kernel size needs to be odd"
-        assert kernel_size[1] % 2 == 1, "Kernel size needs to be odd"
-        pad_h = int((kernel_size[0] - 1) / 2)
+        self.intermediate_channels = intermediate_channels
+        self.output_channels = output_channels
 
         # Actual nn.Modules for the network
-        self.conv = nn.Conv2d(input_channels, input_channels, kernel_size=kernel_size, padding=pad_h)
-        self.bn = nn.BatchNorm2d(num_features=input_channels, momentum=1)
+        self.conv1 = nn.Conv2d(input_channels, intermediate_channels[0], kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(num_features=intermediate_channels[0], momentum=1)
+        self.update_conv(self.conv1)
 
-        self.update_conv()
-        #self.update_batch_norm()
+        self.conv2 = nn.Conv2d(intermediate_channels[0], intermediate_channels[1], kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(num_features=intermediate_channels[1], momentum=1)
+        self.update_conv(self.conv2)
+
+        self.conv3 = nn.Conv2d(intermediate_channels[1], intermediate_channels[2], kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(num_features=intermediate_channels[1], momentum=1)
+        self.update_conv(self.conv3)
+
+        self.conv4 = nn.Conv2d(intermediate_channels[2], output_channels, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(num_features=intermediate_channels[2], momentum=1)
+        self.update_conv(self.conv4)
+
+        self.relu = F.relu
 
 
-    def update_conv(self, noise=False):
+    def update_conv(self, conv_layer, noise=False):
 
-        conv_kernel = self.conv.weight.data.cpu()
-        conv_bias = self.conv.bias.data.cpu()
+        conv_kernel = conv_layer.weight.data.cpu()
+        conv_bias = conv_layer.bias.data.cpu()
+
+        out_channels, in_channels, height, width = conv_kernel.shape
 
         conv_kernel.zero_()
         conv_bias.zero_()
 
-        center_height = (self.kernel_size[0] - 1) // 2
-        center_width = (self.kernel_size[1] - 1) // 2
+        center_height = (height - 1) // 2
+        center_width = (width - 1) // 2
 
-        for i in range(0, self.input_channel):
+        for i in range(0, in_channels):
             conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
 
         if noise:
@@ -855,18 +545,7 @@ class Net2Net_conv_identity(nn.Module):
                                      size=list(conv_kernel.size()))
             conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
 
-        _assign_kernel_and_bias_to_conv_(self.conv, conv_kernel.numpy(), conv_bias.numpy())
-
-
-    def update_batch_norm(self):
-
-        new_scale = self.bn.weight.data.fill_(0)
-        new_bias = self.bn.bias.data.fill_(1)
-        new_running_mean = self.bn.running_mean.fill_(0)
-        new_running_var = self.bn.running_var.fill_(1)
-
-        _assign_to_batch_norm_(self.bn, new_scale.numpy(), new_bias.numpy(),
-                               new_running_mean.numpy(), new_running_var.numpy())
+        _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
 
 
     def forward(self, x):
@@ -878,14 +557,31 @@ class Net2Net_conv_identity(nn.Module):
         """
         # Forward pass through residual part of the network
 
-        x1 = self.conv(x)
-        x2 = self.bn(x1)
-        #print ("After BN")
-        #print (x2-x1)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
 
-        out = x2
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+
+        x = self.conv4(x)
+        x = self.bn4(x)
+        x = self.relu(x)
+
+        out = x
 
         return out
+
+    def bn_ble(self):
+        yield (self.bn1)
+        yield (self.bn2)
+        yield (self.bn3)
+        yield (self.bn4)
 
     def conv_lle(self):
         """
@@ -895,7 +591,6 @@ class Net2Net_conv_identity(nn.Module):
 
         # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
         yield ((self.conv.weight.data.size(1), height, width), None, self.conv)
-
 
     def lle(self, input_shape=None):
         """
@@ -923,7 +618,106 @@ class Net2Net_conv_identity(nn.Module):
 
 
 
+class Net2Net_conv_identity(nn.Module):
+
+    def __init__(self, input_channels, kernel_size, activation_function='ReLU',
+                 input_spatial_shape=None):
+        """
+        Initialize the filters, optionally making this identity initialized.
+        All convolutional filters have the same number of output channels
+        """
+        # Superclass initializer
+        super(Net2Net_conv_identity, self).__init__()
+
+        self.input_channel = input_channels
+        self.kernel_size = kernel_size
+
+        # Stuff that we need to remember
+        self.input_spatial_shape = input_spatial_shape
+
+        assert kernel_size[0] % 2 == 1, "Kernel size needs to be odd"
+        assert kernel_size[1] % 2 == 1, "Kernel size needs to be odd"
+        pad_h = int((kernel_size[0] - 1) / 2)
+
+        # Actual nn.Modules for the network
+        self.conv = nn.Conv2d(input_channels, input_channels, kernel_size=kernel_size, padding=pad_h)
+        self.bn = nn.BatchNorm2d(num_features=input_channels, momentum=1)
+        self.relu = F.relu
+
+        self.update_conv(self.conv)
 
 
+    def update_conv(self, conv_layer, noise=False):
+
+        conv_kernel = conv_layer.weight.data.cpu()
+        conv_bias = conv_layer.bias.data.cpu()
+
+        out_channels, in_channels, height, width = conv_kernel.shape
+
+        conv_kernel.zero_()
+        conv_bias.zero_()
+
+        center_height = (height - 1) // 2
+        center_width = (width - 1) // 2
+
+        for i in range(0, in_channels):
+            conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
+
+        if noise:
+            noise = np.random.normal(scale=5e-5,
+                                     size=list(conv_kernel.size()))
+            conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
+
+        _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
 
 
+    def forward(self, x):
+        """
+        Forward pass through this residual block
+
+        :param x: the input
+        :return: THe output of applying this residual block to the input
+        """
+        # Forward pass through residual part of the network
+
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        out = x
+
+        return out
+
+    def bn_ble(self):
+        yield (self.bn)
+
+    def conv_lle(self):
+        """
+        Conv part of the 'lle' function (see below)
+        """
+        height, width = self.input_spatial_shape
+
+        # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
+        yield ((self.conv.weight.data.size(1), height, width), None, self.conv)
+
+    def lle(self, input_shape=None):
+        """
+        Implement the lle (linear layer enum) to iterate through layers for widening.
+        Input shape must either not be none here or not be none from before
+        :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
+        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
+        """
+        return self.conv_lle()
+
+    def conv_hvg(self, cur_hvg):
+        """
+        Extends a hidden volume graph 'hvg'.
+        :param cur_hvg: The HVG object of some larger network (that this resblock is part of)
+        :param input_nodes: The node that this module takes as input
+        :return: The hvn for the output from the resblock
+        """
+        # First hidden
+        cur_hvg.add_hvn((self.conv.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
+                        input_modules=[self.conv], batch_norm=self.bn)
+
+    def hvg(self):
+        raise Exception("hvg() not implemented directly for net2net conv identity block.")
