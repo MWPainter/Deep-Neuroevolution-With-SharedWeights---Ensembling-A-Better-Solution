@@ -426,6 +426,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
         for i in range(1, len(volume_slices_indices)):
             beg = volume_slices_indices[i-1] * new_hidden_units_in_next_layer_per_new_channel
             end = volume_slices_indices[i] * new_hidden_units_in_next_layer_per_new_channel
+            extra_params_per_input_layer = extra_channels * new_hidden_units_in_next_layer_per_new_channel
             if multiplicative_widen:
                 extra_params_per_input_layer = (end-beg) * (extra_channels - 1) # triple num outputs = *add* 2x the current num
             matrix_extra_shape = (n_out, extra_params_per_input_layer)
