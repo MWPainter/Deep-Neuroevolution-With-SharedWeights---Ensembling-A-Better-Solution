@@ -333,10 +333,10 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         prev_bias = prev_layer.bias.data.cpu().numpy()
         
         # new conv kernel
-        old_out_channels, in_channels, width, height = prev_kernel.shape
+        old_out_channels, in_channels, height, width = prev_kernel.shape
         if multiplicative_widen:
             extra_channels = old_out_channels * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
-        kernel_extra_shape = (extra_channels, in_channels, width, height)
+        kernel_extra_shape = (extra_channels, in_channels, height, width)
         prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
 
         # zero pad the bias
@@ -405,7 +405,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             slice_extra_channels = extra_channels
             if multiplicative_widen:
                 slice_extra_channels = (end-beg) * (extra_channels - 1) # to triple num channels, *add* 2x the current num
-            kernel_extra_shape = (out_channels, slice_extra_channels, width, height)
+            kernel_extra_shape = (out_channels, slice_extra_channels, height, width)
             kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
                                                                    init_type, alpha)
             next_kernel_parts.append(kernel_part)

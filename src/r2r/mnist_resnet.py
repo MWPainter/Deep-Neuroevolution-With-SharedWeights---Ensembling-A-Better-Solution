@@ -92,16 +92,6 @@ class Mnist_Resnet(nn.Module):
     
     
     
-    def lle_or_hvg(self):
-        """
-        Return if we're using the lle or hvg interface.
-
-        Part of the R2R interface.
-        """
-        return "lle"
-    
-    
-    
     def input_shape(self):
         return (1,32,32)
 
