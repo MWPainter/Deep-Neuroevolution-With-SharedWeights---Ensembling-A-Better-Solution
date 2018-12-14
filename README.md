@@ -27,11 +27,11 @@ TODO: just direct them to the appropriate scripts
 ## Schedule
 
 
-- R2R finished + tests: 3rd Dec
+- ~R2R finished + tests: 3rd Dec~
 - Imagnet + inception: 10th Dec
 - Net2Net reproduced + encorporated in tests: 10th Dec
 - Flops counting and visualizations: 24th Dec
-- Draft: 17th Dec
+- ~Draft: 17th Dec~
 - Finished: 5th Jan
 - Deadline: 13rd Jan
 
@@ -55,7 +55,7 @@ TODO: just direct them to the appropriate scripts
     - Add a link to the paper describing the whole process
     - ~Level 1 headers for title. Level 2 headers for section. Level 3 headers for each bit of code~
     - ~Clean all of the code snippits~
-- Clean up the library code
+- ~Clean up the library code~
     - ~Properly split into files. Have difference packages:~
         - ~Dataset~
         - ~R2R~
@@ -77,14 +77,14 @@ TODO: just direct them to the appropriate scripts
 
 
 #### (General) Coding Todo
-- Saving model/training state to be able to recover state
-- Use of the generic training loop from MSFT internship?
-- Fix seeds for reproducibility
-- Use data loaders
-    - That's probably the bottle neck...?
-- Add tensorboardX for plotting
-    - And plot lots of things!
-    - Use it to debug better
+- ~Saving model/training state to be able to recover state~
+- ~Use of the generic training loop from MSFT internship?~
+- ~Fix seeds for reproducibility~
+- ~Use data loaders~
+    - ~That's probably the bottle neck...?~
+- ~Add tensorboardX for plotting~
+    - ~And plot lots of things!~
+    - ~Use it to debug better~
 - ~Update extending_out_channels to re-use code from extending_in_channels~
 
 
@@ -97,17 +97,17 @@ TODO: just direct them to the appropriate scripts
 - ~Implement R2R for fully connected layers~
     - ~Prototype in tutorial.pynb first~
     - ~The transform can be implemented as a special case of a conv (where the spatial dimensions are 1x1. So just need to expand dims and squeeze dims around the general widen transform!!)~
-- Find a better way to deal with residual connections than masking?
+- ~Find a better way to deal with residual connections than masking?~
 - Fix the R2DeeperR test
-- Implement Net2Net in PyTorch (find another repo that does this?)
-    - Run Net2Net through our tests
+- ~Implement Net2Net in PyTorch (find another repo that does this?)~
+    - ~Run Net2Net through our tests~
 - Reproduce Net2Net results, withe exactly the same tests as Net2Net did
     - Run our network transforms through the same tests
 - At expanding the network time, try freezing the old networks weights and seeing if they 
 - Looking into multiple applications of the transforms
     - How to optimally apply them through training
-- For inception networks, we actually will need \[newLayers], \[newLayersAfters] = R2R(\[layers], \[layersAfter])
-    - I.e. we need arrays of layers, which are concatenated together
+- ~For inception networks, we actually will need \[newLayers], \[newLayersAfters] = R2R(\[layers], \[layersAfter])~
+    - ~I.e. we need arrays of layers, which are concatenated together~
 
 TODO: clean this next bullet up into more concise ideas
 - Better understanding of the learning rate problem
@@ -143,7 +143,7 @@ TODO: clean this next bullet up into more concise ideas
   
   
 #### Evalutation/Visualizations
-- Implement Net2Net in PyTorch + compare
+- ~Implement Net2Net in PyTorch + compare~
 - Cleanly repeat tests for Net2Net (i.e. every test we have for R2R, we should be adding a N2N curve)
 - Working diagrams of R2R tests done (flops)
 - Properly computing the FLOPs in the forward and backward passes
@@ -151,12 +151,12 @@ TODO: clean this next bullet up into more concise ideas
     - Message Emad about it and adding it into PyTorch at some point?
 - Taking nn.Modules and printing an architecture diagram from it
     - TODO: find the repo that we had for this (there is a github repo taking PyTorch modules and printing graphs)
-- Saliency maps / Class visualizations
-    - Run before and after widening
-    - Something that shows the difference
-    - I.e. what does each layer represent?
-        - New layers after widening should be random
-        - New layers after training should learn something
+- ~Saliency maps / Class visualizations~
+    - ~Run before and after widening~
+    - ~Something that shows the difference~
+    - ~I.e. what does each layer represent?~
+        - ~New layers after widening should be random~
+        - ~New layers after training should learn something~
 - Weight visualizatioons
     - ~Prototype this in tutorial.py first~
         - From prototyping we conclude:
@@ -186,8 +186,8 @@ TODO: clean this next bullet up into more concise ideas
 
 
 #### Paper/Writing Todo
-- Plan out headings and bullets
-    - Copy relevant parts from the project report
+- ~Plan out headings and bullets~
+    - ~Copy relevant parts from the project report~
 - Related Work/Finish writing literature survey for the paper
     - Classification state of the art
         - (Important)
@@ -204,29 +204,29 @@ TODO: clean this next bullet up into more concise ideas
         - Short again
 - Write paper! 
     - Aim to be complete about a month before deadline?
-- In the introduction
-    - Look at all the papers about R2R and how people are using it
-    - Mention the many uses that it has
-- Net2Net
-    - Requires idempotent activation functions
-        - Because when they deepen they require $\phi(I\phi(x)) = \phi(x)$
-        - This is avoided by building the deepening operation using a residual connection
-    - Requires a forward pass, and complex allocation of variables in batch norm
-        - Equality only holds in eval mode (for batch norm) and only in expectation (because of batch norm)
-        - Scale and shift have to undo the (random) mean and variance of a batch
-    - This all means that we're "exactly" a function preserving transform, whereas Net2Net is just an approxate preserving transform
-        - In practise this will make little to no difference
-        - Numerical errors also mean that R2R isn't exact
-        - However, it is theoretically more sound
-- Math
-    - Write up the math about symmetry breaking
-    - Write up the math for guiding the initialization of further parameters
-- Our contributions:
-    - A new set of function preserving transforms
-        - Deepen works with residual connections, whereas net2deepernet works without residual connections
-        - New weights are arbitrary (this is a blessing and a curse, as we have to consider inits, however, the freedom to initialize the weights however you like could allow a lot of flexibility, forseeably in meta learning or transfer learning)
-        - (we believe?) that our schema is simpler to implement and use
-        - We don't alter any weights in the function transformation. Therefore, if on widening you decide to keep the weights fixed, then you could still run the old network as before. That is, you can train YOLO mini, then widen, and finish training to YOLO full, and then keep both networks.
+- ~In the introduction~
+    - ~Look at all the papers about R2R and how people are using it~
+    - ~Mention the many uses that it has~
+- ~Net2Net~
+    - ~Requires idempotent activation functions~
+        - ~Because when they deepen they require $\phi(I\phi(x)) = \phi(x)$~
+        - ~This is avoided by building the deepening operation using a residual connection~
+    - ~Requires a forward pass, and complex allocation of variables in batch norm~
+        - ~Equality only holds in eval mode (for batch norm) and only in expectation (because of batch norm)~
+        - ~Scale and shift have to undo the (random) mean and variance of a batch~
+    - ~This all means that we're "exactly" a function preserving transform, whereas Net2Net is just an approxate preserving transform~
+        - ~In practise this will make little to no difference~
+        - ~Numerical errors also mean that R2R isn't exact~
+        - ~However, it is theoretically more sound~
+- ~Math~
+    - ~Write up the math about symmetry breaking~
+    - ~Write up the math for guiding the initialization of further parameters~
+- ~Our contributions:~
+    - ~A new set of function preserving transforms~
+        - ~Deepen works with residual connections, whereas net2deepernet works without residual connections~
+        - ~New weights are arbitrary (this is a blessing and a curse, as we have to consider inits, however, the freedom to initialize the weights however you like could allow a lot of flexibility, forseeably in meta learning or transfer learning)~
+        - ~(we believe?) that our schema is simpler to implement and use~
+        - ~We don't alter any weights in the function transformation. Therefore, if on widening you decide to keep the weights fixed, then you could still run the old network as before. That is, you can train YOLO mini, then widen, and finish training to YOLO full, and then keep both networks.~
     
 
 
