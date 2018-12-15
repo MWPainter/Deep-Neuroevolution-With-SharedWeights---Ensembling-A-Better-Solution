@@ -112,7 +112,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         # Logging per epoch
         for key in avg_val_losses:
             scalar_name = ''.join(['epoch/', key])
-            writer.add_scalars(scalar_name, {'train': avg_losses[key], 'test': avg_val_losses[key]}, epoch)
+            writer.add_scalars(scalar_name, {'train': avg_losses[key], 'test': avg_val_losses[key]}, epoch+1)
 
         # Checkpointing (depending on the model the "best" model may or may not make sense (e.g. GAN it will not))
         avg_val_loss = sum(list(avg_val_losses.values()))
