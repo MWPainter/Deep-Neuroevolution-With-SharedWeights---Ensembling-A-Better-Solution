@@ -378,12 +378,12 @@ if __name__ == "__main__":
     t.cuda.manual_seed_all(args.seed + 1001)
 
     # Run the given script that we wish to run
-    if script == "mnist_identity_init":
+    if script == "mnist_identity_init": ##########
         mnist_identity_init_test(args)
     elif script == "cifar_identity_init":
         cifar_identity_init_test(args)
 
-    elif script == "mnist_widen":
+    elif script == "mnist_widen": ##########
         mnist_widen_test(args)
     elif script == "cifar_widen":
         cifar_widen_test(args)
@@ -394,7 +394,7 @@ if __name__ == "__main__":
 
     elif script == "cifar_widen_multi_stage":
         cifar_widen_test(args)
-    elif script == "cifar_widen_with_budget_multi_stage":
+    elif script == "cifar_widen_with_budget_multi_stage": ##########
         cifar_widen_with_budget_test(args)
 
     elif script == "mnist_deepen":
@@ -411,7 +411,7 @@ if __name__ == "__main__":
     elif script == "cifar_deepen_with_budget_multi_stage":
         cifar_deepen_with_budget_test(args)
 
-    elif script == "mnist_net2net_style":
+    elif script == "mnist_net2net_style": ##########
         mnist_net_to_net_style_test(args)
     elif script == "cifar_net2net_style":
         cifar_net_to_net_style_test(args)

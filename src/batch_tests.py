@@ -444,7 +444,6 @@ def mnist_widen_with_budget_test(args):
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
-    raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
     # identity initialize loop
     args.shard = "R2WiderR"
@@ -467,7 +466,6 @@ def cifar_widen_with_budget_test(args):
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
-    raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
     # identity initialize loop
     args.shard = "R2WiderR"
