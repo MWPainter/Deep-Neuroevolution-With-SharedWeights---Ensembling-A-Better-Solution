@@ -411,10 +411,15 @@ if __name__ == "__main__":
     elif script == "cifar_deepen_with_budget_multi_stage":
         cifar_deepen_with_budget_test(args)
 
-    elif script == "mnist_net2net_style": ##########
+    elif script == "mnist_net2widernet_style": ##########
         mnist_net_to_net_style_test(args)
-    elif script == "cifar_net2net_style":
+    elif script == "cifar_net2widernet_style":
         cifar_net_to_net_style_test(args)
+
+    elif script == "mnist_net2deepernet_style":
+        mnist_net_to_net_style_test(args, widen=False)
+    elif script == "cifar_net2widernet_style":
+        cifar_net_to_net_style_test(args, widen=False)
 
     else:
         print("Couldn't find script for '{s}'".format(s=script))
