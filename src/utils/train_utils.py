@@ -126,7 +126,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
 
 
 
-def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, writer, tb_prefix, args):
+def _train_loop_epoch(model, data_loader, step_op, optimizer, start_global_iter, writer, tb_prefix, args):
     """
     The inner training loop of an epoch.
 
@@ -135,7 +135,7 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
     :param step_op: This should either by 'validation_loss' to compute validation losses or 'update_op' to update
         weights in the network (as a side effect of the 'update_op' function)
     :param optimizer: A PyTorch optimizer (just passed to the step_op)
-    :param global_iter: The current global step (n.b. this is a local variable)
+    :param start_global_iter: The current global step at the start of this loop (n.b. this is a local variable)
     :param bar: A progress bar to update the CLI on training
     :param writer: A tensorboardX summary writer
     :param tb_prefix: A prefix to prepend to any tensorboard logging (to differentiate between train and val plots in
@@ -163,7 +163,7 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
         # if global_iter % args.tb_log_freq == 0:
         for key in losses:
             scalar_name = ''.join(['iter/', tb_prefix, key])
-            writer.add_scalar(scalar_name, losses[key], global_iter)
+            writer.add_scalar(scalar_name, losses[key], start_global_iter + iter)
             minibatch_size = minibatch_data[0].size(0)
             avg_losses_dict[key].update(losses[key], n=minibatch_size)
 
@@ -177,7 +177,6 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
         bar.update()
 
         # update the time and indices for the next iteration
-        global_iter += 1
         iter += 1
         iter_end_time = time.time()
 
