@@ -546,7 +546,6 @@ def mnist_deepen_with_budget_test(args):
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
-    raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
     # Create a resblock that can be used for deepening
     args.get_deepen_block = lambda identity: Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
@@ -574,7 +573,6 @@ def cifar_deepen_with_budget_test(args):
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
-    raise Exception("Add a flops budget + make sure epochs default is enough to hit it")
 
     # Create a resblock that can be used for deepening
     args.get_deepen_block = lambda identity: Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
@@ -612,11 +610,27 @@ def mnist_net_to_net_style_test(args, widen=True):
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
-    raise Exception("Fix the todos here first")
     if widen:
-        model = widen_network_()  # TODO
+        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=True, multiplicative_widen=True))
     else:
-        model = make_deeper_network_()  # TODO
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+    model = cudafy(model)
 
     # R2R transformed model training
     args.shard = "r2r_student"
@@ -624,11 +638,27 @@ def mnist_net_to_net_style_test(args, widen=True):
 
     # Make an randomly padded model
     model = copy.deepcopy(teacher_model)
-    raise Exception("Fix the todos here first")
     if widen:
-        model = widen_network_()  # TODO
+        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=False, multiplicative_widen=True))
     else:
-        model = make_deeper_network_()  # TODO
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
+                           output_channels=32, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+    model = cudafy(model)
 
     # R2R transformed model training
     args.shard = "random_padding_student"
@@ -657,11 +687,27 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
-    raise Exception("Fix the todos here first")
     if widen:
-        model = widen_network_()  # TODO
+        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=True, multiplicative_widen=True))
     else:
-        model = make_deeper_network_()  # TODO
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=True,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+    model = cudafy(model)
 
     # R2R transformed model training
     args.shard = "r2r_student"
@@ -669,11 +715,27 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # Make an randomly padded model
     model = copy.deepcopy(teacher_model)
-    raise Exception("Fix the todos here first")
     if widen:
-        model = widen_network_()  # TODO
+        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=False, multiplicative_widen=True))
     else:
-        model = make_deeper_network_()  # TODO
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+        rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
+                           output_channels=64, identity_initialize=False,
+                           input_spatial_shape=(4, 4))
+        model = make_deeper_network_(model, rblock)
+    model = cudafy(model)
 
     # R2R transformed model training
     args.shard = "random_padding_student"

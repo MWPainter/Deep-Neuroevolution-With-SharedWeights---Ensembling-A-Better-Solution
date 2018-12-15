@@ -40,7 +40,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -54,7 +54,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -70,13 +70,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [3000],
+            "widen_times": [6000],
             "deepen_times": [],
             "flops_budget": 0 #unused
         }
@@ -84,13 +84,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [3000],
+            "widen_times": [6000],
             "deepen_times": [],
             "flops_budget": 0 # unused
         }
@@ -98,29 +98,29 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [3000],
+            "widen_times": [6000],
             "deepen_times": [],
-            "flops_budget": 0 # TODO
+            "flops_budget": 1.0e12
         }
     elif script == "cifar_widen_with_budget":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [3000],
+            "widen_times": [6000],
             "deepen_times": [],
-            "flops_budget": 0 # TODO
+            "flops_budget": 2.0e12
         }
 
 
@@ -128,13 +128,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [1500,3000,4500],
+            "widen_times": [3000,6000,9000],
             "deepen_times": [],
             "flops_budget": 0 # unused
         }
@@ -142,15 +142,15 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [1500,3000,4500],
+            "widen_times": [3000,6000,9000],
             "deepen_times": [],
-            "flops_budget": 0 # TODO
+            "flops_budget": 2.0e12
         }
 
 
@@ -158,57 +158,57 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [3000],
+            "deepen_times": [6000],
             "flops_budget": 0 #unused
         }
     elif script == "cifar_deepen":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [3000],
+            "deepen_times": [6000],
             "flops_budget": 0 # unused
         }
     elif script == "mnist_deepen_with_budget":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [3000],
-            "flops_budget": 0 # TODO
+            "deepen_times": [6000],
+            "flops_budget": 4.0e11
         }
     elif script == "cifar_deepen_with_budget":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [3000],
-            "flops_budget": 0 # TODO
+            "deepen_times": [6000],
+            "flops_budget": 8.0e11
         }
 
 
@@ -223,22 +223,22 @@ def get_defaults(script_name):
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [1500,3000,4500],
+            "deepen_times": [3000,6000,9000],
             "flops_budget": 0 # unused
         }
     elif script == "cifar_deepen_with_budget_multi_stage":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
             "widen_times": [],
-            "deepen_times": [1500,3000,4500],
-            "flops_budget": 0 # TODO
+            "deepen_times": [3000,6000,9000],
+            "flops_budget": 8.0e11
         }
 
 
@@ -246,28 +246,28 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [],
-            "deepen_times": [],
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "mnist_net2deepernet_style":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 8,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [],
-            "deepen_times": [],
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
 
@@ -283,8 +283,8 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [],
-            "deepen_times": [],
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "cifar_net2deepernet_style":
@@ -297,8 +297,8 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [],
-            "deepen_times": [],
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
 
