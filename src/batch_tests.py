@@ -298,7 +298,7 @@ def _mnist_test(args, existing_model_and_loaders=None, widen_times=[], deepen_ti
                        _validation_loss, args)
 
     # return the model in case we want to do anything else with it
-    return model
+    return model, train_loader, val_loader
 
 
 
