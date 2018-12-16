@@ -275,7 +275,7 @@ def get_defaults(script_name):
 
     elif script == "cifar_net2widernet_style":
         return {
-            "lr": 3.0e-2,
+            "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
             "epochs": 20,
             "tb_dir": tb_log_dir,
