@@ -339,6 +339,7 @@ def _cifar_test(args, existing_model_and_loaders=None, widen_times=[], deepen_ti
         model = Cifar_Resnet(identity_initialize=identity_init_network)
 
     # Run the training loop
+    print(model.name)
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
 
@@ -742,6 +743,7 @@ def cifar_net_to_net_style_test(args, widen=True):
     teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
+    teacher_model.name = "Hello World!"
     model = copy.deepcopy(teacher_model)
     if widen:
         model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
@@ -770,6 +772,8 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # R2R transformed model training
     args.shard = "r2r_student"
+    print(teacher_model.name)
+    print(model.name)
     _cifar_test(args, existing_model_and_loaders=(model, train_loader, val_loader))
 
     # Make an randomly padded model

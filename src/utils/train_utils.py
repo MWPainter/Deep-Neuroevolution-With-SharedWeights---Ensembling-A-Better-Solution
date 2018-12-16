@@ -86,6 +86,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
     # Run a validation epoch on the randomly initialized network
     print("Epoch {epoch} validation:".format(epoch=start_epoch))
     model.eval()
+    print(model.name)
     validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
     avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
                                        writer, "val/", args)
@@ -97,6 +98,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
 
     # Main train loop
     for epoch in range(start_epoch, args.epochs):
+        print(model.name)
         # Training epoch
         print("Epoch {epoch} training:".format(epoch=epoch+1))
         model.train()
