@@ -1,5 +1,5 @@
-import torch
-
+import torch as t
+import numpy as np
 
 
 
@@ -64,7 +64,7 @@ def parameter_magnitude(model):
     mag = 0
     for p in model.parameters():
         if p.requires_grad:
-            mag += torch.sum(torch.abs(p.data.cpu()))
+            mag += t.sum(t.abs(p.data.cpu()))
     return mag
 
 
@@ -76,7 +76,7 @@ def gradient_magnitude(model):
     mag = 0
     for p in model.parameters():
         if p.requires_grad and p.grad is not None:
-            mag += torch.sum(torch.abs(p.grad.data.cpu()))
+            mag += t.sum(t.abs(p.grad.data.cpu()))
     return mag
 
 

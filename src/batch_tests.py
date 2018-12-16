@@ -288,8 +288,8 @@ def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     # Make the model, and run the training loop
     if model is None:
         model = Mnist_Resnet(identity_initialize=identity_init_network)
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                       _validation_loss, args)
 
     # return the model in case we want to do anything else with it
     return model
@@ -327,8 +327,8 @@ def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     # Make the model, and run the training loop
     if model is None:
         model = Cifar_Resnet(identity_initialize=identity_init_network)
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                       _validation_loss, args)
 
     # return the model in case we want to do anything else with it
     return model
@@ -594,6 +594,38 @@ def cifar_deepen_with_budget_test(args):
 
 
 
+def _compute_parameter_l2(model):
+    """
+    Compute the l2 norm of the parameters in the model 'model'
+    """
+    mag_sqr = 0
+    for p in model.parameters():
+        if p.requires_grad:
+            mag_sqr += t.sum(p.data.cpu() ** 2)
+    return mag_sqr
+
+
+
+
+
+def _compute_consistent_weight_decay(cur_weight_decay, old_model, new_model):
+    """
+    Compute a new weight decay coefficient (to account for widening/deepening). We compute this such that the l2
+    regularization loss should be constant before and after the widening/deepening.
+
+    :param cur_weight_decay: The current weight decay coefficient
+    :param old_model: The old model
+    :param new_model: The widened/deepened model
+    :return: A new weight decay coefficient to use
+    """
+    old_l2 = _compute_parameter_l2(old_model)
+    new_l2 = _compute_parameter_l2(new_model)
+    return cur_weight_decay * (old_l2 / new_l2)
+
+
+
+
+
 def mnist_net_to_net_style_test(args, widen=True):
     """
     Training runs which are used to duplicate the tests from the Net2Net paper
@@ -610,6 +642,7 @@ def mnist_net_to_net_style_test(args, widen=True):
     # Teacher network training loop
     args.shard = "teacher"
     teacher_model = _mnist_test(args)
+    teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
@@ -634,6 +667,9 @@ def mnist_net_to_net_style_test(args, widen=True):
                            input_spatial_shape=(4, 4))
         model = make_deeper_network_(model, rblock)
     model = cudafy(model)
+
+    # Update weight decay, so that we don't hit a random increase in the loss for the student
+    args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
 
     # R2R transformed model training
     args.shard = "r2r_student"
@@ -663,9 +699,13 @@ def mnist_net_to_net_style_test(args, widen=True):
         model = make_deeper_network_(model, rblock)
     model = cudafy(model)
 
+    # Update weight decay, so that we don't hit a random increase in the loss for the student
+    args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
+
     # R2R transformed model training
     args.shard = "random_padding_student"
     _mnist_test(args, model=model)
+
 
 
 
@@ -687,6 +727,7 @@ def cifar_net_to_net_style_test(args, widen=True):
     # Teacher network training loop
     args.shard = "teacher"
     teacher_model = _cifar_test(args)
+    teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
@@ -711,6 +752,9 @@ def cifar_net_to_net_style_test(args, widen=True):
                            input_spatial_shape=(4, 4))
         model = make_deeper_network_(model, rblock)
     model = cudafy(model)
+
+    # Update weight decay, so that we don't hit a random increase in the loss for the student
+    args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
 
     # R2R transformed model training
     args.shard = "r2r_student"
@@ -739,6 +783,9 @@ def cifar_net_to_net_style_test(args, widen=True):
                            input_spatial_shape=(4, 4))
         model = make_deeper_network_(model, rblock)
     model = cudafy(model)
+
+    # Update weight decay, so that we don't hit a random increase in the loss for the student
+    args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
 
     # R2R transformed model training
     args.shard = "random_padding_student"

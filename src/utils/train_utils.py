@@ -58,6 +58,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         (some) of the training losses. Only validation losses will be plotted for epoch averages.
         Usage "validations_loss = validation_loss(model, minibatch, args)"
     :param args: Argparser arguments to use, required to contain the values mentioned above.
+    :returns: The trained model, so that we could do something else with it later
     """
     # Move the model to the GPU if it is available
     model = cudafy(model)
@@ -121,6 +122,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_best_model)
 
     print("Fin.")
+    return model
 
 
 
