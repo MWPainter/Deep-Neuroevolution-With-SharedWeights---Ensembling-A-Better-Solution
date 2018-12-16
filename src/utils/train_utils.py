@@ -56,7 +56,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         Usage "model, optimizer, train_losses = update_op(model, optimizer, minibatch, iter, args)"
     :param validation_loss: Given a model and a minibatch, compute a validation loss, returns losses corresponding to
         (some) of the training losses. Only validation losses will be plotted for epoch averages.
-        Usage "validations_loss = validation_loss(model, minibatch)"
+        Usage "validations_loss = validation_loss(model, minibatch, args)"
     :param args: Argparser arguments to use, required to contain the values mentioned above.
     """
     # Move the model to the GPU if it is available
@@ -106,7 +106,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         # mode)
         print("Epoch {epoch} validation:".format(epoch=epoch+1))
         model.eval()
-        validation_op = lambda model, _optimizer, mbatch, _b, _c: (model, optimizer, validation_loss(model, mbatch))
+        validation_op = lambda model, _optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
         avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, cur_global_iter, writer, "val/", args)
 
         # Logging per epoch

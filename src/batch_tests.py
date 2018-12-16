@@ -222,7 +222,7 @@ def _make_loss_fn():
 
 
 
-def _validation_loss(model, minibatch):
+def _validation_loss(model, minibatch, args):
     """
     Mnist Tests + Cifar Tests.
 
@@ -230,12 +230,13 @@ def _validation_loss(model, minibatch):
 
     :param model: The model to compute the validation loss for.
     :param minibatch: A PyTorch Varialbe of shape (N,D) to compute the validation loss over.
+    :param args: The command line arguments (opt parser) passed in through the command line.
     :return: A PyTorch scalar Variable with value of the validation loss.
         Returns validation loss and validation accuracy.
     """
     # If we have expended the number of flops for this test, then we should stop any updates
     if hasattr(args, "total_flops") and hasattr(args, "flops_budget") and args.total_flops >= args.flops_budget:
-        return model, optimizer, {}
+        return {}
 
     with t.no_grad():
         # Put in eval mode
