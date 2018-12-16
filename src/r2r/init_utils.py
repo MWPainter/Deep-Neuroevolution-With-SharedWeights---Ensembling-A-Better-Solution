@@ -155,6 +155,7 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
         new_channels_weights = _conv_xavier_initialize((C2,I,H,W), override_output_channels=C1+twoC2)
     elif init_type == 'match_std':
         std = np.std(existing_filter)
+        print(std)
         new_channels_weights = _conv_match_std_initialize((C2,I,H,W), std=std)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
