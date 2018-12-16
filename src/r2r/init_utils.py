@@ -58,7 +58,7 @@ def _conv_xavier_initialize(filter_shape, override_input_channels=None, override
     
     
 
-def _conv_he_initialize(filter_shape, override_input_channels=None, override_output_channels=None):
+def _conv_he_initialize(filter_shape, override_input_channels=None):
     """
     Initialize a convolutional filter, with shape 'filter_shape', according to "Xavier initialization".
     Each weight for each hidden unit should be drawn from a normal distribution, with zero mean and stddev of 
@@ -84,6 +84,22 @@ def _conv_he_initialize(filter_shape, override_input_channels=None, override_out
                     
     scale = np.sqrt(2.0 / (in_channels*width*height))
     return scale * np.random.randn(*filter_shape).astype(np.float32)
+
+
+
+
+
+def _conv_match_std_initialize(filter_shape, std=1.0):
+    """
+    Initialize a convolutional filter, with shape 'filter_shape', with a std deviation of std.
+    Each weight for each hidden unit should be drawn from a normal distribution, with zero mean and stddev of
+    sqrt(2/n_in).
+
+    :param filter_shape: THe shape of the filter that we want to produce an initialization
+    :param std: The standard deviation of the noise to add
+    :return: A numpy array, of shape 'filter_shape', randomly initialized according to He initialization.
+    """
+    return std * np.random.randn(*filter_shape).astype(np.float32)
 
 
 
@@ -137,6 +153,9 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
         new_channels_weights = _conv_he_initialize((C2,I,H,W))
     elif init_type == 'Xavier':
         new_channels_weights = _conv_xavier_initialize((C2,I,H,W), override_output_channels=C1+twoC2)
+    elif init_type == 'match_std':
+        std = np.std(existing_filter)
+        new_channels_weights = _conv_match_std_initialize((C2,I,H,W), std=std)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -202,7 +221,10 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     if init_type == 'He':
         new_channels_weights = _conv_he_initialize((C,I2,H,W))
     elif init_type == 'Xavier':
-        new_channels_weights = _conv_xavier_initialize((C,I2,H,W), overried_input_channels=I1+twoI2)
+        new_channels_weights = _conv_xavier_initialize((C,I2,H,W), override_input_channels=I1+twoI2)
+    elif init_type == 'match_std':
+        std = np.std(existing_filter)
+        new_channels_weights = _conv_match_std_initialize((C,I2,H,W), std=std)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
