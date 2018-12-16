@@ -362,7 +362,7 @@ def make_arg_parser(defaults):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: 'python main.py <script_name>'")
+        print("Usage: 'python main.py <script_name> <options>'")
         exit()
 
     # Get script name + options from command line
