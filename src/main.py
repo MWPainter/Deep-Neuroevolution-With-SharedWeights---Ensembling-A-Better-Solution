@@ -34,7 +34,7 @@ TODO 1: tests
 def get_defaults(script_name):
     checkpoint_dir = "checkpoints"
     tb_log_dir = "tb_logs"
-    exp_id = "{sn}_0".format(sn=script_name)
+    exp_id = "{sn}_default".format(sn=script_name)
 
     if script == "mnist_identity_init":
         return {
