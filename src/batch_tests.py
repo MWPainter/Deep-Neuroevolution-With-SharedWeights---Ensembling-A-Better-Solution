@@ -337,6 +337,7 @@ def _cifar_test(args, existing_model_and_loaders=None, widen_times=[], deepen_ti
 
         # Make the model
         model = Cifar_Resnet(identity_initialize=identity_init_network)
+        model.name="Default Name"
 
     # Run the training loop
     print(model.name)
