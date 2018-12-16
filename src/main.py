@@ -361,7 +361,7 @@ def make_arg_parser(defaults):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print("Usage: 'python main.py <script_name>'")
         exit()
 
@@ -383,9 +383,9 @@ if __name__ == "__main__":
     elif script == "cifar_identity_init":
         cifar_identity_init_test(args)
 
-    elif script == "mnist_widen": ##########
+    elif script == "mnist_widen":
         mnist_widen_test(args)
-    elif script == "cifar_widen":
+    elif script == "cifar_widen": #
         cifar_widen_test(args)
     elif script == "mnist_widen_with_budget":
         mnist_widen_with_budget_test(args)
@@ -394,7 +394,7 @@ if __name__ == "__main__":
 
     elif script == "cifar_widen_multi_stage":
         cifar_widen_test(args)
-    elif script == "cifar_widen_with_budget_multi_stage": ##########
+    elif script == "cifar_widen_with_budget_multi_stage": #
         cifar_widen_with_budget_test(args)
 
     elif script == "mnist_deepen":
