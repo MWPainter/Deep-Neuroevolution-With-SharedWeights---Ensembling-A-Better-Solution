@@ -260,12 +260,12 @@ def _validation_loss(model, minibatch, args):
 
 
 
-def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
+def _mnist_test(args, existing_model_and_loaders=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
     """
     Train a mnist resnet, widening and deepening at some points
 
     :param args: Arguments from an ArgParser specifying how to run the trianing
-    :param model: Optionally pass in a model (that may have been trained already)
+    :param existing_model_and_loaders: Optionally pass in a model and the loaders it was trained with (that may have been trained already)
     :param widen_times: The timesteps to widen at
     :param deepen_times: The timesteps to deepen at
     :param function_preserving: If any paddings should be random initialiations or identity/zero initialized
@@ -276,18 +276,24 @@ def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     args.deepen_times = deepen_times
     args.function_preserving = function_preserving
 
-    # Make the data loader objects
-    train_dataset = MnistDataset(train=True)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # Unpack if existing model & loaders passed in
+    if existing_model_and_loaders is not None:
+        model, train_loader, val_loader = existing_model_and_loaders
 
-    val_dataset = MnistDataset(train=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    else:
+        # Make the data loader objects
+        train_dataset = MnistDataset(train=True)
+        train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                                  num_workers=args.workers, pin_memory=True)
 
-    # Make the model, and run the training loop
-    if model is None:
+        val_dataset = MnistDataset(train=False)
+        val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                                  num_workers=args.workers, pin_memory=True)
+
+        # Make the model
         model = Mnist_Resnet(identity_initialize=identity_init_network)
+
+    # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
 
@@ -299,12 +305,12 @@ def _mnist_test(args, model=None, widen_times=[], deepen_times=[], identity_init
 
 
 
-def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
+def _cifar_test(args, existing_model_and_loaders=None, widen_times=[], deepen_times=[], identity_init_network=False, function_preserving=False):
     """
     Train a mnist resnet, widening and deepening at some points
 
     :param args: Arguments from an ArgParser specifying how to run the trianing
-    :param model: Optionally pass in a model (that may have been trained already)
+    :param existing_model_and_loaders: Optionally pass in a model and the loaders it was trained with (that may have been trained already)
     :param widen_times: The timesteps to widen at
     :param deepen_times: The timesteps to deepen at
     :param function_preserving: If any paddings should be random initialiations or identity/zero initialized
@@ -315,24 +321,29 @@ def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     args.deepen_times = deepen_times
     args.function_preserving = function_preserving
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train")
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # Unpack if existing model & loaders passed in
+    if existing_model_and_loaders is not None:
+        model, train_loader, val_loader = existing_model_and_loaders
 
-    val_dataset = CifarDataset(mode="val")
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    else:
+        # Make the data loader objects
+        train_dataset = CifarDataset(mode="train")
+        train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                                  num_workers=args.workers, pin_memory=True)
 
-    # Make the model, and run the training loop
-    if model is None:
+        val_dataset = CifarDataset(mode="val")
+        val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                                  num_workers=args.workers, pin_memory=True)
+
+        # Make the model
         model = Cifar_Resnet(identity_initialize=identity_init_network)
-        print("making model in cifar test")
+
+    # Run the training loop
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
 
     # return the model in case we want to do anything else with it
-    return model
+    return model, train_loader, val_loader
 
 
 
@@ -642,14 +653,14 @@ def mnist_net_to_net_style_test(args, widen=True):
 
     # Teacher network training loop
     args.shard = "teacher"
-    teacher_model = _mnist_test(args)
+    teacher_model, train_loader, val_loader = _mnist_test(args)
     teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
     model = copy.deepcopy(teacher_model)
     if widen:
-        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
-                               function_preserving=True, multiplicative_widen=True))
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=True, multiplicative_widen=True)
     else:
         rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
                            output_channels=32, identity_initialize=True,
@@ -674,13 +685,13 @@ def mnist_net_to_net_style_test(args, widen=True):
 
     # R2R transformed model training
     args.shard = "r2r_student"
-    _mnist_test(args, model=model)
+    _mnist_test(args, existing_model_and_loaders=(model, train_loader, val_loader))
 
     # Make an randomly padded model
     model = copy.deepcopy(teacher_model)
     if widen:
-        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
-                               function_preserving=False, multiplicative_widen=True))
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=False, multiplicative_widen=True)
     else:
         rblock = Res_Block(input_channels=32, intermediate_channels=[32, 32, 32],
                            output_channels=32, identity_initialize=False,
@@ -705,7 +716,7 @@ def mnist_net_to_net_style_test(args, widen=True):
 
     # R2R transformed model training
     args.shard = "random_padding_student"
-    _mnist_test(args, model=model)
+    _mnist_test(args, existing_model_and_loaders=(model, train_loader, val_loader))
 
 
 
@@ -727,16 +738,14 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # Teacher network training loop
     args.shard = "teacher"
-    teacher_model = _cifar_test(args)
+    teacher_model, train_loader, val_loader = _cifar_test(args)
     teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
-    # model = copy.deepcopy(teacher_model)
-    model = teacher_model
+    model = copy.deepcopy(teacher_model)
     if widen:
-        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
-                               function_preserving=True, multiplicative_widen=True))
-        print("widening")
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=True, multiplicative_widen=True)
     else:
         rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
                            output_channels=64, identity_initialize=True,
@@ -758,17 +767,16 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # Update weight decay, so that we don't hit a random increase in the loss for the student
     args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
-    print(args.weight_decay)
 
     # R2R transformed model training
     args.shard = "r2r_student"
-    _cifar_test(args, model=model)
+    _cifar_test(args, existing_model_and_loaders=(model, train_loader, val_loader))
 
     # Make an randomly padded model
     model = copy.deepcopy(teacher_model)
     if widen:
-        model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
-                               function_preserving=False, multiplicative_widen=True))
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+                               function_preserving=False, multiplicative_widen=True)
     else:
         rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
                            output_channels=64, identity_initialize=False,
@@ -793,7 +801,7 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # R2R transformed model training
     args.shard = "random_padding_student"
-    _cifar_test(args, model=model)
+    _cifar_test(args, existing_model_and_loaders=(model, train_loader, val_loader))
 
 
 
