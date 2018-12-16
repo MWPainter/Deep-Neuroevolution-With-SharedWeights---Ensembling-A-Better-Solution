@@ -327,6 +327,7 @@ def _cifar_test(args, model=None, widen_times=[], deepen_times=[], identity_init
     # Make the model, and run the training loop
     if model is None:
         model = Cifar_Resnet(identity_initialize=identity_init_network)
+        print("making model in cifar test")
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
 
