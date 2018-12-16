@@ -736,6 +736,7 @@ def cifar_net_to_net_style_test(args, widen=True):
     if widen:
         model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
                                function_preserving=True, multiplicative_widen=True))
+        print("widening")
     else:
         rblock = Res_Block(input_channels=64, intermediate_channels=[64, 64, 64],
                            output_channels=64, identity_initialize=True,
@@ -757,6 +758,7 @@ def cifar_net_to_net_style_test(args, widen=True):
 
     # Update weight decay, so that we don't hit a random increase in the loss for the student
     args.weight_decay = _compute_consistent_weight_decay(teacher_weight_decay, teacher_model, model)
+    print(args.weight_decay)
 
     # R2R transformed model training
     args.shard = "r2r_student"
