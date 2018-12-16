@@ -731,7 +731,8 @@ def cifar_net_to_net_style_test(args, widen=True):
     teacher_weight_decay = args.weight_decay
 
     # Make an R2R transformed model
-    model = copy.deepcopy(teacher_model)
+    # model = copy.deepcopy(teacher_model)
+    model = teacher_model
     if widen:
         model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
                                function_preserving=True, multiplicative_widen=True))
