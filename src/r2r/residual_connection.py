@@ -56,7 +56,27 @@ class Residual_Connection(object):
     if slice_map[(a,b)] = (k, (c,d)), and out = res_con(x, res), then we must have out[c:d] = x[c:d] + k * res[a:b].
     """
 
-    def __init__(self, initial_residual_slice_indices):
+    def __init__(self, initial_residual_slice_indices=None):
+        """
+        Creates a residual conncection object, where we can optionally initialize a slice map (described in the class
+        description).
+
+        If no initial slicing is provided, then, we attempt to lazily initialize the slice mapping.
+
+        :param initial_residual_slice_indices: The indices that define the edges of the initial slices of the volume being
+            used over the residual connection. This should be a list of the form [0, num_channels] if there is a single
+            conv module that outputs the volume used in the residual connection.
+        """
+        self.residual_slice_map = None
+        if initial_residual_slice_indices is not None:
+            self._initialize_slice_map(initial_residual_slice_indices)
+
+
+
+
+
+
+    def _initialize_slice_map(self, initial_residual_slice_indices):
         """
         Initializes the slice map, where the following holds:
         if slice_map[(a,b)] = (k, (c,d)), and out = res_con(x, res), then we must have out[c:d] = x[c:d] + k * res[a:b].
@@ -87,18 +107,22 @@ class Residual_Connection(object):
         This function will alter self.residual_slice_map, to account for the widening of the volume that is propogated
         over the residual connection.
 
-        The inputs give the number of channels from different modules who's outputs are concatenated together
+        The inputs give the number of channels from different modules who's outputs are concatenated together.
 
-        TODO: identify in r2widerr when we have the problem where the volume recieving the residual connection isn't widended enough to fit the residual connection
+        We use the following terminology in this function:
+        - input slice = (indices for) a slice of the volume that the residual connection is being added to (in y=x+F(x) this would be 'F(x)')
+        - residual slice = (indices for) a slice of the volume forming the residual connection (in y=x+F(x), this would be 'x')
+        - output slice = (indices for) a slice of the volume forming the output of this residual connection object.
 
-        TODO
-        - especially differentiate between input slice, residual slice and output_slice
-
-        :param volume_slice_indices:
-        :param extra_channels:
-        :param multiplicative_widen:
-        :return:
+        :param volume_slice_indices: TODO
+        :param extra_channels: TODO
+        :param multiplicative_widen: TODO
+        :return: TODO
         """
+        # if we currently have no slice map, then, initialize it according to the first (assumed correct) volume slice indices
+        if self.residual_slice_map is None:
+            self._initialize_slice_map(volume_slice_indices)
+
         # Check for erroneous indices
         for slice_indx in volume_slice_indices:
             for (beg, end) in self.residual_slice_map:
@@ -179,6 +203,12 @@ class Residual_Connection(object):
             paper).
         :returns: The result of applying the residual connection (propogating 'res') to the volume x.
         """
+        # If we haven't created a residual slice map yet, perform the bog standard residual connection
+        if self.residual_slice_map is None:
+            num_channels = res.size(1)
+            x[:, :num_channels] += res
+            return x
+
         # Check that the residual volume (res) being added hasn't been widened so much that it can't fit in x
         # Assumes x.size() = (batch_size, channels, height, width)
         # (Easier to do than you think)

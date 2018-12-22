@@ -120,7 +120,7 @@ class Res_Block(nn.Module):
     It would be good to fix this limitation of not being able to increase the residual connection size.
     """
     def __init__(self, input_channels, intermediate_channels, output_channels, identity_initialize=True, 
-                 input_spatial_shape=None, input_volume_slices_indices=None, add_residual=True):
+                 input_spatial_shape=None, add_residual=True):
         """
         Initialize the conv layers and so on, optionally making this identity initialized.
 
@@ -130,24 +130,19 @@ class Res_Block(nn.Module):
         :param output_channels: The number of channels for the volume output by the resblock.
         :param identity_initialize: If the resblock should be initialized such that it represents an identity function.
         :param input_spatial_shape: The spatial dimensions of the input shape.
-        :param input_volume_slices_indices: The slices of the input volume to the residual block (i.e. if the input to
-                this block is the concatenation of two volumes, with 10 channels and 20 channels respectively, then we
-                should have input_volume_slices_indices = [0,10,30]). If None, then we will assume
-                    input_volume_slices_indices=[0,input_channels], which means that the input is from a single volume.
+        :param add_residual: If we should add a residual connection over the block
         """
         # Superclass initializer
         super(Res_Block, self).__init__()
-
-        self.add_residual = add_residual
         
         # Check that we gave the correct number of intermediate channels
         if len(intermediate_channels) != 3:
             raise Exception("Need to specify 3 intemediate channels in the resblock")
 
-        # Make the residual connection object (using the input_volume_slices_inddices)
-        if input_volume_slices_indices is None:
-            input_volume_slices_indices = [0, input_channels]
-        self.residual_connection = Residual_Connection(input_volume_slices_indices)
+        # Make the residual connection object
+        self.add_residual = add_residual
+        if add_residual:
+            self.residual_connection = Residual_Connection()
 
         # Stuff that we need to remember
         self.input_spatial_shape = input_spatial_shape
