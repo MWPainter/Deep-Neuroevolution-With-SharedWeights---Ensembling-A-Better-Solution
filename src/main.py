@@ -380,45 +380,45 @@ if __name__ == "__main__":
     # Run the given script that we wish to run
     if script == "mnist_identity_init": ##########
         mnist_identity_init_test(args)
-    elif script == "cifar_identity_init":
+    elif script == "cifar_identity_init": #########
         cifar_identity_init_test(args)
 
-    elif script == "mnist_widen":
+    elif script == "mnist_widen": #########
         mnist_widen_test(args)
-    elif script == "cifar_widen": #
+    elif script == "cifar_widen": #########
         cifar_widen_test(args)
     elif script == "mnist_widen_with_budget":
         mnist_widen_with_budget_test(args)
-    elif script == "cifar_widen_with_budget":
+    elif script == "cifar_widen_with_budget": #########
         cifar_widen_with_budget_test(args)
 
-    elif script == "cifar_widen_multi_stage":
+    elif script == "cifar_widen_multi_stage": # TODO: fix!!
         cifar_widen_test(args)
-    elif script == "cifar_widen_with_budget_multi_stage": #
+    elif script == "cifar_widen_with_budget_multi_stage": # TODO: fix!!
         cifar_widen_with_budget_test(args)
 
-    elif script == "mnist_deepen":
+    elif script == "mnist_deepen": #########
         mnist_deepen_test(args)
-    elif script == "cifar_deepen":
+    elif script == "cifar_deepen": #########
         cifar_deepen_test(args)
     elif script == "mnist_deepen_with_budget":
         mnist_deepen_with_budget_test(args)
-    elif script == "cifar_deepen_with_budget":
+    elif script == "cifar_deepen_with_budget": #########
         cifar_deepen_with_budget_test(args)
 
-    elif script == "cifar_deepen_multi_stage":
+    elif script == "cifar_deepen_multi_stage": #########
         cifar_deepen_test(args)
-    elif script == "cifar_deepen_with_budget_multi_stage":
+    elif script == "cifar_deepen_with_budget_multi_stage": #########
         cifar_deepen_with_budget_test(args)
 
-    elif script == "mnist_net2widernet_style":
+    elif script == "mnist_net2widernet_style": #########
         mnist_net_to_net_style_test(args)
-    elif script == "cifar_net2widernet_style": #
+    elif script == "cifar_net2widernet_style": #########
         cifar_net_to_net_style_test(args)
 
-    elif script == "mnist_net2deepernet_style":
+    elif script == "mnist_net2deepernet_style": #########
         mnist_net_to_net_style_test(args, widen=False)
-    elif script == "cifar_net2deepernet_style":
+    elif script == "cifar_net2deepernet_style": #########
         cifar_net_to_net_style_test(args, widen=False)
 
     else:
