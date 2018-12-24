@@ -228,7 +228,7 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
         prev_bias = prev_layer.bias.data.cpu()
 
         # new conv kernel
-        out_channels, in_channels, width, height = prev_kernel.shape
+        out_channels, in_channels, height, width = prev_kernel.shape
         layer_extra_channels = extra_channels
 
         if scaled:
@@ -236,7 +236,7 @@ def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_m
                         extra_channels - 1)  # to triple number of channels, *add* 2x the current num
 
         new_kernel = prev_kernel.clone()
-        new_kernel.resize_(out_channels + layer_extra_channels, in_channels, width, height)
+        new_kernel.resize_(out_channels + layer_extra_channels, in_channels, height, width)
 
         new_bias = prev_bias.clone()
         new_bias.resize_(out_channels + layer_extra_channels)
@@ -315,7 +315,7 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
 
         # Compute the new kernel for 'next_kernel' (extending each slice carefully)
 
-        out_channels, _, width, height = next_kernel.shape
+        out_channels, _, height, width = next_kernel.shape
         next_kernel_parts = []
 
         for i in range(1, len(volume_slice_indxs)):
@@ -329,7 +329,7 @@ def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indx
 
             original_kernel = next_kernel[:, beg:end]
             kernel_part = original_kernel.clone()
-            kernel_part.resize_(out_channels, in_channels + volume_extra_channels, width, height)
+            kernel_part.resize_(out_channels, in_channels + volume_extra_channels, height, width)
             kernel_part = _net2net_extend_filter_input_channels(original_kernel, kernel_part,
                                                                 in_channels, volume_extra_channels,
                                                                 extra_channels_mappings[i - 1])
