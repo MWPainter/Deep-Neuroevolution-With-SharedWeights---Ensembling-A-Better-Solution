@@ -222,10 +222,10 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     for i in range(1,len(next_layers)):
         if type(next_layers[i]) not in [next_type, nn.AvgPool2d, nn.MaxPool2d]:
             raise Exception("All (non pooling) output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
-    for i in range(1,len(next_layers)):
-        if type(next_layers[i]) in [nn.AvgPool2d, nn.MaxPool2d] and not hasattr(next_layer[i], 'r2r_cache'):
-            raise Exception("AvgPool2d or MaxPool2d called in next_layers when not used previously in a R2WiderR call "
-                            "in prev_layers, which is necessary to create a cache of values needed for the transformation.")
+    for i in range(1,len(prev_layers)):
+        if type(prev_layers[i]) in [nn.AvgPool2d, nn.MaxPool2d] and not hasattr(prev_layers[i], 'r2r_cache'):
+            raise Exception("AvgPool2d or MaxPool2d in prev_layers when not used previously in a R2WiderR call in "
+                            "next_layers, which is necessary to create a cache of values needed for the transformation.")
 
     # Check that the volume shape is either linear or convolutional
     if len(volume_shape) not in [1,3]:
@@ -247,10 +247,12 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
     volume_slices_indices = [0]
+    module_slices_indices = [0]
     for prev_layer in prev_layers:
         base_index = volume_slices_indices[-1]
         new_slice_indices = _compute_new_volume_slices_from_layer(base_index, prev_layer)
         volume_slices_indices.extend(new_slice_indices)
+        module_slices_indices.append(new_slice_indices[-1])
     
     # Sanity check that our slices are covering the entire volume that is being widened
     # There is some complexity when conv volumes are flattened as input to a linear layer
@@ -265,7 +267,7 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     
     # Widen batch norm appropriately 
     if batch_norm:
-        _extend_bn_(batch_norm, extra_channels, volume_slices_indices, multiplicative_widen)
+        _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen)
 
     # Widen the residual connection appropriately
     if residual_connection:
@@ -324,20 +326,21 @@ def _compute_new_volume_slices_from_layer(base_index, prev_layer):
 
 
 
-def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicative_widen):
+def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicative_widen):
     """
     Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
     Really this is just a helper function for R2WiderR
     
-    :param bn: The batch norm layer to be extended
+    :param bn: The batch norm layer to be extended (or list of batch norms)
     :param new_channels_per_slice: The number of new channels to add, per slice
-    :param volume_slices_indices: The indices to be able to slice the volume (so that we can add new
+    :param module_slices_indices: The indices to be able to slice the volume per module input (so that we can extend
+            batch norm(s) appropriately for a concatinated input).
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs (rather than additive)
     """
     # Sanity checks
     bn_is_array = hasattr(bn, '__len__')
-    if hasattr(bn, '__len__') and len(bn) + 1 != len(volume_slices_indices):
+    if hasattr(bn, '__len__') and len(bn) + 1 != len(module_slices_indices):
         raise Exception("Number of batch norms and volume slice indices inconsistent.")
 
     # Get the old scale/shift/mean/var as a single vector
@@ -352,23 +355,34 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicativ
         old_running_mean = bn.running_mean.data.cpu().numpy()
         old_running_var = bn.running_var.data.cpu().numpy()
     else:
-        old_scale = np.concatenate([b.weight.data.cpu().numpy() for b in bn])
-        old_shift = np.concatenate([b.bias.data.cpu().numpy() for b in bn])
-        old_running_mean = np.concatenate([b.running_mean.data.cpu().numpy() for b in bn])
-        old_running_var = np.concatenate([b.running_var.data.cpu().numpy() for b in bn])
+        total_channels = module_slices_indices[-1]
+        old_scale = np.ones(total_channels)
+        old_shift = np.zeros(total_channels)
+        old_running_mean = np.zeros(total_channels)
+        old_running_var = np.ones(total_channels)
+
+        for i in range(0,len(module_slices_indices)-1):
+            if bn[i] is None:
+                continue
+            beg = module_slices_indices[i]
+            end = module_slices_indices[i+1]
+            old_scale[beg:end] = bn[i].weight.data.cpu().numpy()
+            old_shift[beg:end] = bn[i].bias.data.cpu().numpy()
+            old_running_mean[beg:end] = bn[i].running_mean.data.cpu().numpy()
+            old_running_var[beg:end] = bn[i].running_var.data.cpu().numpy()
 
     # Extend the bn vector
-    for i in range(1,len(volume_slices_indices)):
-        beg = volume_slices_indices[i-1]
-        end = volume_slices_indices[i]
+    for i in range(0,len(module_slices_indices)-1):
+        beg = module_slices_indices[i]
+        end = module_slices_indices[i+1]
         
         # to triple number of channels, *add* 2x the current num
         new_channels = new_channels_per_slice if not multiplicative_widen else (new_channels_per_slice - 1) * (end-beg)
         
-        new_scale_slices.append(_one_pad_1d(old_scale[beg:end], new_channels))
-        new_shift_slices.append(_zero_pad_1d(old_shift[beg:end], new_channels))
+        new_scale_slices.append(_mean_pad_1d(old_scale[beg:end], new_channels))
+        new_shift_slices.append(_mean_pad_1d(old_shift[beg:end], new_channels))
         new_running_mean_slices.append(_zero_pad_1d(old_running_mean[beg:end], new_channels))
-        new_running_var_slices.append(_zero_pad_1d(old_running_var[beg:end], new_channels))
+        new_running_var_slices.append(_one_pad_1d(old_running_var[beg:end], new_channels))
 
     # Assign to batch norm(s)
     if not bn_is_array:
@@ -380,6 +394,8 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicativ
 
     else:
         for i in range(len(bn)):
+            if bn[i] is None:
+                continue
             _assign_to_batch_norm_(bn[i], new_scale_slices[i], new_shift_slices[i], new_running_mean_slices[i],
                                    new_running_var_slices[i])
 
@@ -402,9 +418,14 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
     :param function_preserving: If we want the widening to be done in a function preserving fashion
     """
     if type(prev_layer) is nn.Conv2d:
+        # If we have a bias in the conv
+        module_has_bias = prev_layer.bias is not None
+
         # unpack conv2d params to numpy tensors
         prev_kernel = prev_layer.weight.data.cpu().numpy()
-        prev_bias = prev_layer.bias.data.cpu().numpy()
+        prev_bias = None
+        if module_has_bias:
+            prev_bias = prev_layer.bias.data.cpu().numpy()
         
         # new conv kernel
         old_out_channels, in_channels, height, width = prev_kernel.shape
@@ -414,15 +435,21 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
 
         # zero pad the bias
-        prev_bias = _zero_pad_1d(prev_bias, extra_channels)
+        if module_has_bias:
+            prev_bias = _zero_pad_1d(prev_bias, extra_channels)
         
         # assign new conv and bias
         _assign_kernel_and_bias_to_conv_(prev_layer, prev_kernel, prev_bias)
         
     elif type(prev_layer) is nn.Linear:
+        # If we have a bias in the linear
+        module_has_bias = prev_layer.bias is not None
+
         # unpack linear params to numpy tensors
         prev_matrix = prev_layer.weight.data.cpu().numpy()
-        prev_bias = prev_layer.bias.data.cpu().numpy()
+        prev_bias = None
+        if module_has_bias:
+            prev_bias = prev_layer.bias.data.cpu().numpy()
         
         # new linear matrix
         old_n_out, n_in = prev_matrix.shape
@@ -432,7 +459,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
 
         # zero pad the bias
-        prev_bias = _zero_pad_1d(prev_bias, extra_channels)
+        if module_has_bias:
+            prev_bias = _zero_pad_1d(prev_bias, extra_channels)
         
         # assign new matrix and bias
         _assign_weights_and_bias_to_linear_(prev_layer, prev_matrix, prev_bias)
@@ -483,11 +511,10 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
     if type(next_layer) is nn.Conv2d:
         # unpack conv2d params to numpy tensors
         next_kernel = next_layer.weight.data.cpu().numpy()
-        next_bias = next_layer.bias.data.cpu().numpy()
         
         # Compute the new kernel for 'next_kernel' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
-        out_channels, old_in_channels, width, height = next_kernel.shape 
+        out_channels, old_in_channels, height, width = next_kernel.shape
         next_kernel_parts = []
         for i in range(1, len(volume_slices_indices)):
             beg, end = volume_slices_indices[i-1], volume_slices_indices[i]
@@ -506,7 +533,6 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
     elif type(next_layer) is nn.Linear:            
         # unpack linear params to numpy tensors
         next_matrix = next_layer.weight.data.cpu().numpy()
-        next_bias = next_layer.bias.data.cpu().numpy()
         
         # Compute the new matrix for 'next_matrix' (extending each slice carefully)
         alpha = -1.0 if function_preserving else 1.0
@@ -582,6 +608,8 @@ class HVG(object):
         Adds a HVN ovbject directly to the graph
         :param hvn: A HVN typed object that should be part of this graph
         """
+        if hvn in self.nodes:
+            raise Exception("Cannot create loops in the HVG.")
         self.nodes.append(hvn)
 
     
@@ -714,10 +742,36 @@ class HVG(object):
             if hvn in new_input_hvns:
                 raise Exception("Can't concatenate volumes where one is the input to another")
 
-        # Remove all of the edges being concatenated from hvn list, and replace it with the concatenated volume
+        # Remove all of the HVNs being concatenated from HVNs list, including all of the edges with a child node being
+        # one of the HVNs, and replace it with the concatenated volume
+        for hvn in self.nodes:
+            new_child_edges = []
+            for edge in hvn.child_edges:
+                if edge.child_node not in hvns:
+                    new_child_edges.append(edge)
+            hvn.child_edges = new_child_edges
         for hvn in hvns:
             self.nodes.remove(hvn)
         return self.add_hvn(new_shape, input_modules=new_input_modules, input_hvns=new_input_hvns, batch_norm=new_batch_norms)
+
+
+
+    def pretty_print(self):
+        """
+        Pretty prints the graph.
+        """
+        for i in range(len(self.nodes)):
+            s = self.nodes[i]._pretty_print(i)
+            s += " -> "
+            next = set()
+            for edge in self.nodes[i].child_edges:
+                j = self.nodes.index(edge.child_node)
+                next.add(j)
+            next = list(next)
+            for j in range(len(next)):
+                s += self.nodes[next[j]]._pretty_print(next[j])
+                s += ", " if j < len(next) - 1 else ";"
+            print(s)
 
 
 
@@ -831,8 +885,9 @@ class HVN(object):
         if they are output from a
 
         Specifically, we define a volume to be a 'conv_volume' iff in the tree rooted at this HVN there is a Conv2d
-        module on some edge of every path from the root node to a leaf node. (I.e. if in every computation path
-        there will be another application of a convolution operation).
+        module on some edge of the tree (i.e. if there is some computation path using a conv in the "future")
+
+        Assumes that there are no cycles in the HVG (which should be enforced by the HVG).
 
         :return: If the HVN is considered a 'conv_volume' as defined above
         """
@@ -840,11 +895,18 @@ class HVN(object):
         while len(queue) > 0:
             edge = queue.pop(0)
             if type(edge.pytorch_module) == nn.Conv2d:
-                continue
-            if len(edge.child_node.child_edges) == 0:
-                return False
+                return True
             queue.extend(edge.child_node.child_edges)
-        return True
+        return False
+
+
+
+    def _pretty_print(self, index):
+        """
+        Pretty prints this volume shape, with a tagged index
+        :returns: A string for this hvn
+        """
+        return "({index}, {shape})".format(index=index, shape=self.hv_shape)
             
             
     
@@ -898,8 +960,20 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
     hvg = network.hvg()
         
     # Iterate through the hvg, widening appropriately in each place
+    prev_channels_or_nodes_to_add = -1
     for prev_layers, shape, is_conv_volume, batch_norm, residual_connection, next_layers in hvg.node_iterator():
-        channels_or_nodes_to_add = new_hidden_nodes if is_conv_volume else new_channels
+        channels_or_nodes_to_add = new_channels if is_conv_volume else new_hidden_nodes
+
+        # Sanity check that we haven't made an oopsie with the widening operation with pooling layers
+        if channels_or_nodes_to_add != prev_channels_or_nodes_to_add:
+            for layer in prev_layers:
+                if type(layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_cache'):
+                    raise Exception("Arguments to widen_network_ caused a pooling layer to be 'widened' as part of "
+                                    "next_layers in R2WiderR, but, when widening as part of prev_layers using use an "
+                                    "inconsistent number of channels.")
+        prev_channels_or_nodes_to_add = channels_or_nodes_to_add
+
+        # Perform the widening
         if channels_or_nodes_to_add == 0:
             continue
         r_2_wider_r_(prev_layers, shape, next_layers, batch_norm, residual_connection,

@@ -17,7 +17,8 @@ __all__ = ['_conv_xavier_initialize',
            '_extend_matrix_with_repeated_in_weights', 
            '_extend_matrix_with_repeated_out_weights',
            '_zero_pad_1d', 
-           '_one_pad_1d', 
+           '_one_pad_1d',
+           '_mean_pad_1d',
            '_widen_hidden_volume']
 
 
@@ -138,8 +139,8 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
     # Error checking.
     if twoC2 % 2 != 0:
         raise Exception("The filter shape needs to be even to allow for repetition in it.")
-    elif existing_filter is not None and (W != existing_filter.shape[2] 
-        or H != existing_filter.shape[3] or I != existing_filter.shape[1]):
+    elif existing_filter is not None and (H != existing_filter.shape[2]
+        or W != existing_filter.shape[3] or I != existing_filter.shape[1]):
         raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
     
     # Canvas for the new numpy array to return. Copy existing filter weights.
@@ -207,8 +208,8 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     # Error checking.
     if twoI2 % 2 != 0:
         raise Exception("The filter shape needs to be even to allow for repetition in it.")
-    elif existing_filter is not None and (W != existing_filter.shape[2] 
-        or H != existing_filter.shape[3] or C != existing_filter.shape[0]):
+    elif existing_filter is not None and (H != existing_filter.shape[2]
+        or W != existing_filter.shape[3] or C != existing_filter.shape[0]):
         raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
     
     # Canvas for the new numpy array to return. Copy existing filter weights.
@@ -329,6 +330,23 @@ def _one_pad_1d(old_val, new_params):
     """
     old_len = old_val.shape[0]
     canvas = np.ones((old_len+new_params,), dtype=np.float32)
+    canvas[:old_len] = old_val
+    return canvas
+
+
+
+
+
+def _mean_pad_1d(old_val, new_params):
+    """
+    Pads an old (1d) tensor to match the new number of outputs. Pads with the mean value of 'old_val'
+
+    :param old_val the old numpy tensor to one pad
+    :param new_params: the number of new params needed
+    :return: a new, padded tensor
+    """
+    old_len = old_val.shape[0]
+    canvas = np.ones((old_len+new_params,), dtype=np.float32) * np.mean(old_val)
     canvas[:old_len] = old_val
     return canvas
 

@@ -32,19 +32,24 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
     :param kernel: A numpy tensor to assign to nn.Conv2d.weight (the kernel parameter)
     :return: A reference to the updated conv module
     """
-    # If bias is none, we can safely re-assign the old bias
-    if bias is None:
+    # Check if module actually has a bias.
+    module_has_bias = conv.bias is not None
+
+    # If bias is none, and module has a bias, we can safely re-assign the old bias
+    if module_has_bias and bias is None:
         bias = conv.bias.data.cpu().numpy()
     
     # Sanity check new shaping values
     out_channels, in_channels, kernel_width, kernel_height = kernel.shape
-    bias_size = bias.shape[0]
-    if bias_size != out_channels:
-        raise Exception("Trying to assign inconsistend kernel and biases in convolution.")
+    if module_has_bias:
+        bias_size = bias.shape[0]
+        if bias_size != out_channels:
+            raise Exception("Trying to assign inconsistend kernel and biases in convolution.")
     
     # Update weight, bias and shape values in 'conv'
     conv.weight = Parameter(t.tensor(kernel))
-    conv.bias = Parameter(t.tensor(bias))
+    if module_has_bias:
+        conv.bias = Parameter(t.tensor(bias))
     
     conv.out_channels = out_channels
     conv.in_channels = in_channels
@@ -52,7 +57,8 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
     
     # Re-register the new weight and bias in the conv
     conv.register_parameter('weight', conv.weight)
-    conv.register_parameter('bias', conv.bias)
+    if module_has_bias:
+        conv.register_parameter('bias', conv.bias)
     
     # Move to GPU if need be
     conv = cudafy(conv)
@@ -107,26 +113,32 @@ def _assign_weights_and_bias_to_linear_(linear, matrix, bias=None):
     :param bias: A numpy tensor to assign to linear.bias.
     :return: A reference to the updated linear module
     """
-    # If bias is none, we assume we can safely re-assign the old bias
-    if bias is None:
+    # Check if module actually has a bias.
+    module_has_bias = linear.bias is not None
+
+    # If bias is none, and module has a bias, we can safely re-assign the old bias
+    if module_has_bias and bias is None:
         bias = linear.bias.data.cpu().numpy()
     
     # Sanity check new shaping values
     n_out, n_in = matrix.shape
-    bias_size = bias.shape[0]
-    if bias_size != n_out:
-        raise Exception("Trying to assign inconsistend matrix and biases in linear.")
+    if module_has_bias:
+        bias_size = bias.shape[0]
+        if bias_size != n_out:
+            raise Exception("Trying to assign inconsistend matrix and biases in linear.")
     
     # Update weight, bias and shape values in 'conv'
     linear.weight = Parameter(t.tensor(matrix))
-    linear.bias = Parameter(t.tensor(bias))
+    if module_has_bias:
+        linear.bias = Parameter(t.tensor(bias))
     
     linear.out_features = n_out
     linear.in_features = n_in
     
     # Re-register the new weight and bias in the conv
     linear.register_parameter('weight', linear.weight)
-    linear.register_parameter('bias', linear.bias)
+    if module_has_bias:
+        linear.register_parameter('bias', linear.bias)
     
     # Move to GPU if need be
     linear = cudafy(linear)

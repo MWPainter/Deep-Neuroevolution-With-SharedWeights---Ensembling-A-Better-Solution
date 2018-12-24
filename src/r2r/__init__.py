@@ -4,3 +4,5 @@ from .mnist_resnet import *
 from .cifar_resnet import *
 from .resblock import *
 from .residual_connection import *
+from .inception import *
+from .inception_resnet import *
