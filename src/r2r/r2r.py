@@ -7,6 +7,7 @@ from r2r.init_utils import *
 from r2r.module_utils import *
 from utils.pytorch_utils import cudafy
 
+import copy
 from itertools import chain
 
 
@@ -112,7 +113,7 @@ Some helper functions :)
 
 
 
-def _is_linear_volume(vol_shape):
+def _is_linear_volume_shape(vol_shape):
     """
     Checks if a hidden volume is a "linear" volume
     """
@@ -122,7 +123,7 @@ def _is_linear_volume(vol_shape):
 
 
 
-def _is_conv_volume(vol_shape):
+def _is_conv_volume_shape(vol_shape):
     """
     Checks if a hidden volume is a "convolutional" volume
     """
@@ -139,9 +140,8 @@ Widening hidden volumes
 
 
 
-def r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_ratio=1, batch_norm=None,
-                 residual_connection=None, extra_channels=0, init_type="He", function_preserving=True,
-                 multiplicative_widen=True):
+def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residual_connection=None, extra_channels=0,
+                 init_type="He", function_preserving=True, multiplicative_widen=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
 
@@ -149,15 +149,11 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_rati
     that we will edit to widen in a function preserving way.
 
     At a high level, we are considering the local operation of next(phi(prev(...))), where phi is any channel wise
-    function. phi can incorporate batch norm, which is fed into the 'batch_norm' input and 'next_layer_spatial_ratio'
-    allows for the fact that phi may involve an operation that reduces the spatial dimension of the hidden volume.
-
-    Therefore, if volume_shape = (c,h,w) is the output from the 'prev_layers' then the volume input to each of the
-    nn.Module's in 'next_layers' is (c,h/r,w/r), where r=next_layer_spatial_ratio.
-
-    Very frequently next_layer_spatial_ratio should be equal to 1. An example of where it should be different is if
-    part of phi is a max pooling module. If we have a max pool with kernel size (2,2), then the
-    next_layer_spatial_ratio should be equal to 2.
+    function. phi can incorporate batch norm, which is fed into the 'batch_norm' input. In the paper, phi may involve
+    an operation that reduces the spatial dimension of the hidden volume, such as max pooling, however, in the
+    implementation, we consider pooling layers explicitly as 'next', and propagate channel and concatination information
+    through the pooling layers using a cache. This is necessary to deal with the pooling layers used as 'subnetweorks'
+    in inception style networks, which aren't explicitly considered in the paper.
     
     For now, with convolutions, we only support variable sizes kernels, strides and padding. We don't support 
     any non-default padding and so on.
@@ -170,14 +166,21 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_rati
     (nn.Conv2d, nn.Conv2d)
     (nn.Conv2d, nn.Linear)
     (nn.Linear, nn.Linear)
-    
+
+    Additionally we support modules of type nn.MaxPool2d and nn.AvgPool2d, however, for the overall transformation
+    to be made function preserving (or just flatout work with respect to shaping), any time a pooling layer is seen
+    in next_layers, it must then be seen in prev_layers in another . Specifically, any volume that is computed
+    using the output of a "widened maxpool/avgpool" must also be widened to actually perform the negations needed to
+    make the transform function preserving.
+
+    Note that the consideration of avg/max pools in the paper is as part of the activation function, and that is why
+    it is necessary to cache information in the pooling module object, to "skip" a layer.
+
     :param prev_layers: A (list of) layer(s) before the hidden volume/units being widened (their outputs are 
             concatenated together)
     :param volume_shape: The shape of the volume for which we wish to widen
     :param next_layers: A (list of) layer(s) layer after the hidden volume/units being widened (inputs are the 
             concatenated out)
-    :param next_layer_spatial_ratio: The ratio of the spatial dimensions for the volume input to 'next_layers' with
-            respect to the spatial dimensions output from 'prev_layers'.
     :param batch_norm: The batch norm function associated with the volume being widened (None if there is no batch norm)
     :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
             used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
@@ -194,14 +197,14 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_rati
     if type(next_layers) != list:
         next_layers = [next_layers]
         
-    _r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_ratio, batch_norm, residual_connection,
-                  extra_channels, init_type, function_preserving, multiplicative_widen)
+    _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
+                  function_preserving, multiplicative_widen)
 
 
 
 
-def _r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_ratio, batch_norm, residual_connection,
-                  extra_channels, init_type, function_preserving, multiplicative_widen):
+def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
+                  function_preserving, multiplicative_widen):
     """  
     The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
     More helper functions are used.
@@ -211,50 +214,54 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_rat
         raise Exception("Invalid number of extra channels in widen.")
     
     # Check that the types of all the in/out layers are the same
+    prev_type = nn.Linear if any([type(layer) == nn.Linear for layer in prev_layers]) else nn.Conv2d
+    next_type = nn.Linear if any([type(layer) == nn.Linear for layer in next_layers]) else nn.Conv2d
     for i in range(1,len(prev_layers)):
-        if type(prev_layers[0]) != type(prev_layers[i]):
-            raise Exception("All input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+        if type(prev_layers[i]) not in [prev_type, nn.AvgPool2d, nn.MaxPool2d]:
+            raise Exception("All (non pooling) input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
     for i in range(1,len(next_layers)):
-        if type(prev_layers[0]) != type(next_layers[i]):
-            raise Exception("All output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
-            
+        if type(next_layers[i]) not in [next_type, nn.AvgPool2d, nn.MaxPool2d]:
+            raise Exception("All (non pooling) output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+    for i in range(1,len(next_layers)):
+        if type(next_layers[i]) in [nn.AvgPool2d, nn.MaxPool2d] and not hasattr(next_layer[i], 'r2r_cache'):
+            raise Exception("AvgPool2d or MaxPool2d called in next_layers when not used previously in a R2WiderR call "
+                            "in prev_layers, which is necessary to create a cache of values needed for the transformation.")
+
     # Check that the volume shape is either linear or convolutional
     if len(volume_shape) not in [1,3]:
         raise Exception("Volume shape must be 1D or 3D for R2WiderR to work")
             
     # Get if we have a linear input or not
-    input_is_linear = type(prev_layers[0]) is nn.Linear
-            
+    input_is_linear = any([type(prev_layer) == nn.Linear for prev_layer in prev_layers])
+
     # Work out the number of hiden units per new channel 
     # (for fc pretend 1x1 spatial resolution, so 1 per channel) (for conv this is width*height)
     # For conv -> linear layers this can be a little complex. But we always know the number of channels from the prev kernels
-    channels_in_volume = np.sum([layer.weight.size(0) for layer in prev_layers])
+    channels_in_volume = np.sum([_get_output_channels_from_layer(layer) for layer in prev_layers])
     total_hidden_units = np.prod(volume_shape)
-    new_hidden_units_per_new_channel = total_hidden_units // channels_in_volume
-    new_hidden_units_in_next_layer_per_new_channel = new_hidden_units_per_new_channel // (next_layer_spatial_ratio ** 2)
+    new_hidden_units_in_next_layer_per_new_channel = total_hidden_units // channels_in_volume
     
     # Sanity checks
-    if input_is_linear and new_hidden_units_per_new_channel != 1:
+    if input_is_linear and new_hidden_units_in_next_layer_per_new_channel != 1:
         raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
-    if new_hidden_units_per_new_channel % (next_layer_spatial_ratio ** 2) != 0:
-        raise Exception("new_hidden_units_per_new_channel and next_layer_spatial_ratio are incompatable.")
     
     # Compute the slicing of the volume from the input (to widen outputs appropraitely)
     volume_slices_indices = [0]
     for prev_layer in prev_layers:
-        new_slice_indx = volume_slices_indices[-1] + prev_layer.weight.size(0)
-        volume_slices_indices.append(new_slice_indx)
+        base_index = volume_slices_indices[-1]
+        new_slice_indices = _compute_new_volume_slices_from_layer(base_index, prev_layer)
+        volume_slices_indices.extend(new_slice_indices)
     
     # Sanity check that our slices are covering the entire volume that is being widened
     # There is some complexity when conv volumes are flattened as input to a linear layer
     # We effectively check that the input is consistent with the volume shape here
-    if ((_is_conv_volume(volume_shape) and volume_slices_indices[-1] != volume_shape[0]) or
-        (_is_linear_volume(volume_shape) and volume_slices_indices[-1] * new_hidden_units_per_new_channel != volume_shape[0])):
+    if ((_is_conv_volume_shape(volume_shape) and volume_slices_indices[-1] != volume_shape[0]) or
+        (_is_linear_volume_shape(volume_shape) and volume_slices_indices[-1] * new_hidden_units_in_next_layer_per_new_channel != volume_shape[0])):
         raise Exception("The shape output from the input layers is inconsistent with the hidden volume provided in R2WiderR.")
     
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:
-        _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen)
+        _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear, function_preserving)
     
     # Widen batch norm appropriately 
     if batch_norm:
@@ -268,9 +275,53 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, next_layer_spatial_rat
     for next_layer in next_layers:
         _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                                new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving)
+
+
+
+
+
+def _get_output_channels_from_layer(layer):
+    """
+    Gets output channels from a layer, which can be of type nn.Linear, nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d.
+    To get the output layers from one of the pooling layers, it has to have been used as part of "next_layers" in a
+    previous R2WiderR call.
+    """
+    if type(layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_old_channels_propagated'):
+        return layer.r2r_old_channels_propagated
+    elif type(layer) in [nn.Conv2d, nn.Linear]:
+        return layer.weight.size(0)
+    else:
+        raise Exception("Couldn't get output channels from layer.")
+
+
+
+
+
+def _compute_new_volume_slices_from_layer(base_index, prev_layer):
+    """
+    Computes the new slicing indices (in the current volume of consideration) contributed from the layer 'prev_layer'.
+    For example, if prev_layer is a convolutional layer, with 10 ouput channels, and the base index is 20, then we
+    should output [30]. This is because this convolutional layer is contributing to layer 20-29 in the volume, and,
+    the base index (20) has already been considered.
+
+    The situation is more complex when considering pooling layer, which, may take an input that was a concatination from
+    many layers. This slciing information needs to be propagated through the pooling layer from the input.
+
+    :param base_index: The current index that we have considered up to
+    :param prev_layer: A layer from prev_layers in R2WiderR who's output makes part of the volume being widened.
+    :return: New indices into the volume being widened, contributed from 'prev_layer'
+    """
+    if type(prev_layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(prev_layer, 'r2r_volume_slice_indices'):
+        propagating_slice_indices = prev_layer.r2r_volume_slice_indices[1:]
+        return [base_index + index for index in propagating_slice_indices]
+    elif type(prev_layer) in [nn.Conv2d, nn.Linear]:
+        return [base_index + prev_layer.weight.size(0)]
+    else:
+        raise Exception("Couldn't get new volume slice indices from some layer in prev_layers.")
         
-        
-        
+
+
+
 
 
 def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicative_widen):
@@ -284,16 +335,29 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicativ
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs (rather than additive)
     """
+    # Sanity checks
+    bn_is_array = hasattr(bn, '__len__')
+    if hasattr(bn, '__len__') and len(bn) + 1 != len(volume_slices_indices):
+        raise Exception("Number of batch norms and volume slice indices inconsistent.")
+
+    # Get the old scale/shift/mean/var as a single vector
     new_scale_slices = []
     new_shift_slices = []
     new_running_mean_slices = []
     new_running_var_slices = []
-    
-    old_scale = bn.weight.data.cpu().numpy()
-    old_shift = bn.bias.data.cpu().numpy()
-    old_running_mean = bn.running_mean.data.cpu().numpy()
-    old_running_var = bn.running_var.data.cpu().numpy()
-    
+
+    if not bn_is_array:
+        old_scale = bn.weight.data.cpu().numpy()
+        old_shift = bn.bias.data.cpu().numpy()
+        old_running_mean = bn.running_mean.data.cpu().numpy()
+        old_running_var = bn.running_var.data.cpu().numpy()
+    else:
+        old_scale = np.concatenate([b.weight.data.cpu().numpy() for b in bn])
+        old_shift = np.concatenate([b.bias.data.cpu().numpy() for b in bn])
+        old_running_mean = np.concatenate([b.running_mean.data.cpu().numpy() for b in bn])
+        old_running_var = np.concatenate([b.running_var.data.cpu().numpy() for b in bn])
+
+    # Extend the bn vector
     for i in range(1,len(volume_slices_indices)):
         beg = volume_slices_indices[i-1]
         end = volume_slices_indices[i]
@@ -305,19 +369,27 @@ def _extend_bn_(bn, new_channels_per_slice, volume_slices_indices, multiplicativ
         new_shift_slices.append(_zero_pad_1d(old_shift[beg:end], new_channels))
         new_running_mean_slices.append(_zero_pad_1d(old_running_mean[beg:end], new_channels))
         new_running_var_slices.append(_zero_pad_1d(old_running_var[beg:end], new_channels))
-        
-    new_scale = np.concatenate(new_scale_slices)
-    new_shift = np.concatenate(new_shift_slices)
-    new_running_mean = np.concatenate(new_running_mean_slices)
-    new_running_var = np.concatenate(new_running_var_slices)
-        
-    _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
+
+    # Assign to batch norm(s)
+    if not bn_is_array:
+        new_scale = np.concatenate(new_scale_slices)
+        new_shift = np.concatenate(new_shift_slices)
+        new_running_mean = np.concatenate(new_running_mean_slices)
+        new_running_var = np.concatenate(new_running_var_slices)
+        _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
+
+    else:
+        for i in range(len(bn)):
+            _assign_to_batch_norm_(bn[i], new_scale_slices[i], new_shift_slices[i], new_running_mean_slices[i],
+                                   new_running_var_slices[i])
+
     
     
     
     
     
-def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen):
+def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
+                            function_preserving):
     """
     Helper function for r2widerr. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -326,6 +398,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
     :param init_type: The type of initialization to use ('He' or 'Xavier')
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs, rather than additive
+    :param input_is_linear: If input is from a linear layer previously
+    :param function_preserving: If we want the widening to be done in a function preserving fashion
     """
     if type(prev_layer) is nn.Conv2d:
         # unpack conv2d params to numpy tensors
@@ -362,9 +436,24 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         
         # assign new matrix and bias
         _assign_weights_and_bias_to_linear_(prev_layer, prev_matrix, prev_bias)
-        
+
+    elif type(prev_layer) in [nn.MaxPool2d, nn.AvgPool2d]:
+        # Unpack, and check consistency
+        prev_extra_channels, prev_input_is_linear, prev_multiplicative_widen = prev_layer.r2r_cache
+        if function_preserving and (prev_extra_channels != extra_channels or prev_multiplicative_widen != multiplicative_widen):
+            raise Exception("Widen with a pooling layer in prev_layers inconsistent wiht the call made when it was in "
+                            "next_layers, making the cached values invalid for a function presering transform.")
+        if prev_input_is_linear != input_is_linear:
+            raise Exception("Pooling layer allows accidental mixing of conv and linear layers at the next layer.")
+
+        # Delete the values that we stored in the nn.Module as a cache
+        del prev_layer.r2r_cache
+        del prev_layer.r2r_old_channels_propagated
+        del prev_layer.r2r_volume_slice_indices
+
+
     else:
-        raise Exception("We can only handle input nn.Modules that are Linear or Conv2d at the moment.")
+        raise Exception("We can only handle input nn.Modules that are Linear, Conv2d at the moment.")
                             
                             
                             
@@ -436,10 +525,17 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
         
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
-        
+
+    elif type(next_layer) in [nn.MaxPool2d,  nn.AvgPool2d]:
+        # If maxpool or avgpool, store the information for when it's used as a 'prev layer'
+        # Note that when this max pool is part of "prev_layers" we're pretending that it's 'widened', hence the need to
+        # remember the state before
+        next_layer.r2r_cache = (extra_channels, input_is_linear, multiplicative_widen)
+        next_layer.r2r_old_channels_propagated = volume_slices_indices[-1]
+        next_layer.r2r_volume_slice_indices = volume_slices_indices
+
     else:
-        raise Exception("We can only handle output nn.Modules that are Linear or Conv2d at the moment. (Did you forget "
-                        "to specify a HVN was 'non_parametric' in the HVG? Such as when adding a max pool layer to the HVG?")
+        raise Exception("We can only handle output nn.Modules that are Linear, Conv2d, MaxPool2d or AvgPool2d at the moment.")
         
 
 
@@ -490,8 +586,7 @@ class HVG(object):
 
     
     
-    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None, residual_connection=None,
-                non_paramtric=False):
+    def add_hvn(self, hv_shape, input_modules=[], input_hvns=None, batch_norm=None, residual_connection=None):
         """
         Creates a new hvn node, and is just a wrapper around the HVN constructor. 
         THe wrapper allows the graph object to keep track of the nodes that have been added.
@@ -506,40 +601,15 @@ class HVG(object):
         :param residual_connection: The Residual_Connection object associated with the volume. (I.e. if this volume x is
                 used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
                 This should be none if it's not used as part of a residual connection.
-        :param non_paramtric: If the connection to the previous HVN is non-parametric (i.e. it doesn't contain any
-                parameters that can be used for widening). This will then be added as a 'pseudo node', which is part
-                of the current output node
         """
         # If no input hvn's provided, then take all of the current output n odes
         if input_hvns is None:
             input_hvns = self.get_output_nodes()
 
         # If it's a normal HVN (not pseudo hvn), make a new hvn node and add it to the hvg
-        if not non_paramtric:
-            hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm, residual_connection)
-            self.nodes.append(hvn)
-            return hvn
-
-        # If the node is non-parametric (pseudo hvn), then add it as a pseudo hvn (in the current output hvn)
-        # Sanity checks
-        if len(input_hvns) != 1:
-            raise Exception("Can't add a pseudo hvn with more than one input hvn.")
-        if batch_norm != None or residual_connection != None:
-            raise Exception("Can't add a batch norm or residual connection ")
-        if len(input_modules) != 1:
-            raise Exception("Can't add a pseudo hvn with more than one input module")
-
-        # Add the pseudo hvn (including residual connection if any)
-        input_hvn = input_hvns[0]
-        input_hvn._pseudo_extend_hvn(hv_shape)
-        if residual_connection is not None:
-            input_hvn.residual_connection = residual_connection
-
-        # Make sure the pseudo hvn is in the list of nodes
-        if input_hvn not in self.nodes:
-            self.nodes.append(input_hvn)
-
-        return input_hvn
+        hvn = HVN(hv_shape, input_modules, input_hvns, batch_norm, residual_connection)
+        self.nodes.append(hvn)
+        return hvn
 
     
 
@@ -551,13 +621,13 @@ class HVG(object):
         Note that not all volumes are appropriate to be widened, only the one's that are both output from a layer and input
         to another layer.
 
-        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, batch norm, residual connection object,
-                    pseudo_next_layer_spatial_ratio, [list of child nn.Modules (edges)]) tuples.
+        :yields: ([list of parent nn.Modules (edges)], hidden volume shape, is_conv_volume, batch norm,
+                    residual connection object, [list of child nn.Modules (edges)]) tuples.
         """
         for node in self.nodes:
             if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
-                yield (node._get_parent_modules(), node.hv_shape, node.batch_norm, node.residual_connection,
-                       node._get_pseudo_next_hvn_spatial_ratio(), node._get_child_modules())
+                yield (node._get_parent_modules(), node.hv_shape, node._is_conv_volume(), node.batch_norm,
+                       node.residual_connection, node._get_child_modules())
             
             
             
@@ -588,6 +658,69 @@ class HVG(object):
                 if edge.pytorch_module is module:
                     return edge
         return None
+
+
+
+    def concat(self, hvns):
+        """
+        Concatenates a list of hvn objects, and corresponds to the same operation as
+
+        This "edits" the graph (it creates a new node, that replaces all of the hvn's in 'hvns')
+
+        :param hvns: A list of HVN objects to be concatenated in the HVG
+        :returns: The new HVN object in the HVG that's replacing the hvn's in 'hvns'
+        """
+        # Start with some sanity checks
+        for hvn in hvns:
+            if len(hvn.child_edges) > 0:
+                raise Exception("Can't concatenate volumes that are already fed as input to some other module.")
+            if hvn.residual_connection is not None:
+                raise Exception("Can't concatenate volumes that already are used in a residual connection.")
+            if hasattr(hvn.batch_norm, '__len__'):
+                raise Exception("Can't concatenate nodes that mix batch_norm lists and single batch norms... yet")
+
+        is_conv = hvns[0]._is_conv_volume_shape()
+        for hvn in hvns:
+            if hvn._is_conv_volume_shape() != is_conv:
+                raise Exception("Cannot concatinate convolutional volumes and linear volumes.")
+
+        if is_conv:
+            _, h, w = hvns[0].hv_shape
+            for hvn in hvns:
+                if h != hvn.hv_shape[1] or w != hvn.hv_shape[2]:
+                    raise Exception("Cannot concatenate convolutional volumes with different spatial dimensions.")
+
+        # Compute the new shape
+        new_channels = 0
+        for hvn in hvns:
+            new_channels += hvn.hv_shape[0]
+        new_shape = (new_channels,)
+        if is_conv:
+            _, h, w = hvns[0].hv_shape
+            new_shape = (new_channels, h, w)
+
+        # Concatenate all of the input modules and input hvns
+        new_input_modules = []
+        new_input_hvns = []
+        new_batch_norms = []
+        for hvn in hvns:
+            new_input_modules.extend(hvn._get_parent_modules())
+            new_input_hvns.extend(hvn._get_parent_hvns())
+            new_batch_norms.append(hvn.batch_norm)
+
+        # Check that we're not accidentally introducing some loop (could be possible to encorporate, but not now)
+        # Also, this doesn't do a proper check for a loop (for more than 2 edges)
+        for hvn in hvns:
+            if hvn in new_input_hvns:
+                raise Exception("Can't concatenate volumes where one is the input to another")
+
+        # Remove all of the edges being concatenated from hvn list, and replace it with the concatenated volume
+        for hvn in hvns:
+            self.nodes.remove(hvn)
+        return self.add_hvn(new_shape, input_modules=new_input_modules, input_hvns=new_input_hvns, batch_norm=new_batch_norms)
+
+
+
     
     
     
@@ -615,7 +748,9 @@ class HVN(object):
         :param input_modules: the nn.Modules where input_modules[i] takes input with shape from input_hvns[i] to be 
                 concatenated for this hidden volume (node).
         :param input_hvns: A list of HVN objects that are parents/inputs to this HVN
-        :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm
+        :param batch_norm: Any batch norm layer that's associated with this hidden volume, None if there is no batch norm.
+                In the case where the volume is formed by a concatenation (len(input_hvns) > 1), then, we can provide a
+                list
         :param residual_connection: The Residual_Connection object associated with this volume. (I.e. if this volume x is
                 used for a residual connection at some point later in the network y, with y = residual_connection(y,x)).
                 This should be none if it's not used as part of a residual connection.
@@ -626,53 +761,13 @@ class HVN(object):
         self.parent_edges = []
         self.batch_norm = batch_norm
         self.residual_connection = residual_connection
-        self.pseudo_next_hvn_shape = hv_shape
         
         # Make the edges between this node and it's parents/inputs
         self._link_nodes(input_modules, input_hvns)
 
-
-
-    def _pseudo_extend_hvn(self, pseudo_hvn_shape):
-        """
-        Adds a pseudo hvn shape to the end of this hvn. We do this to 'add' non-parametric edges, such as one associated
-        with a max pool module, which changes that volume in it's spatial dimensions.
-
-        Pseudo hvns are ignored by r_2_wider_r, and we instead use the pseudo hvn to provide the
-        'next_layer_spatial_ratio' in r_2_wider_r. We perform some sanity checks to make sure that the pseudo hvn shape
-        is compatible with this purpose.
-
-        :param pseudo_hvn_shape: The shape of the hidden volume for a pseudo hvn
-        """
-        # Sanity checks
-        if len(self.hv_shape) != 3 or len(pseudo_hvn_shape) != 3:
-            raise Exception("We can only add pseudo hvn's for convolutional volumes in the HVG.")
-
-        # Unpack (current pseudo next hvn shape) and the new one we are adding
-        c, h, w = self.pseudo_next_hvn_shape
-        pseudo_c, pseudo_h, pseudo_w = pseudo_hvn_shape
-
-        # More sanity checks
-        if c != pseudo_c:
-            raise Exception("Can't add a pseudo hvn that reduces the number of channels between nodes.")
-        if h % pseudo_h != 0 or w % pseudo_w != 0:
-            raise Exception("Currently can only support pseudo volumes where new width and height divides the previous widen and height")
-        if h // pseudo_h != w // pseudo_w:
-            raise Exception("Currently cannot support different ratios of reduction in pseudo hvn's between width and height.")
-
-        # Set
-        self.pseudo_next_hvn_shape = pseudo_hvn_shape
-
-
-
-    def _get_pseudo_next_hvn_spatial_ratio(self):
-        """
-        Gets the ratio of the spatial dimensions ready to be input as 'next_layer_spatial_ratio' to r_2_wider_r.
-
-        :return: The ratio between the spatial dimensions of the hvn shape in this node, and the spatial dimensions of
-                the hvn shape in the pseudo node.
-        """
-        return self.hv_shape[-1] // self.pseudo_next_hvn_shape[-1]
+        # Check for invalid number of batch norm
+        if hasattr(batch_norm, '__len__') and len(batch_norm) != len(input_hvns):
+            raise Exception("If batch norm is a list of nn.BatchNorm instances, it has to be the same length as the number of inputs to the hvn.")
 
 
     
@@ -694,6 +789,14 @@ class HVN(object):
             edge = HVE(parent_node=parent_hvn, child_node=self, module=input_modules[i])
             parent_hvn.child_edges.append(edge)
             self.parent_edges.append(edge)
+
+
+
+    def _get_parent_hvns(self):
+        """
+        Gets a list of HVN objects from the parent edges (in the same order)
+        """
+        return [edge.parent_node for edge in self.parent_edges]
     
     
     
@@ -713,12 +816,35 @@ class HVN(object):
     
     
     
-    def _is_conv_volume(self):
+    def _is_conv_volume_shape(self):
         """
         Volumes output by conv layers are 3D, and linear are 1D.
         """
         return len(self.hv_shape) == 3
-        
+
+
+
+    def _is_conv_volume(self):
+        """
+        Returns a boolean that says if this volume should always be considered a convolutional volume.
+        Volumes that aren't always considered a convolutional volume are those that are fed into linear layers, even
+        if they are output from a
+
+        Specifically, we define a volume to be a 'conv_volume' iff in the tree rooted at this HVN there is a Conv2d
+        module on some edge of every path from the root node to a leaf node. (I.e. if in every computation path
+        there will be another application of a convolution operation).
+
+        :return: If the HVN is considered a 'conv_volume' as defined above
+        """
+        queue = copy.copy(self.child_edges)
+        while len(queue) > 0:
+            edge = queue.pop(0)
+            if type(edge.pytorch_module) == nn.Conv2d:
+                continue
+            if len(edge.child_node.child_edges) == 0:
+                return False
+            queue.extend(edge.child_node.child_edges)
+        return True
             
             
     
@@ -754,7 +880,11 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
     any batch norm layer associated with it, along with the shape for the current hidden volume.
     
     For simplicity we add 'new_channels' many new channels to hidden volumes, and 'new_units' many additional 
-    hidden units. By setting one of them to zero we can easily just widen the convs or fc layers of a network independently.
+    hidden units. By setting one of them to zero we can easily just widen the convs or fc layers of a network
+    independently.
+
+    To be explicit, we will use 'new_channels' in R2WiderR whenever the volume will be (eventually) fed into another
+    convolutional layer, otherwise, we go with 'new_hidden_nodes' (probably a lower, more reasonable number of new hidden units)
     
     :param network: The nn.Module to be widened, which must implement the R2WiderR interface.
     :param new_channels: The number of new channels/hidden units to add in conv layers
@@ -768,12 +898,11 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
     hvg = network.hvg()
         
     # Iterate through the hvg, widening appropriately in each place
-    for prev_layers, shape, batch_norm, residual_connection, pseudo_next_volume_spatial_ratio, next_layers in hvg.node_iterator():
-        feeding_to_linear = (type(prev_layers[0]) is nn.Linear) or (type(next_layers[0]) is nn.Linear)
-        channels_or_nodes_to_add = new_hidden_nodes if feeding_to_linear else new_channels
+    for prev_layers, shape, is_conv_volume, batch_norm, residual_connection, next_layers in hvg.node_iterator():
+        channels_or_nodes_to_add = new_hidden_nodes if is_conv_volume else new_channels
         if channels_or_nodes_to_add == 0:
             continue
-        r_2_wider_r_(prev_layers, shape, next_layers, pseudo_next_volume_spatial_ratio, batch_norm, residual_connection,
+        r_2_wider_r_(prev_layers, shape, next_layers, batch_norm, residual_connection,
                      channels_or_nodes_to_add, init_type, function_preserving, multiplicative_widen)
         
     # Return model for if someone want to use this in an assignment form etc

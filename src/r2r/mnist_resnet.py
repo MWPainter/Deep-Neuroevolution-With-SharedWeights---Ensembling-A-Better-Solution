@@ -116,11 +116,11 @@ class Mnist_Resnet(nn.Module):
         :return: A hvg representing the entire conv part of this network
         """
         cur_hvg = self.resblock1.conv_hvg(cur_hvg)
-        cur_hvg.add_hvn((self.resblock1.r2r.conv2.weight.data.size(0), 16, 16), input_modules=[self.pool1], non_paramtric=True)
+        cur_hvg.add_hvn((self.resblock1.r2r.conv2.weight.data.size(0), 16, 16), input_modules=[self.pool1])
         cur_hvg = self.resblock2.conv_hvg(cur_hvg)
-        cur_hvg.add_hvn((self.resblock2.r2r.conv2.weight.data.size(0),  8,  8), input_modules=[self.pool2], non_paramtric=True)
+        cur_hvg.add_hvn((self.resblock2.r2r.conv2.weight.data.size(0),  8,  8), input_modules=[self.pool2])
         cur_hvg = self.resblock3.conv_hvg(cur_hvg)
-        cur_hvg.add_hvn((self.resblock3.r2r.conv2.weight.data.size(0),  4,  4), input_modules=[self.pool3], non_paramtric=True)
+        cur_hvg.add_hvn((self.resblock3.r2r.conv2.weight.data.size(0),  4,  4), input_modules=[self.pool3])
         return cur_hvg
 
 
