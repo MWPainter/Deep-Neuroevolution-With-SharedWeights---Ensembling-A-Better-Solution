@@ -33,7 +33,7 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_TRAIN,
                 transforms.Compose([
-                    transforms.RandomResizedCrop(224),
+                    transforms.RandomResizedCrop(299),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     normalize,
@@ -43,8 +43,8 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_VAL,
                 transforms.Compose([
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
+                    transforms.Resize(341),
+                    transforms.CenterCrop(299),
                     transforms.ToTensor(),
                     normalize,
                 ]))
@@ -53,8 +53,8 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_TEST,
                 transforms.Compose([
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
+                    transforms.Resize(341),
+                    transforms.CenterCrop(299),
                     transforms.ToTensor(),
                     normalize,
                 ]))
