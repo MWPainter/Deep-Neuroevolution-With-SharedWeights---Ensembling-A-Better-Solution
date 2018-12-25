@@ -22,7 +22,9 @@ Note that we will use jupyter notebooks, which are part of the default anaconda 
 
 #### Getting the datasets
 
-TODO: just direct them to the appropriate scripts
+- MNist: No work required, we use the PyTorch built in dataset for MNist.
+- Cifar: In `src/dataset/data` run the shell script by typing `./get_cifar10.sh`.
+- Imagenet: Download from the portal site [here](http://www.image-net.org/challenges/LSVRC/2012/nonpub-downloads), and unzip the data in `src/dataset/data/imagenet` as described [here](https://github.com/facebook/fb.resnet.torch/blob/master/INSTALL.md#download-the-imagenet-dataset). For imagenet, we use 'standard normalization', as seen in this [code snippet](https://github.com/pytorch/examples/blob/e0d33a69bec3eb4096c265451dbb85975eb961ea/imagenet/main.py#L113-L126).
 
 ## Schedule
 
@@ -129,17 +131,17 @@ TODO: clean this next bullet up into more concise ideas
     
     
 #### Imagenet work
-- Dataset work
-    - Downloading the data
-    - Dataset object
-    - Definitely req's data loaders
-- **Implement Inception-Resnetv2 architecture 
-    - **ANd a smaller shallower version as a starting point
-    - **Adapt implementation from [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionresnetv2.py) and [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionv4.py) and reference them correctly
+- ~Dataset work~
+    - ~Downloading the data~
+    - ~Dataset object~
+    - ~Definitely req's data loaders~
+- ~Implement Inception-Resnetv2 architecture~ 
+    - ~ANd a smaller shallower version as a starting point~
+    - ~Adapt implementation from [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionresnetv2.py) and [here](https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/inceptionv4.py) and reference them correctly~
 - Repeate all experiments on imagenet using Inception-Resnetv2
     - Use the pretrained models from [here](https://github.com/Cadene/pretrained-models.pytorch) and reference correctly
-- Data augmentation? 
-    - Hve this mostly from MSFT internship
+- ~Data augmentation?~ 
+    - ~Hve this mostly from MSFT internship~
   
   
 #### Evalutation/Visualizations
@@ -243,6 +245,7 @@ TODO: clean this next bullet up into more concise ideas
 - Checking say 10 small perterbations from Inception, and check that inception isn't necessarily the best of the 10
     - A check that inception isn't a max point in the architecture space
     - And it's worth continuing the optimization in the architecture space
+- Add an adanet related idea (have some information theoretic objective in the diverse neuroevolution traininer when do architecture search)
 
 
 #### Neuroevolution Paper/Writing Todo
