@@ -1,10 +1,8 @@
 import os
-import copy
 import torch as t
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 
-from dataset import MnistDataset, CifarDataset, ImagenetDataset, get_imagenet_dataloader
+from dataset import get_imagenet_dataloader
 
 from utils import cudafy
 from utils import train_loop
@@ -129,6 +127,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     :return: An updated reference to the model and optimizer, and a dictionary from strings to PyTorch scalar Variables
             used for TensorBoard summaries.
     """
+    print(minibatch)
+    raise Exception("Testing, remove this after hit it.")
+
     # If we have expended the number of flops for this test, then we should stop any updates
     if hasattr(args, "total_flops") and hasattr(args, "flops_budget") and args.total_flops >= args.flops_budget:
         return model, optimizer, {}
