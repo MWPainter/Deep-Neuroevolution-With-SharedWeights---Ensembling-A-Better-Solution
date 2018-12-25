@@ -671,6 +671,7 @@ def inceptionv4(num_classes=1000, pretrained='imagenet'):
             new_last_linear.weight.data = model.last_linear.weight.data[1:]
             new_last_linear.bias.data = model.last_linear.bias.data[1:]
             model.last_linear = new_last_linear
+        # elif pretrained == 'imagenet+background' if want to load the pretrained model for 1001 classes
 
         model.input_space = settings['input_space']
         model.input_size = settings['input_size']
