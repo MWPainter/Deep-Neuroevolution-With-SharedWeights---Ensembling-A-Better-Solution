@@ -133,6 +133,17 @@ def _is_conv_volume_shape(vol_shape):
 
 
 
+def _round_up_multiply(a, b, m):
+    """
+    Performs a*b and rounds up to the nearest m. Note that (x+m-1)//m, is a divide by m rounded up
+    """
+    prod = ((a*b + m - 1) // m) * m
+    return prod
+
+
+
+
+
 """
 Widening hidden volumes
 """
@@ -210,7 +221,7 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     More helper functions are used.
     """
     # For us to be able to perform a function preserving transforms, extra channels must be even and non-negative
-    if extra_channels <= 0 or (function_preserving and extra_channels % 2 != 0):
+    if extra_channels <= 0 or (function_preserving and not multiplicative_widen and extra_channels % 2 != 0):
         raise Exception("Invalid number of extra channels in widen.")
     
     # Check that the types of all the in/out layers are the same
@@ -377,7 +388,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
         end = module_slices_indices[i+1]
         
         # to triple number of channels, *add* 2x the current num
-        new_channels = new_channels_per_slice if not multiplicative_widen else (new_channels_per_slice - 1) * (end-beg)
+        new_channels = new_channels_per_slice if not multiplicative_widen else _round_up_multiply(new_channels_per_slice - 1, (end-beg), 2)
         
         new_scale_slices.append(_mean_pad_1d(old_scale[beg:end], new_channels))
         new_shift_slices.append(_mean_pad_1d(old_shift[beg:end], new_channels))
@@ -430,7 +441,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         # new conv kernel
         old_out_channels, in_channels, height, width = prev_kernel.shape
         if multiplicative_widen:
-            extra_channels = old_out_channels * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
+            extra_channels = _round_up_multiply(old_out_channels, (extra_channels - 1), 2) # to triple number of channels, *add* 2x the current num
         kernel_extra_shape = (extra_channels, in_channels, height, width)
         prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
 
@@ -454,7 +465,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         # new linear matrix
         old_n_out, n_in = prev_matrix.shape
         if multiplicative_widen:
-            extra_channels = old_n_out * (extra_channels - 1) # to triple number of channels, *add* 2x the current num
+            extra_channels = _round_up_multiply(old_n_out, (extra_channels - 1), 2) # to triple number of channels, *add* 2x the current num
         matrix_extra_shape = (extra_channels, n_in)
         prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
 
@@ -520,7 +531,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             beg, end = volume_slices_indices[i-1], volume_slices_indices[i]
             slice_extra_channels = extra_channels
             if multiplicative_widen:
-                slice_extra_channels = (end-beg) * (extra_channels - 1) # to triple num channels, *add* 2x the current num
+                slice_extra_channels = _round_up_multiply((end-beg), (extra_channels - 1), 2) # to triple num channels, *add* 2x the current num
             kernel_extra_shape = (out_channels, slice_extra_channels, height, width)
             kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
                                                                    init_type, alpha)
@@ -543,7 +554,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             end = volume_slices_indices[i] * new_hidden_units_in_next_layer_per_new_channel
             extra_params_per_input_layer = extra_channels * new_hidden_units_in_next_layer_per_new_channel
             if multiplicative_widen:
-                extra_params_per_input_layer = (end-beg) * (extra_channels - 1) # triple num outputs = *add* 2x the current num
+                extra_params_per_input_layer = _round_up_multiply((end-beg), (extra_channels - 1), 2) # triple num outputs = *add* 2x the current num
             matrix_extra_shape = (n_out, extra_params_per_input_layer)
             matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end], init_type, alpha)
             next_matrix_parts.append(matrix_part)
