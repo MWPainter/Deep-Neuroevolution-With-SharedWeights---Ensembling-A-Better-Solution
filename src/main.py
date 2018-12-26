@@ -10,6 +10,9 @@ from batch_tests import mnist_identity_init_test, cifar_identity_init_test, mnis
 from batch_tests import mnist_widen_with_budget_test, cifar_widen_with_budget_test, mnist_deepen_with_budget_test, cifar_deepen_with_budget_test
 from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 
+from run import _net_2_wider_net_inception_test, _net_2_wider_net_inception_resnet_test, _net_2_deeper_net_inception_test, _net_2_deeper_net_inception_resnet_test
+from run import _r_2_wider_r_inception_test, _r_2_wider_r_inception_resnet_test, _r_2_deeper_r_inception_test, _r_2_deeper_r_inception_resnet_test
+
 
 
 
@@ -303,6 +306,38 @@ def get_defaults(script_name):
         }
 
 
+
+    elif script == "n2n_wider_inception":
+        return {
+            "lr": 1.0e-4,
+            "weight_decay": 1.0e-7,
+            "epochs": 25,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 16,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "n2n_wider_inception_resnet":
+        return {} # TODO: actually set params
+    elif script == "n2n_deeper_inception":
+        return {} # TODO: actually set params
+    elif script == "n2n_deeper_inception_resnet":
+        return {} # TODO: actually set params
+
+    elif script == "r2r_wider_inception":
+        return {} # TODO: actually set params
+    elif script == "r2r_wider_inception_resnet":
+        return {} # TODO: actually set params
+    elif script == "r2r_deeper_inception":
+        return {} # TODO: actually set params
+    elif script == "r2r_deeper_inception_resnet":
+        return {} # TODO: actually set params
+
+
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
 
@@ -420,6 +455,24 @@ if __name__ == "__main__":
         mnist_net_to_net_style_test(args, widen=False)
     elif script == "cifar_net2deepernet_style": #########
         cifar_net_to_net_style_test(args, widen=False)
+
+    elif script == "n2n_wider_inception":
+        _net_2_wider_net_inception_test(args)
+    elif script == "n2n_wider_inception_resnet":
+        _net_2_wider_net_inception_resnet_test(args)
+    elif script == "n2n_deeper_inception":
+        _net_2_deeper_net_inception_test(args)
+    elif script == "n2n_deeper_inception_resnet":
+        _net_2_deeper_net_inception_resnet_test(args)
+
+    elif script == "r2r_wider_inception":
+        _r_2_wider_r_inception_test(args)
+    elif script == "r2r_wider_inception_resnet":
+        _r_2_wider_r_inception_resnet_test(args)
+    elif script == "r2r_deeper_inception":
+        _r_2_deeper_r_inception_test(args)
+    elif script == "r2r_deeper_inception_resnet":
+        _r_2_deeper_r_inception_resnet_test(args)
 
     else:
         print("Couldn't find script for '{s}'".format(s=script))
