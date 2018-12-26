@@ -81,6 +81,6 @@ class ImagenetDataset(Dataset):
 
 
 
-def get_imagenet_dataloader(mode="train", batch_size=0, shuffle=True, num_workers=1, pin_memory=True)
+def get_imagenet_dataloader(mode="train", batch_size=0, shuffle=True, num_workers=1, pin_memory=True):
     return DataLoader(dataset=ImagenetDataset(mode), batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                       pin_memory=pin_memory)

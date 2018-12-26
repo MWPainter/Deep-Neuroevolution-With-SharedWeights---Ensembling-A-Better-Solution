@@ -144,8 +144,10 @@ def _update_op(model, optimizer, minibatch, iter, args):
         raise Exception("Not implemented yet")
         if iter in args.widen_times:
             # TODO: implement widen for InceptionV4 and InceptionResnetV2, such that it can be R2WiderR or Net2WiderNet
+            pass
         elif iter in args.deepen_times:
             # TODO: implement deepen for InceptionV4 and InceptionResnetV2, such that it can be R2DeeperR or Net2DeeperNet
+            pass
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
