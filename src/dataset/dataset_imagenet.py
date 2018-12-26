@@ -8,7 +8,7 @@ import torchvision.datasets as datasets
 
 
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
+ROOT = "/raid/local_scratch/mmp10-ihp03/imagenet" # os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
 ROOT_TRAIN = os.path.join(ROOT, 'train')
 ROOT_VAL = os.path.join(ROOT, 'val')
 ROOT_TEST = os.path.join(ROOT, 'test')

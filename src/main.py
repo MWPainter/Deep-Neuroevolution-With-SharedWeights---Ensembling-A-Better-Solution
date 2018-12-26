@@ -315,8 +315,8 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
-            "workers": 100,
+            "batch_size": 128,
+            "workers": 32,
             "widen_times": [], # unused
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
