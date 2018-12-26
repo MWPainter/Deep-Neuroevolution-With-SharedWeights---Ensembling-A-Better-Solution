@@ -26,6 +26,13 @@ Note that we will use jupyter notebooks, which are part of the default anaconda 
 - Cifar: In `src/dataset/data` run the shell script by typing `./get_cifar10.sh`.
 - Imagenet: Download from the portal site [here](http://www.image-net.org/challenges/LSVRC/2012/nonpub-downloads), and unzip the data in `src/dataset/data/imagenet` as described [here](https://github.com/facebook/fb.resnet.torch/blob/master/INSTALL.md#download-the-imagenet-dataset). For imagenet, we use 'standard normalization', as seen in this [code snippet](https://github.com/pytorch/examples/blob/e0d33a69bec3eb4096c265451dbb85975eb961ea/imagenet/main.py#L113-L126).
 
+
+## Acknowledgements
+
+Code for Inception architectures is adapted from [PyTorch's Model Zoo](https://github.com/Cadene/pretrained-models.pytorch). 
+
+Code for counting FLOPs is addapted from [TODO](http://todo.com).
+
 ## Schedule
 
 
