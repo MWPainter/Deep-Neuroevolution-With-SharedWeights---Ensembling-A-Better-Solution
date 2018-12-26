@@ -8,6 +8,7 @@ from r2r.module_utils import *
 from utils.pytorch_utils import cudafy
 
 import copy
+import math
 from itertools import chain
 
 
@@ -137,7 +138,7 @@ def _round_up_multiply(a, b, m):
     """
     Performs a*b and rounds up to the nearest m. Note that (x+m-1)//m, is a divide by m rounded up
     """
-    prod = ((a*b + m - 1) // m) * m
+    prod = int(math.ceil(((a*b + m - 1) // m) * m))
     return prod
 
 
