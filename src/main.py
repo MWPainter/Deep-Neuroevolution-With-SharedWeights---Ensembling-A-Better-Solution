@@ -311,12 +311,12 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-4,
             "weight_decay": 1.0e-7,
-            "epochs": 25,
+            "epochs": 8,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
-            "workers": 32,
+            "batch_size": 32,
+            "workers": 4,
             "widen_times": [], # unused
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
