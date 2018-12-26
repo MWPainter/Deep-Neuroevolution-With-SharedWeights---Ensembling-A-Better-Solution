@@ -232,11 +232,6 @@ def _validation_loss(model, minibatch, args):
     :return: A PyTorch scalar Variable with value of the validation loss.
         Returns validation loss and validation accuracy.
     """
-
-    return {'loss': 1.0,
-            'accuracy@1': 1.0,
-            'accuracy@5': 1.0}
-
     # If we have expended the number of flops for this test, then we should stop any updates
     if hasattr(args, "total_flops") and hasattr(args, "flops_budget") and args.total_flops >= args.flops_budget:
         return {}
