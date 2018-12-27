@@ -337,16 +337,17 @@ def _one_pad_1d(old_val, new_params):
 
 
 
-def _mean_pad_1d(old_val, new_params):
+def _mean_pad_1d(old_val, new_params, ratio=1.0):
     """
     Pads an old (1d) tensor to match the new number of outputs. Pads with the mean value of 'old_val'
 
     :param old_val the old numpy tensor to one pad
     :param new_params: the number of new params needed
+    :param ratio: a ratio to use for the mean value
     :return: a new, padded tensor
     """
     old_len = old_val.shape[0]
-    canvas = np.ones((old_len+new_params,), dtype=np.float32) * np.mean(old_val)
+    canvas = np.ones((old_len+new_params,), dtype=np.float32) * np.mean(old_val) * ratio
     canvas[:old_len] = old_val
     return canvas
 
