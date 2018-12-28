@@ -5,4 +5,4 @@ from .cifar_resnet import *
 from .resblock import *
 from .residual_connection import *
 from .inception import *
-from .inception_resnet import *
+from .resnet import *

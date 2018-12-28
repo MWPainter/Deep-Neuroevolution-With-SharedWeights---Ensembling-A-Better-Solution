@@ -202,12 +202,10 @@ class Res_Block(nn.Module):
         if len(output_nodes) > 1:
             raise Exception("Input to residual block when making HVG was multiple volumes.")
 
-        # Add the residual connection object to the current hvg output node
-        output_node = output_nodes[0]
-        if self.add_residual:
-            output_node.residual_connection = self.residual_connection
+        # Grab a refence to the current output node (input node to this resblock)
+        input_hvn = output_nodes[0]
 
-        # First hidden 
+        # First hidden
         cur_hvg.add_hvn((self.conv1.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
                         input_modules=[self.conv1], batch_norm=self.bn1)
         
@@ -222,6 +220,11 @@ class Res_Block(nn.Module):
         # Fourth (output) hidden volume (second of r2r block)
         cur_hvg.add_hvn((self.r2r.conv2.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]), 
                          input_modules=[self.r2r.conv2], batch_norm=self.r2r.opt_bn2)
+
+        # Add the residual connection object to the input hvn node
+        if self.add_residual:
+            input_hvn.residual_connection = self.residual_connection
+
         return cur_hvg
         
                    

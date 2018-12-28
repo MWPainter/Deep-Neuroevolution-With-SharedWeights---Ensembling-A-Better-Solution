@@ -19,12 +19,14 @@ class ImagenetDataset(Dataset):
     """
     Our wrapper for the imagenet dataset (just an "ImageFolder" dataset) and it's corresponding normalizations.
     """
-    def __init__(self, mode="train"):
+    def __init__(self, mode="train", inception=True):
         Dataset.__init__(self)
 
         # Normalization stats
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
+        resize_dim = 341 if inception else 256
+        input_dim = 299 if inception else 224
 
         # Make the dataset, using the correct directory and random/center cropping
         dataset = None
@@ -33,7 +35,7 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_TRAIN,
                 transforms.Compose([
-                    transforms.RandomResizedCrop(299),
+                    transforms.RandomResizedCrop(input_dim),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     normalize,
@@ -43,8 +45,8 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_VAL,
                 transforms.Compose([
-                    transforms.Resize(341),
-                    transforms.CenterCrop(299),
+                    transforms.Resize(resize_dim),
+                    transforms.CenterCrop(input_dim),
                     transforms.ToTensor(),
                     normalize,
                 ]))
@@ -53,8 +55,8 @@ class ImagenetDataset(Dataset):
             dataset = datasets.ImageFolder(
                 ROOT_TEST,
                 transforms.Compose([
-                    transforms.Resize(341),
-                    transforms.CenterCrop(299),
+                    transforms.Resize(resize_dim),
+                    transforms.CenterCrop(input_dim),
                     transforms.ToTensor(),
                     normalize,
                 ]))

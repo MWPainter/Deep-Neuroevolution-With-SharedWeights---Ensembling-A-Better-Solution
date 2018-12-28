@@ -24,15 +24,6 @@ This contains the main entry point from which to run scripts.
 
 
 
-"""
-TODO 0: Add defaults for deepen and widen times
-TODO 1: tests
-"""
-
-
-
-
-
 
 def get_defaults(script_name):
     checkpoint_dir = "checkpoints"
@@ -321,20 +312,7 @@ def get_defaults(script_name):
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
-    elif script == "n2n_wider_inception_resnet":
-        return {} # TODO: actually set params
-    elif script == "n2n_deeper_inception":
-        return {} # TODO: actually set params
-    elif script == "n2n_deeper_inception_resnet":
-        return {} # TODO: actually set params
-
     elif script == "r2r_wider_inception":
-        return {} # TODO: actually set params
-    elif script == "r2r_wider_inception_resnet":
-        return {} # TODO: actually set params
-    elif script == "r2r_deeper_inception":
-        return {} # TODO: actually set params
-    elif script == "r2r_deeper_inception_resnet":
         return {} # TODO: actually set params
 
 
@@ -458,21 +436,8 @@ if __name__ == "__main__":
 
     elif script == "n2n_wider_inception":
         _net_2_wider_net_inception_test(args)
-    elif script == "n2n_wider_inception_resnet":
-        _net_2_wider_net_inception_resnet_test(args)
-    elif script == "n2n_deeper_inception":
-        _net_2_deeper_net_inception_test(args)
-    elif script == "n2n_deeper_inception_resnet":
-        _net_2_deeper_net_inception_resnet_test(args)
-
     elif script == "r2r_wider_inception":
         _r_2_wider_r_inception_test(args)
-    elif script == "r2r_wider_inception_resnet":
-        _r_2_wider_r_inception_resnet_test(args)
-    elif script == "r2r_deeper_inception":
-        _r_2_deeper_r_inception_test(args)
-    elif script == "r2r_deeper_inception_resnet":
-        _r_2_deeper_r_inception_resnet_test(args)
 
     else:
         print("Couldn't find script for '{s}'".format(s=script))

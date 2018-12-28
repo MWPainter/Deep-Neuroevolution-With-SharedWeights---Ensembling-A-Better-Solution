@@ -2,7 +2,7 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 
-from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4
+from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50
 from utils import flatten
 
 
@@ -66,7 +66,7 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
 
 
 
-def test_function_preserving_r2widerr(model, thresh, function_preserving=True, data_channels=1, verbose=False, inception=False):
+def test_function_preserving_r2widerr(model, thresh, function_preserving=True, data_channels=1, verbose=False, deep=False, spatial_dim=32):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -74,18 +74,17 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        spatial_dim = 32 if not inception else 299
         rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    if not inception:
+    if not deep:
         model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
                                function_preserving=function_preserving, multiplicative_widen=False)
     else:
-        model = widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='He',
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
                                function_preserving=function_preserving, multiplicative_widen=True)
 
     
@@ -519,7 +518,7 @@ if __name__ == "__main__":
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR hvg.concat works:")
-    test_function_preserving_r2widerr(_Baby_Inception(test_concat=True), 1e-5, verbose=verbose)
+    test_function_preserving_r2widerr(_Baby_Inception(test_concat=True), 1e-4, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -560,12 +559,25 @@ if __name__ == "__main__":
 
 
 
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4().eval(), 1e-5, verbose=verbose, data_channels=3, inception=True)
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+
+
 
     if verbose:
         print("\n"*4)
-        print("Testing random padding for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, inception=True)
+        print("Testing R2WiderR for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+

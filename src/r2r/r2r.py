@@ -229,13 +229,13 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     prev_type = nn.Linear if any([type(layer) == nn.Linear for layer in prev_layers]) else nn.Conv2d
     next_type = nn.Linear if any([type(layer) == nn.Linear for layer in next_layers]) else nn.Conv2d
     for i in range(1,len(prev_layers)):
-        if type(prev_layers[i]) not in [prev_type, nn.AvgPool2d, nn.MaxPool2d]:
+        if type(prev_layers[i]) not in [prev_type, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
             raise Exception("All (non pooling) input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
     for i in range(1,len(next_layers)):
-        if type(next_layers[i]) not in [next_type, nn.AvgPool2d, nn.MaxPool2d]:
+        if type(next_layers[i]) not in [next_type, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
             raise Exception("All (non pooling) output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
     for i in range(1,len(prev_layers)):
-        if type(prev_layers[i]) in [nn.AvgPool2d, nn.MaxPool2d] and not hasattr(prev_layers[i], 'r2r_cache'):
+        if type(prev_layers[i]) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and not hasattr(prev_layers[i], 'r2r_cache'):
             raise Exception("AvgPool2d or MaxPool2d in prev_layers when not used previously in a R2WiderR call in "
                             "next_layers, which is necessary to create a cache of values needed for the transformation.")
 
@@ -300,7 +300,7 @@ def _get_output_channels_from_layer(layer):
     To get the output layers from one of the pooling layers, it has to have been used as part of "next_layers" in a
     previous R2WiderR call.
     """
-    if type(layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_old_channels_propagated'):
+    if type(layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_old_channels_propagated'):
         return layer.r2r_old_channels_propagated
     elif type(layer) in [nn.Conv2d, nn.Linear]:
         return layer.weight.size(0)
@@ -325,7 +325,7 @@ def _compute_new_volume_slices_from_layer(base_index, prev_layer):
     :param prev_layer: A layer from prev_layers in R2WiderR who's output makes part of the volume being widened.
     :return: New indices into the volume being widened, contributed from 'prev_layer'
     """
-    if type(prev_layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(prev_layer, 'r2r_volume_slice_indices'):
+    if type(prev_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and hasattr(prev_layer, 'r2r_volume_slice_indices'):
         propagating_slice_indices = prev_layer.r2r_volume_slice_indices[1:]
         return [base_index + index for index in propagating_slice_indices]
     elif type(prev_layer) in [nn.Conv2d, nn.Linear]:
@@ -477,7 +477,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         # assign new matrix and bias
         _assign_weights_and_bias_to_linear_(prev_layer, prev_matrix, prev_bias)
 
-    elif type(prev_layer) in [nn.MaxPool2d, nn.AvgPool2d]:
+    elif type(prev_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
         # Unpack, and check consistency
         prev_extra_channels, prev_input_is_linear, prev_multiplicative_widen = prev_layer.r2r_cache
         if function_preserving and (prev_extra_channels != extra_channels or prev_multiplicative_widen != multiplicative_widen):
@@ -564,7 +564,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
         # assign new linear params (don't need to change bias)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
 
-    elif type(next_layer) in [nn.MaxPool2d,  nn.AvgPool2d]:
+    elif type(next_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
         # If maxpool or avgpool, store the information for when it's used as a 'prev layer'
         # Note that when this max pool is part of "prev_layers" we're pretending that it's 'widened', hence the need to
         # remember the state before
@@ -665,7 +665,7 @@ class HVG(object):
                     residual connection object, [list of child nn.Modules (edges)]) tuples.
         """
         for node in self.nodes:
-            if len(node.child_edges) != 0 and len(node.parent_edges) != 0:
+            if len(node.parent_edges) != 0 and (len(node.child_edges) != 0 or node.residual_connection is not None):
                 yield (node._get_parent_modules(), node.hv_shape, node._is_conv_volume(), node.batch_norm,
                        node.residual_connection, node._get_child_modules())
             
@@ -673,7 +673,21 @@ class HVG(object):
             
     def get_output_nodes(self):
         """
-        Gets a list of nodes that have no output edges
+        Gets a list of nodes that have no output edges (including residual connections as output edges)
+
+        :returns: A list of 'output nodes' (the HVN's in the graph that have no children)
+        """
+        output_nodes = []
+        for node in self.nodes:
+            if len(node.child_edges) == 0 and node.residual_connection is None:
+                output_nodes.append(node)
+        return output_nodes
+
+
+
+    def get_childless_nodes(self):
+        """
+        Gets a list of nodes that have no output edges (excluding residual connections as output edges)
 
         :returns: A list of 'output nodes' (the HVN's in the graph that have no children)
         """
@@ -979,7 +993,7 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', 
         # Sanity check that we haven't made an oopsie with the widening operation with pooling layers
         if channels_or_nodes_to_add != prev_channels_or_nodes_to_add:
             for layer in prev_layers:
-                if type(layer) in [nn.AvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_cache'):
+                if type(layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_cache'):
                     raise Exception("Arguments to widen_network_ caused a pooling layer to be 'widened' as part of "
                                     "next_layers in R2WiderR, but, when widening as part of prev_layers using use an "
                                     "inconsistent number of channels.")
