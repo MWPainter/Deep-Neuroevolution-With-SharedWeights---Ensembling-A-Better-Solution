@@ -295,7 +295,7 @@ class ResNet(nn.Module):
 
 
     def widen(self, ratio):
-        widen_network_(self, new_channels=ratio, new_hidden_nodes=0, init_type='match_std',
+        widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
                        function_preserving=self.function_preserving, multiplicative_widen=True)
 
 
@@ -353,12 +353,15 @@ class ResNet(nn.Module):
 
 
 
-def resnet18(pretrained=False, **kwargs):
+def resnet18(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
@@ -367,40 +370,79 @@ def resnet18(pretrained=False, **kwargs):
 
 
 
-def resnet34(pretrained=False, **kwargs):
+def resnet34(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
 
 
 
+def resnet26(thin=False, function_preserving=True, **kwargs):
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(Bottleneck, [2, 2, 2, 2], function_preserving=function_preserving, r=r, **kwargs)
+    return model
 
 
-def resnet50(pretrained=False, **kwargs):
+
+def resnet26_r2r(thin=False):
+    model = resnet26(thin=True)
+    if not thin:
+        model.widen(1.41)
+        model.widen(1.41)
+        model.widen(1.41)
+        model.widen(1.41)
+    return model
+
+
+
+
+def resnet50(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(Bottleneck, [3, 4, 6, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
 
+def resnet50_r2r(thin=False):
+    model = resnet50(thin=True)
+    if not thin:
+        model.widen(1.41)
+        model.widen(1.41)
+        model.widen(1.41)
+        model.widen(1.41)
+    return model
 
 
-def resnet101(pretrained=False, **kwargs):
+
+
+
+def resnet101(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(Bottleneck, [3, 4, 23, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
     return model
@@ -409,12 +451,15 @@ def resnet101(pretrained=False, **kwargs):
 
 
 
-def resnet152(pretrained=False, **kwargs):
+def resnet152(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """Constructs a ResNet-152 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // 4)
+    model = ResNet(Bottleneck, [3, 8, 36, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
