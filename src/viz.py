@@ -92,8 +92,8 @@ class FC_Net(nn.Module):
 
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
-            r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, batch_norm=self.bn, extra_channels=num_channels,
-                         init_type="He", function_preserving=False, multiplicative_widen=self.multiplicative_widen)
+            r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
+                         init_type="He", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             raise NotImplementedError()
         elif self.widen_method == 'netmorph':
@@ -107,6 +107,52 @@ class FC_Net(nn.Module):
     def save_weights(self, iter, dir):
         shape = (self.hidden_units, self.in_channels, 32, 32)
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
+        weights_scipy = np.transpose(weights, (0,2,3,1))
+        weights_normalized = (weights_scipy + 1.0) / 2.0
+        weights_img = np.squeeze(_visualize_grid(weights_normalized))
+        filename = "{iter:0>6d}.jpg".format(iter=iter)
+        filepath = os.path.join(dir, filename)
+        scipy.misc.imsave(filepath, weights_img)
+
+
+
+
+class Conv_Net(nn.Module):
+    def __init__(self, hidden_units, conv_channels, in_channels=1, widen_method='r2r', multiplicative_widen=False):
+        super(Conv_Net, self).__init__()
+        self.widen_method = widen_method.lower()
+        self.multiplicative_widen = multiplicative_widen
+        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=7, padding=3)
+        self.pool1 = nn.MaxPool2d(kernel_size=2)
+        self.W1 = nn.Linear(conv_channels * 16 * 16, hidden_units)
+        self.bn = nn.BatchNorm1d(num_features=hidden_units)
+        self.W2 = nn.Linear(hidden_units, 10)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.pool1(x)
+        x = flatten(x)
+        x = self.W1(x)
+        x = F.relu(x)
+        x = self.W2(x)
+
+        return x
+
+    def clip_(self):
+        for p in self.parameters():
+            p.data.clamp_(-1.0, 1.0)
+
+    def widen(self, num_channels=2):
+        if self.widen_method == 'r2r':
+            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
+                         init_type="He", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+        elif self.widen_method == 'net2net':
+            raise NotImplementedError()
+        elif self.widen_method == 'netmorph':
+            raise NotImplementedError()
+
+    def save_weights(self, iter, dir):
+        weights = self.conv1.weight.data.detach().cpu().numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
         weights_img = np.squeeze(_visualize_grid(weights_normalized))
@@ -355,7 +401,7 @@ def _mnist_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    model = FC_Net(2, widen_method=widen_method)
+    model = Conv_Net(10, 2, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -382,7 +428,7 @@ def _cifar_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    model = FC_Net(2, in_channels=3, widen_method=widen_method)
+    model = Conv_Net(10, 2, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
