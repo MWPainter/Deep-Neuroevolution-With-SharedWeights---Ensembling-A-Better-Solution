@@ -401,6 +401,7 @@ def _mnist_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
+    # model = FC_Net(2, in_channels=3, widen_method=widen_method)
     model = Conv_Net(10, 2, widen_method=widen_method)
 
     # Train
@@ -428,6 +429,7 @@ def _cifar_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
+    # model = FC_Net(2, in_channels=3, widen_method=widen_method)
     model = Conv_Net(10, 2, in_channels=3, widen_method=widen_method)
 
     # Train
