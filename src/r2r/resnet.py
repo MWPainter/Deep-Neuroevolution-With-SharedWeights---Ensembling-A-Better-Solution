@@ -74,7 +74,7 @@ def conv1x1(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None, use_residual=True):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -83,6 +83,30 @@ class BasicBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
+
+        self.res = Residual_Connection()
+        self.img_shape = img_shape
+        self.use_residual = use_residual
+
+        if identity_initialize:
+            # When deepening, we shouldn't decrease the spatial dimension (for now at least
+            if self.downsample:
+                raise Exception("Can't deepen/identity initialize a residual block when it's downsampling spatial dimensions")
+
+            # Initialize the conv weights as appropriate, using the helpers
+            conv1_filter_shape = (planes, inplanes, 3, 3)
+            conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type='He')
+            self.conv1.weight.data = Parameter(t.Tensor(conv1_filter_init))
+
+            conv2_filter_shape = (planes * self.expansion, planes, 1, 1)
+            conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', alpha=-1.0)
+            self.conv2.weight.data = Parameter(t.Tensor(conv2_filter_init))
+
+            # Initialize the batch norm variables so that the scale is one and the mean is zero
+            nn.init.constant_(self.bn1.weight, 1)
+            nn.init.constant_(self.bn1.bias, 0)
+            nn.init.constant_(self.bn2.weight, 1)
+            nn.init.constant_(self.bn2.bias, 0)
 
 
     def forward(self, x):
@@ -98,10 +122,33 @@ class BasicBlock(nn.Module):
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out += identity
+        if self.use_residual:
+            out = self.res(out, identity)
         out = self.relu(out)
 
         return out
+
+    def _out_shape(self):
+        """
+        Output shape takes into account the spatial reduction from conv2, and sets the out channels using conv3
+        :return:
+        """
+        return conv_out_shape(self.img_shape, self.conv2.weight.data.size(0), kernel_size=3, stride=self.stride, padding=1)
+
+    def extend_hvg(self, hvg, hvn):
+        conv1_shape = conv_out_shape(self.img_shape, self.conv1.weight.data.size(0), kernel_size=3, stride=self.stride, padding=1)
+        conv1_hvn = hvg.add_hvn(conv1_shape, input_modules=[self.conv1], input_hvns=[hvn], batch_norm=self.bn1)
+
+        conv2_shape = conv_out_shape(conv1_shape[1:], self.conv2.weight.data.size(0), kernel_size=3, stride=1, padding=1)
+        conv2_hvn = hvg.add_hvn(conv2_shape, input_modules=[self.conv2], input_hvns=[conv1_hvn], batch_norm=self.bn2)
+
+        if self.downsample:
+            ds_shape = conv_out_shape(self.img_shape, self.downsample[0].weight.data.size(0), kernel_size=3, stride=self.stride, padding=1)
+            ds_hvn = hvg.add_hvn(ds_shape, input_modules=[self.downsample[0]], input_hvns=[hvn], batch_norm=self.downsample[1], residual_connection=self.res)
+        else:
+            hvn.residual_connection = self.res
+
+        return hvg, conv2_hvn
 
 
 
@@ -110,7 +157,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None, use_residual=True):
         super(Bottleneck, self).__init__()
         self.conv1 = conv1x1(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -124,6 +171,7 @@ class Bottleneck(nn.Module):
 
         self.res = Residual_Connection()
         self.img_shape = img_shape
+        self.use_residual = use_residual
 
         if identity_initialize:
             # When deepening, we shouldn't decrease the spatial dimension (for now at least
@@ -137,7 +185,7 @@ class Bottleneck(nn.Module):
 
             conv3_filter_shape = (planes * self.expansion, planes, 1, 1)
             conv3_filter_init = _extend_filter_with_repeated_in_channels(conv3_filter_shape, init_type='He', alpha=-1.0)
-            self.conv2.weight.data = Parameter(t.Tensor(conv3_filter_init))
+            self.conv3.weight.data = Parameter(t.Tensor(conv3_filter_init))
 
             # Initialize the batch norm variables so that the scale is one and the mean is zero
             nn.init.constant_(self.bn1.weight, 1)
@@ -174,7 +222,8 @@ class Bottleneck(nn.Module):
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out = self.res(out, identity)
+        if self.use_residual:
+            out = self.res(out, identity)
         out = self.relu(out)
 
         return out
@@ -360,7 +409,7 @@ def resnet18(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
+        r = lambda x: int(x // 2)
     model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
@@ -377,7 +426,7 @@ def resnet34(pretrained=False, thin=False, function_preserving=True, **kwargs):
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
+        r = lambda x: int(x // 2)
     model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
@@ -397,10 +446,10 @@ def resnet26(thin=False, function_preserving=True, **kwargs):
 def resnet26_r2r(thin=False):
     model = resnet26(thin=True)
     if not thin:
-        model.widen(1.41)
-        model.widen(1.41)
-        model.widen(1.41)
-        model.widen(1.41)
+        model.widen(1.414)
+        model.widen(1.414)
+        model.widen(1.414)
+        model.widen(1.414)
     return model
 
 
@@ -424,10 +473,10 @@ def resnet50(pretrained=False, thin=False, function_preserving=True, **kwargs):
 def resnet50_r2r(thin=False):
     model = resnet50(thin=True)
     if not thin:
-        model.widen(1.41)
-        model.widen(1.41)
-        model.widen(1.41)
-        model.widen(1.41)
+        model.widen(1.414)
+        model.widen(1.414)
+        model.widen(1.414)
+        model.widen(1.414)
     return model
 
 

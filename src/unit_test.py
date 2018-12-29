@@ -2,7 +2,7 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 
-from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50
+from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50, resnet18
 from utils import flatten
 
 
@@ -23,7 +23,7 @@ def test_res_block_identity_initialize(thresh=1.0e-5):
 
 
 def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, data_channels=1, layer1=None,
-                                       layer2=None, verbose=False):
+                                       layer2=None, verbose=False, resnet=False):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -37,7 +37,10 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
         rand_outs.append(rand_out)
 
     # deepen and check that the outputs are (almost) identical
-    model = make_deeper_network_(model, layer1)
+    if not resnet:
+        model = make_deeper_network_(model, layer1)
+    else:
+        model.deepen([1,1,1,1])
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -54,7 +57,10 @@ def test_function_preserving_r2deeperr(model, thresh, function_preserving=True, 
         print("Params after the transform is: {param}".format(param=params_after))
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = make_deeper_network_(model, layer2)
+    if not resnet:
+        model = make_deeper_network_(model, layer1)
+    else:
+        model.deepen([0,1,2,0])
 
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -571,13 +577,33 @@ if __name__ == "__main__":
 
 
 
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for ResNet50 network:")
+    # test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding for ResNet50 network:")
+    # test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
-        print("Testing random padding for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+        print("Testing R2WiderR for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding on deepening for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(function_preserving=False), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
