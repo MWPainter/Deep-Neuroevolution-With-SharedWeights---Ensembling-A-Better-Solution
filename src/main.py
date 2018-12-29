@@ -11,6 +11,10 @@ from batch_tests import mnist_widen_with_budget_test, cifar_widen_with_budget_te
 from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 
 from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
+from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
+from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
+from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
+from run import r2r_faster_test
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
@@ -317,7 +321,9 @@ def get_defaults(script_name):
         return {} # TODO: actually set params
 
 
-
+    #######
+    # Weight visualizations tests
+    #######
     elif script == "mnist_weight_viz_r2r":
         return {
             "lr": 1.0e-2,
@@ -399,6 +405,140 @@ def get_defaults(script_name):
             "batch_size": 256,
             "workers": 6,
             "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+
+
+    #######
+    # Net 2 Net Style tests, and R2R style tests
+    #######
+    elif script == "n2wn":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "n2dn":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "r2wr":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [1532*15], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+
+    elif script == "r2dr":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*15], # unused
+            "flops_budget": 0 # unused
+        }
+
+
+
+
+
+    #######
+    # Learning rate adaption tests
+    #######
+    elif script == "quad_widen":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [1532*6,1532*12,1532*18,1532*24], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "double_deepen":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*10,1532*20], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "double_widen_deepen":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [1532*6,1532*18], # unused
+            "deepen_times": [1532*12,1532*24], # unused
+            "flops_budget": 0 # unused
+        }
+
+
+
+
+
+    #######
+    # Fast training tests
+    #######
+    elif script == "r2fasterr":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [], # unused (probably widen at 30 and 60, deepen at 45 and 75)
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
@@ -527,6 +667,10 @@ if __name__ == "__main__":
     elif script == "r2r_wider_inception":
         _r_2_wider_r_inception_test(args)
 
+
+    #######
+    # Weight visualizations tests
+    #######
     elif script == "mnist_weight_viz_r2r":
         _mnist_weight_visuals(args, widen_method="r2r")
     elif script == "cifar_weight_viz_r2r":
@@ -539,6 +683,35 @@ if __name__ == "__main__":
         _mnist_weight_visuals(args, widen_method="netmorph")
     elif script == "cifar_weight_viz_netmorph":
         _cifar_weight_visuals(args, widen_method="netmorph")
+
+    #######
+    # Net 2 Net Style tests, and R2R style tests
+    #######
+    elif script == "n2wn":
+        net_2_wider_net_resnet(args)
+    elif script == "n2dn":
+        net_2_deeper_net_resnet(args)
+    elif script == "r2wr":
+        r_2_wider_r_resnet(args)
+    elif script == "r2dr":
+        r_2_deeper_r_resnet(args)
+
+    #######
+    # Learning rate adaption tests
+    #######
+    elif script == "quad_widen":
+        quadruple_widen_run(args)
+    elif script == "double_deepen":
+        double_deepen_run(args)
+    elif script == "double_widen_deepen":
+        double_widen_and_deepen_run(args)
+
+    #######
+    # Fast training tests
+    #######
+    elif script == "r2fasterr":
+        r2r_faster_test(args)
+
 
     else:
         print("Couldn't find script for '{s}'".format(s=script))

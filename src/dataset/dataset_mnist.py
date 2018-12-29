@@ -11,15 +11,17 @@ class MnistDataset(Dataset):
     """
     A wrapper around PyTorch's MNIST dataset implementation, making it useful for us
     """
-    def __init__(self, train=True, normalize=True, subtract_mean=True):
+    def __init__(self, train=True, normalize=True, subtract_mean=True, labels_as_logits=True):
         """
         Make the PyTorch MNIST dataset instance and
 
         :param train: If this is a training dataset (else this is a test set)
         :param normalize: If samples should be normalized
         :param subtract_mean: If samples should be mean subtrracted (so that mean sample from dataset is zero).
+        :param labels_as_logiits: If we should return lab
         """
         Dataset.__init__(self)
+        self.labels_as_logits = labels_as_logits
 
         # Files for the data, and make sure that the path exists
         this_files_dir = os.path.dirname(__file__)
@@ -51,6 +53,8 @@ class MnistDataset(Dataset):
         """
         Gets item at 'index' from the dataset
         """
+        if not self.labels_as_logits:
+            return self.dataset[index]
         x, y = self.dataset[index]
         y_onehot = t.zeros((10,))
         y_onehot.scatter_(0, y, 1)

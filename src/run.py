@@ -1,15 +1,16 @@
 import os
 import torch as t
 import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
 
-from dataset import get_imagenet_dataloader
+from dataset import get_imagenet_dataloader, CifarDataset
 
 from utils import cudafy
 from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import model_flops
 
-from r2r import widen_network_, make_deeper_network_, inceptionv4
+from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26
 
 
 
@@ -137,14 +138,13 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
-        # TODO: implement widen and deepen so that it can be Net2Net/R2R/NetMorph
-        raise Exception("Not implemented yet")
         if iter in args.widen_times:
-            # TODO: implement widen for InceptionV4 and InceptionResnetV2, such that it can be R2WiderR or Net2WiderNet
-            pass
-        elif iter in args.deepen_times:
-            # TODO: implement deepen for InceptionV4 and InceptionResnetV2, such that it can be R2DeeperR or Net2DeeperNet
-            pass
+            model.widen(1.414)
+        if iter in args.deepen_times:
+            if len(args.deepen_indidces_list) == 0:
+                raise Exception("Too many deepen times for this test.")
+            deepen_indices = args.deepen_indidces_list.pop(0)
+            model.deepen(deepen_indices)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
@@ -258,7 +258,6 @@ def _validation_loss(model, minibatch, args):
 
 
 
-
 """
 Net2Net duplicate tests
 """
@@ -332,6 +331,155 @@ def _net_2_wider_net_inception_test(args):
     model = inceptionv4(pretrained=False)
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
+
+
+
+
+
+def net_2_wider_net_resnet(args):
+    """
+    Duplicates of the Net2WiderNet tests, on cifar.
+    :param args:
+    :return:
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # Teacher network training loop
+    args.shard = "teacher_w_residual"
+    initial_model = resnet18(thin=True, thinning_ratio=1.414)
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
+
+    # R2R
+    model = copy.deepcopy(teacher_model)
+    model.widen(1.414)
+    args.shard = "R2R_student"
+    train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # # NetMorph
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(1.414) # TODO: add NetMorph widening to resnet
+    # args.shard = "NetMorph_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # RandomPadding
+    model = copy.deepcopy(teacher_model)
+    model.function_preserving = False
+    model.widen(1.414)
+    args.shard = "RandomPadding_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Random init start
+    model_= resnet18(thin=True, thinning_ratio=1.414)
+    model.widen(1.414)
+    args.shard = "Completely_Random_Init"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # # Net2Net teacher
+    # args.shard = "teacher_w_out_residual"
+    # initial_model = resnet18(thin=True, thinning_ratio=1.414, use_residual=False)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+
+    # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+
+
+
+def net_2_deeper_net_resnet(args):
+    """
+    Duplicates of the Net2WiderNet tests, on cifar.
+    :param args:
+    :return:
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # Teacher network training loop
+    args.shard = "teacher_w_residual"
+    initial_model = resnet10()
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
+
+    # R2R
+    model = copy.deepcopy(teacher_model)
+    model.deepen([1,1,1,1])
+    args.shard = "R2R_student"
+    train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # # NetMorph
+    # model = copy.deepcopy(teacher_model)
+    # model.deepen([1,1,1,1]) # TODO: add NetMorph widening to resnet
+    # args.shard = "NetMorph_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # RandomPadding
+    model = copy.deepcopy(teacher_model)
+    model.function_preserving = False
+    model.deepen([1,1,1,1])
+    args.shard = "RandomPadding_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Random init start
+    model_= resnet10()
+    model.deepen([1,1,1,1])
+    args.shard = "Completely_Random_Init"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # # Net2Net teacher
+    # args.shard = "teacher_w_out_residual"
+    # initial_model = resnet10(use_residual=False)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+
+    # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
 
 
 
@@ -416,5 +564,300 @@ def _r_2_wider_r_inception_test(args):
 
 
 
+def r_2_wider_r_resnet(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # R2R
+    model = resnet18(thin=True, thinning_ratio=1.414)
+    args.shard = "R2R_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net
+    # model = resnet18(thin=True, thinning_ratio=1.414)
+    # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # RandomPadding
+    model_= resnet18(thin=True, thinning_ratio=1.414, function_preserving=False)
+    args.shard = "RandomPadding_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # # NetMorph
+    # model = resnet18(thin=True, thinning_ratio=1.414)
+    # TODO: add NetMorph widening to resnet
+    # args.shard = "NetMorph_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # Random init start
+    model_= resnet18(thin=True, thinning_ratio=1.414)
+    model.widen(1.414)
+    args.shard = "Completely_Random_Init"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Teacher network training loop
+    model = resnet18(thin=True, thinning_ratio=1.414)
+    args.shard = "teacher_w_residual"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
+
+    # Net2Net teacher
+    model = resnet18(thin=True, thinning_ratio=1.414, use_residual=False)
+    args.shard = "teacher_w_out_residual"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
 
 
+
+
+
+def r_2_deeper_r_resnet(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # R2R
+    model = resnet10()
+    args.deepen_indidces_list = [[1,1,1,1]]
+    args.shard = "R2R_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net
+    # model = resnet10(use_residual=False)
+    # args.deepen_indidces_list = [[1,1,1,1]]
+    # TODO: add Net2DeeperNet deepening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # RandomPadding
+    model = resnet10(function_preserving=False)
+    args.deepen_indidces_list = [[1,1,1,1]]
+    args.shard = "RandomPadding_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Random init start
+    model_= resnet10()
+    model.deepen([1,1,1,1])
+    args.shard = "Completely_Random_Init"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Teacher network training loop
+    model = resnet10()
+    args.shard = "teacher_w_residual"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
+
+    # Net2Net teacher
+    initial_model = resnet10(use_residual=False)
+    args.shard = "teacher_w_out_residual"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
+
+
+
+
+
+
+"""
+Learning rate and weight decay adaption tests
+"""
+
+
+
+
+
+def quadruple_widen_run(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.deepen_times = []
+    if len(args.widen_times) != 4:
+        raise Exception("Widening times needs to be a list of length 4 for this test")
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # R2R
+    model = resnet18(thin=True, thinning_ratio=4)
+    args.shard = "R2R"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net
+    # model = resnet18(thin=True, thinning_ratio=4)
+    # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+
+
+
+def double_deepen_run(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1], [1,1,1,1]]
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # R2R
+    model = resnet18()
+    args.shard = "R2R"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net
+    # model = resnet18()
+    # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+
+
+
+def double_widen_and_deepen_run(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1], [1,1,1,1]]
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    # R2R
+    model = resnet18()
+    args.shard = "R2R"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net
+    # model = resnet18()
+    # TODO: add Net2WiderNet widening to resnet
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+
+
+
+
+"""
+Showing that R2R == faster training tests
+"""
+
+
+
+
+
+
+
+
+def r2r_faster_test(args):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet26(thin=True, thinning_ratio=2)
+    args.shard = "R2R_Then_Widened"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Larger model trained staight up
+    model = resnet26(thin=True, thinning_ratio=2)
+    model.deepen([1,1,1,1])
+    model.widen(1.414)
+    model.deepen([0,1,2,1])
+    model.widen(1.414)
+    args.shard = "Full_Model"
+    args.widen_times = []
+    args.deepen_times = []
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)

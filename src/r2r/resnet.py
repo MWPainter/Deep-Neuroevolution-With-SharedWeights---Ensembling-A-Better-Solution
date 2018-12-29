@@ -16,7 +16,7 @@ Code adapted from: https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 
 
-__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
+__all__ = ['ResNet', 'resnet10', 'resnet18', 'resnet34', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
            'resnet152']
 
 
@@ -259,7 +259,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x), function_preserving=True):
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x), function_preserving=True, use_residual=True):
         super(ResNet, self).__init__()
 
         self.block = block
@@ -269,6 +269,7 @@ class ResNet(nn.Module):
         self.in_shape = (3,224,224)
         self.out_shape = (num_classes,)
         self.r = r
+        self.use_residual = use_residual
 
         self.inplanes = r(64)
         self.conv1 = nn.Conv2d(3, r(64), kernel_size=7, stride=2, padding=3,
@@ -316,18 +317,18 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, img_shape=img_shape))
+        layers.append(block(self.inplanes, planes, stride, downsample, img_shape=img_shape, use_residual=self.use_residual))
         img_shape = conv_out_shape(img_shape, planes, kernel_size=3, stride=stride, padding=1)[1:]
         self.inplanes = planes * block.expansion
         for _ in range(1, num_blocks):
-            layers.append(block(self.inplanes, planes, img_shape=img_shape))
+            layers.append(block(self.inplanes, planes, img_shape=img_shape, use_residual=self.use_residual))
         return nn.ModuleList(layers), img_shape
 
     def _deepen_layer(self, layer_modules, block, planes, num_blocks):
         img_shape = layer_modules[-1]
         self.inplanes = planes * block.expansion
         for _ in range(1, num_blocks):
-            identity_block = block(self.inplanes, planes, identity_initialize=self.function_preserving, img_shape=img_shape)
+            identity_block = block(self.inplanes, planes, identity_initialize=self.function_preserving, img_shape=img_shape, use_residual=self.use_residual)
             layer_modules.append(identity_block)
 
 
@@ -402,14 +403,27 @@ class ResNet(nn.Module):
 
 
 
-def resnet18(pretrained=False, thin=False, function_preserving=True, **kwargs):
+def resnet10(thin=False, thinning_ratio=2, function_preserving=True, **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 2)
+        r = lambda x: int(x // thinning_ratio)
+    model = ResNet(BasicBlock, [1, 1, 1, 1], function_preserving=function_preserving, r=r, **kwargs)
+    return model
+
+
+
+def resnet18(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, **kwargs):
+    """Constructs a ResNet-18 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = lambda x: x
+    if thin:
+        r = lambda x: int(x // thinning_ratio)
     model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
@@ -417,16 +431,14 @@ def resnet18(pretrained=False, thin=False, function_preserving=True, **kwargs):
 
 
 
-
-
-def resnet34(pretrained=False, thin=False, function_preserving=True, **kwargs):
+def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, **kwargs):
     """Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 2)
+        r = lambda x: int(x // thinning_ratio)
     model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
@@ -434,35 +446,32 @@ def resnet34(pretrained=False, thin=False, function_preserving=True, **kwargs):
 
 
 
-def resnet26(thin=False, function_preserving=True, **kwargs):
+def resnet26(thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
-    model = ResNet(Bottleneck, [2, 2, 2, 2], function_preserving=function_preserving, r=r, **kwargs)
+        r = lambda x: int(x // thinning_ratio)
+    model = ResNet(Bottleneck, [2, 2, 2, 1], function_preserving=function_preserving, r=r, **kwargs)
     return model
 
 
 
-def resnet26_r2r(thin=False):
-    model = resnet26(thin=True)
+def resnet26_r2r(thin=False, thinning_ratio=4):
+    model = resnet26(thin=True, thinning_ratio=thinning_ratio)
     if not thin:
-        model.widen(1.414)
-        model.widen(1.414)
-        model.widen(1.414)
-        model.widen(1.414)
+        model.widen(thinning_ratio)
     return model
 
 
 
 
-def resnet50(pretrained=False, thin=False, function_preserving=True, **kwargs):
+def resnet50(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
+        r = lambda x: int(x // thinning_ratio)
     model = ResNet(Bottleneck, [3, 4, 6, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
@@ -470,27 +479,24 @@ def resnet50(pretrained=False, thin=False, function_preserving=True, **kwargs):
 
 
 
-def resnet50_r2r(thin=False):
-    model = resnet50(thin=True)
+def resnet50_r2r(thin=False, thinning_ratio=4):
+    model = resnet50(thin=True, thinning_ratio=thinning_ratio)
     if not thin:
-        model.widen(1.414)
-        model.widen(1.414)
-        model.widen(1.414)
-        model.widen(1.414)
+        model.widen(thinning_ratio)
     return model
 
 
 
 
 
-def resnet101(pretrained=False, thin=False, function_preserving=True, **kwargs):
+def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
     """Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
+        r = lambda x: int(x // thinning_ratio)
     model = ResNet(Bottleneck, [3, 4, 23, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
@@ -500,14 +506,14 @@ def resnet101(pretrained=False, thin=False, function_preserving=True, **kwargs):
 
 
 
-def resnet152(pretrained=False, thin=False, function_preserving=True, **kwargs):
+def resnet152(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
     """Constructs a ResNet-152 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // 4)
+        r = lambda x: int(x // thinning_ratio)
     model = ResNet(Bottleneck, [3, 8, 36, 3], function_preserving=function_preserving, r=r, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))

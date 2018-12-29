@@ -119,8 +119,9 @@ class CifarDataset(Dataset):
     Above are helper functions, taken from the cs231n starter code (publicly available :)) 
     We wrangle them into a sublass of the Dataset object we've defined.
     """
-    def __init__(self, mode="train", subtract_mean=True, validation_set_size=1000):
+    def __init__(self, mode="train", subtract_mean=True, validation_set_size=1000, labels_as_logits=True):
         Dataset.__init__(self)
+        self.labels_as_logits = labels_as_logits
         
         data = get_data(num_training=50000-validation_set_size,
                         num_validation=validation_set_size,
@@ -149,6 +150,8 @@ class CifarDataset(Dataset):
         """
         xs = t.tensor(self.xs[index]).float()
         ys = t.tensor(self.ys[index]).long()
+        if not self.labels_as_logits:
+            return xs, ys
         ys_onehot = t.zeros((10,))
         ys_onehot.scatter_(0, ys, 1)
         return (xs, ys_onehot)
