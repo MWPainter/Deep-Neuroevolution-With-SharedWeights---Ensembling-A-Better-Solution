@@ -565,27 +565,27 @@ if __name__ == "__main__":
 
 
 
-    # if verbose:
-    #     print("\n"*4)
-    #     print("Testing R2WiderR for Inception network:")
-    # test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
-    #
-    # if verbose:
-    #     print("\n"*4)
-    #     print("Testing random padding for Inception network:")
-    # test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for Inception network:")
+    test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for Inception network:")
+    test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
 
 
 
-    # if verbose:
-    #     print("\n"*4)
-    #     print("Testing R2WiderR for ResNet50 network:")
-    # test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
-    #
-    # if verbose:
-    #     print("\n"*4)
-    #     print("Testing random padding for ResNet50 network:")
-    # test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
