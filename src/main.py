@@ -10,8 +10,9 @@ from batch_tests import mnist_identity_init_test, cifar_identity_init_test, mnis
 from batch_tests import mnist_widen_with_budget_test, cifar_widen_with_budget_test, mnist_deepen_with_budget_test, cifar_deepen_with_budget_test
 from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 
-from run import _net_2_wider_net_inception_test, _net_2_wider_net_inception_resnet_test, _net_2_deeper_net_inception_test, _net_2_deeper_net_inception_resnet_test
-from run import _r_2_wider_r_inception_test, _r_2_wider_r_inception_resnet_test, _r_2_deeper_r_inception_test, _r_2_deeper_r_inception_resnet_test
+from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
+
+from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
 
 
@@ -316,6 +317,93 @@ def get_defaults(script_name):
         return {} # TODO: actually set params
 
 
+
+    elif script == "mnist_weight_viz_r2r":
+        return {
+            "lr": 1.0e-2,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": range(235*10, 235*100, 235*10),
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_r2r":
+        return {
+            "lr": 1.0e-2,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": range(383*10, 383*100, 383*10),
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz_net2net":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_net2net":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz_netmorph":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_netmorph":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+
+
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
 
@@ -438,6 +526,19 @@ if __name__ == "__main__":
         _net_2_wider_net_inception_test(args)
     elif script == "r2r_wider_inception":
         _r_2_wider_r_inception_test(args)
+
+    elif script == "mnist_weight_viz_r2r":
+        _mnist_weight_visuals(args, widen_method="r2r")
+    elif script == "cifar_weight_viz_r2r":
+        _cifar_weight_visuals(args, widen_method="r2r")
+    elif script == "mnist_weight_viz_net2net":
+        _mnist_weight_visuals(args, widen_method="net2net")
+    elif script == "cifar_weight_viz_net2net":
+        _cifar_weight_visuals(args, widen_method="net2net")
+    elif script == "mnist_weight_viz_netmorph":
+        _mnist_weight_visuals(args, widen_method="netmorph")
+    elif script == "cifar_weight_viz_netmorph":
+        _cifar_weight_visuals(args, widen_method="netmorph")
 
     else:
         print("Couldn't find script for '{s}'".format(s=script))

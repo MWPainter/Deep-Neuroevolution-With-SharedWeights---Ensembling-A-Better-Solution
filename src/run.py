@@ -9,7 +9,7 @@ from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import model_flops
 
-from r2r import widen_network_, make_deeper_network_, inceptionv4, inceptionresnetv2
+from r2r import widen_network_, make_deeper_network_, inceptionv4
 
 
 
