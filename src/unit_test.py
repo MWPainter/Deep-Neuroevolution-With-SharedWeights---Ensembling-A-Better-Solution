@@ -191,6 +191,9 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
     if verbose:
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
+
+
+
     
 
 class _Baby_Siamese(nn.Module):
@@ -255,6 +258,7 @@ class _Baby_Siamese(nn.Module):
         hvg = self.conv_hvg(hvg)
         hvg = self.fc_hvg(hvg)
         return hvg
+
 
 
 
@@ -607,3 +611,5 @@ if __name__ == "__main__":
         print("Testing random padding on deepening for ResNet18 network:")
     test_function_preserving_r2deeperr(resnet18(function_preserving=False), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
+
+    # TODO: add the same set of tests for NetMorph widening...

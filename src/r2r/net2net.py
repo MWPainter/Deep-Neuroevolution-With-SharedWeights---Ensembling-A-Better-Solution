@@ -3,14 +3,15 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+from collections import defaultdict
+
 from r2r.init_utils import *
 from r2r.module_utils import *
 from r2r.r2r import HVN, HVG, HVE, Deepened_Network
 
-###############################################
-##### Net2Net implementation adapted from #####
-##### https://github.com/erogol/Net2Net   #####
-###############################################
+
+
 
 
 # Only export things that actually widen/deepen volumes, and not helper functions
@@ -24,8 +25,22 @@ Widening hidden volumes
 """
 
 
-def net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm,
-                     extra_channels=0, scaled=True):
+
+
+
+def _round_up_multiply(a, b, m):
+    """
+    Performs a*b and rounds up to the nearest m. Note that (x+m-1)//m, is a divide by m rounded up
+    """
+    prod = int(math.ceil(((a*b + m - 1) // m) * m))
+    return prod
+
+
+
+
+
+def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
+                     extra_channels=0, multiplicative_widen=True, add_noise=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
     
@@ -63,12 +78,15 @@ def net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_
     if type(next_layers) != list:
         next_layers = [next_layers]
 
-    _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm, extra_channels,
-                      scaled)
+    _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels,
+                      multiplicative_widen, add_noise)
 
 
-def _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume_shape, batch_norm, extra_channels,
-                      scaled):
+
+
+
+def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels,
+                      multiplicative_widen, add_noise):
     """  
     The full internal implementation of net_2_wider_net_. See description of net_2_wider_net_.
     More helper functions are used.
@@ -78,331 +96,321 @@ def _net_2_wider_net_(prev_layers, next_layers, next_layer_spatial_ratio, volume
         raise Exception("Invalid number of extra channels in widen.")
 
     # Check that the types of all the in/out layers are the same
-    for i in range(1, len(prev_layers)):
-        if type(prev_layers[0]) != type(prev_layers[i]):
-            raise Exception("All input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
-    for i in range(1, len(next_layers)):
-        if type(prev_layers[0]) != type(next_layers[i]):
-            raise Exception("All output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
-
-    #  Work out the number of params per new channel (for fc this is 1)
-    new_params_per_new_channel = 1
-    if len(volume_shape) == 3:
-        _, height, width = volume_shape
-        new_params_per_new_channel = height * width
+    prev_type = nn.Linear if any([type(layer) == nn.Linear for layer in prev_layers]) else nn.Conv2d
+    next_type = nn.Linear if any([type(layer) == nn.Linear for layer in next_layers]) else nn.Conv2d
+    for i in range(1,len(prev_layers)):
+        if type(prev_layers[i]) not in [prev_type, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
+            raise Exception("All (non pooling) input layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+    for i in range(1,len(next_layers)):
+        if type(next_layers[i]) not in [next_type, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
+            raise Exception("All (non pooling) output layers in R2WiderR need to be the same type, nn.Conv2D or nn.Linear")
+    for i in range(1,len(prev_layers)):
+        if type(prev_layers[i]) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and not hasattr(prev_layers[i], 'r2r_volume_slice_indices'):
+            raise Exception("AvgPool2d or MaxPool2d in prev_layers when not used previously in a R2WiderR call in "
+                            "next_layers, which is necessary to create a cache of values needed for the transformation.")
 
     # Check that the volume shape is either linear or convolutional
     if len(volume_shape) not in [1, 3]:
         raise Exception("Volume shape must be 1D or 3D for R2WiderR to work")
 
     # Get if we have a linear input or not
-    is_linear_input = type(prev_layers[0]) is nn.Linear
+    input_is_linear = any([type(prev_layer) == nn.Linear for prev_layer in prev_layers])
 
     #  Work out the number of hiden units per new channel
     # (for fc pretend 1x1 spatial resolution, so 1 per channel) (for conv this is width*height)
     # For conv -> linear layers this can be a little complex. But we always know the number of channels from the prev kernels
-
-    channels_in_volume = np.sum([layer.weight.size(0) for layer in prev_layers])
+    channels_in_volume = np.sum([_get_output_channels_from_layer(layer) for layer in prev_layers])
     total_hidden_units = np.prod(volume_shape)
-    new_hidden_units_per_new_channel = total_hidden_units // channels_in_volume
-    new_hidden_units_in_next_layer_per_new_channel = new_hidden_units_per_new_channel // (next_layer_spatial_ratio ** 2)
+    new_hidden_units_in_next_layer_per_new_channel = total_hidden_units // channels_in_volume
+
 
     # Sanity check
-    if is_linear_input and new_hidden_units_per_new_channel != 1:
+    if input_is_linear and new_hidden_units_in_next_layer_per_new_channel != 1:
         raise Exception("Number of 'new hidden_units per new channel' must be 1 for linear. Something went wrong :(.")
-    if new_hidden_units_per_new_channel % (next_layer_spatial_ratio ** 2) != 0:
-        raise Exception("new_hidden_units_per_new_channel and next_layer_spatial_ratio are incompatable.")
 
-    # Compute the slicing of the volume from the input (to widen outputs appropraitely)
-    volume_slices_indxs = [0]
+    # Compute the slicing of the volume from the input (to widen outputs appropraitely) (and the new slices for the output)
+    module_slices_indices = [0]
+    widened_module_slices_indices = [0]
     for prev_layer in prev_layers:
-        new_slice_indx = volume_slices_indxs[-1] + prev_layer.weight.size(0)
-        volume_slices_indxs.append(new_slice_indx)
+        # Get slices output from a module (this will be [0,out_channels] for any nn.Conv2d or nn.Linear (not
+        # necessarily for pooling, as this is used to propogate mappings))
+        local_slice_indices = _compute_new_volume_slices_from_layer(0, prev_layer)
 
-    extra_channels_mappings = dict()
-    for (layer_index, prev_layer) in enumerate(prev_layers):
-        # Generate a mapping function for each layer, that indicates which original layer is copied in the extra layer.
+        # Compute the next module slice (for current volume)
+        base_index = module_slices_indices[-1]
+        module_slices_indices.append(base_index + local_slice_indices[-1])
 
-        mapping = dict()
-        out_channels = prev_layer.weight.size(0)
+        # Compute next module slice (for widened volume)
+        widened_base_index = widened_module_slices_indices[-1]
+        channels_to_add_for_module = len(local_slice_indices) * extra_channels
+        if multiplicative_widen:
+            channels_to_add_for_module = _round_up_multiply(local_slice_indices[-1], extra_channels-1, 2)
+        widened_module_slices_indices.append(widened_base_index + local_slice_indices[-1] + channels_to_add_for_module)
 
-        map_extra_channels = extra_channels
-        if scaled:
-            map_extra_channels = out_channels * (
-                    extra_channels - 1)  # to triple number of channels, *add* 2x the current num
+    # Compute a mapping between old channels of the volume and new channels of the widened volume
+    local_channel_maps = []
+    channel_maps = []
+    base_index = 0
+    for prev_layer in prev_layers:
+        out_channels = _get_output_channels_from_layer(prev_layer)
 
-        for extra_channel_index in range(out_channels, out_channels + map_extra_channels):
-            original_channel_index = np.random.randint(0, out_channels)
-            mapping[extra_channel_index] = original_channel_index
+        if type(prev_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
+            if not hasattr(prev_layer, 'r2r_channel_map_cache'):
+                raise Exception("Pooling layer used in prev layers before it was called as part of next layers in net2net")
+            local_channel_map = prev_layer.r2r_channel_map_cache
 
-            extra_channels_mappings[layer_index] = mapping
+        else:
+            identity_local_map = np.arange(out_channels)
+
+            map_extra_channels = extra_channels
+            if multiplicative_widen:
+                map_extra_channels = _round_up_multiply(out_channels, extra_channels - 1, 2)
+
+            extra_local_channels_map = np.random.randint(out_channels, size=map_extra_channels)
+            local_channel_map = np.concatenate([identity_local_map, extra_local_channels_map], axis=0)
+
+        local_channel_maps.append(local_channel_map)
+        partial_channel_map = local_channel_map + base_index
+        channel_maps.append(partial_channel_map)
+
+        base_index += out_channels
+
+    channel_map = np.concatenate(channel_maps, axis=0)
+
 
     # Iterate through all of the prev layers, and widen them appropraitely
     input_is_linear = False
     for (layer_index, prev_layer) in enumerate(prev_layers):
         input_is_linear = input_is_linear or type(prev_layer) is nn.Linear
-        _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_mappings[layer_index], scaled)
+        _net2net_widen_output_channels_(prev_layer, local_channel_maps[layer_index], input_is_linear, add_noise)
 
     # Widen batch norm appropriately 
     if batch_norm:
-        _net2net_extend_bn_(batch_norm, extra_channels, volume_slices_indxs, extra_channels_mappings, scaled)
+        _net2net_extend_bn_(batch_norm, channel_map, module_slices_indices, widened_module_slices_indices)
 
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for (layer_index, next_layer) in enumerate(next_layers):
-        _net2net_widen_input_channels_(next_layer, extra_channels, volume_slices_indxs, input_is_linear,
-                                       new_hidden_units_in_next_layer_per_new_channel,
-                                       extra_channels_mappings, scaled)
+        _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel, input_is_linear, module_slices_indices)
 
 
-def _net2net_extend_bn_(bn, new_channels_per_slice, volume_slice_indxs, extra_channels_mappings, scaled):
+
+
+
+def _get_output_channels_from_layer(layer):
+    """
+    Gets output channels from a layer, which can be of type nn.Linear, nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d.
+    To get the output layers from one of the pooling layers, it has to have been used as part of "next_layers" in a
+    previous R2WiderR call.
+    """
+    if type(layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and hasattr(layer, 'r2r_old_channels_propagated'):
+        return layer.r2r_old_channels_propagated
+    elif type(layer) in [nn.Conv2d, nn.Linear]:
+        return layer.weight.size(0)
+    else:
+        raise Exception("Couldn't get output channels from layer.")
+
+
+
+
+
+def _compute_new_volume_slices_from_layer(base_index, prev_layer):
+    """
+    Computes the new slicing indices (in the current volume of consideration) contributed from the layer 'prev_layer'.
+    For example, if prev_layer is a convolutional layer, with 10 ouput channels, and the base index is 20, then we
+    should output [30]. This is because this convolutional layer is contributing to layer 20-29 in the volume, and,
+    the base index (20) has already been considered.
+
+    The situation is more complex when considering pooling layer, which, may take an input that was a concatination from
+    many layers. This slciing information needs to be propagated through the pooling layer from the input.
+
+    :param base_index: The current index that we have considered up to
+    :param prev_layer: A layer from prev_layers in R2WiderR who's output makes part of the volume being widened.
+    :return: New indices into the volume being widened, contributed from 'prev_layer'
+    """
+    if type(prev_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and hasattr(prev_layer, 'r2r_volume_slice_indices'):
+        propagating_slice_indices = prev_layer.r2r_volume_slice_indices[1:]
+        return [base_index + index for index in propagating_slice_indices]
+    elif type(prev_layer) in [nn.Conv2d, nn.Linear]:
+        return [base_index + prev_layer.weight.size(0)]
+    else:
+        raise Exception("Couldn't get new volume slice indices from some layer in prev_layers.")
+
+
+
+
+
+def _net2net_extend_bn_(bn, channel_map, module_slices_indices, widened_module_slices_indices):
     """
     Extend batch norm with new_channels_per_slice many extra units.
     Replicate the channels indicated by extra_channels_mappings.
 
     :param bn: The batch norm layer to be extended
-    :param new_channels_per_slice: The number of new channels to add, per slice
-    :param volume_slice_indx: The indices to be able to slice the volume (so that we can add new
-    :param scaled: If true, then we should interpret "extra channels" as a scaling factor for the number of outputs
+    :param channel_map: The mapping between layers in the unwidened volume to the widened volume
+    :param module_slices_indices: The indices to be able to slice the volume according to which input module was used
+    :param widened_module_slices_indices: The indices to be able to slice the volume according to which input module
+            was used (after widening has occurred)
     """
-    new_scale_slices = []
-    new_shift_slices = []
-    new_running_mean_slices = []
-    new_running_var_slices = []
+    # Sanity checks
+    bn_is_array = hasattr(bn, '__len__')
+    if hasattr(bn, '__len__') and len(bn) + 1 != len(module_slices_indices):
+        raise Exception("Number of batch norms and volume slice indices inconsistent.")
 
-    old_scale = bn.weight.data.cpu()
-    old_shift = bn.bias.data.cpu()
-    old_running_mean = bn.running_mean.data.cpu()
-    old_running_var = bn.running_var.data.cpu()
+    if not bn_is_array:
+        old_scale = bn.weight.data.cpu().numpy()
+        old_shift = bn.bias.data.cpu().numpy()
+        old_running_mean = bn.running_mean.data.cpu().numpy()
+        old_running_var = bn.running_var.data.cpu().numpy()
+    else:
+        total_channels = module_slices_indices[-1]
+        old_scale = np.ones(total_channels).astype(np.float32)
+        old_shift = np.zeros(total_channels).astype(np.float32)
+        old_running_mean = np.zeros(total_channels).astype(np.float32)
+        old_running_var = np.ones(total_channels).astype(np.float32)
 
-    for i in range(1, len(volume_slice_indxs)):
-        beg = volume_slice_indxs[i - 1]
-        end = volume_slice_indxs[i]
-        extra_channels_mapping = extra_channels_mappings[i - 1]
+        for i in range(0,len(module_slices_indices)-1):
+            if bn[i] is None:
+                continue
+            beg = module_slices_indices[i]
+            end = module_slices_indices[i+1]
+            old_scale[beg:end] = bn[i].weight.data.cpu().numpy()
+            old_shift[beg:end] = bn[i].bias.data.cpu().numpy()
+            old_running_mean[beg:end] = bn[i].running_mean.data.cpu().numpy()
+            old_running_var[beg:end] = bn[i].running_var.data.cpu().numpy()
 
-        # to triple number of channels, *add* 2x the current num
-        new_channels = new_channels_per_slice if not scaled else (new_channels_per_slice - 1) * (end - beg)
+    # Extend the bn vector
+    new_scale = old_scale[channel_map]
+    new_shift = old_shift[channel_map]
+    new_running_mean = old_running_mean[channel_map]
+    new_running_var = old_running_var[channel_map]
 
-        out_channels = end - beg
-        new_width = out_channels + new_channels
+    # Assign to batch norm(s)
+    if not bn_is_array:
+        _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
 
-        new_scale = old_scale[beg:end].clone().resize_(new_width)
-        new_shift = old_shift[beg:end].clone().resize_(new_width)
-        new_running_mean = old_running_mean[beg:end].clone().resize_(new_width)
-        new_running_var = old_running_var[beg:end].clone().resize_(new_width)
+    else:
+        for i in range(len(bn)):
+            if bn[i] is None:
+                continue
+            beg = widened_module_slices_indices[i]
+            end = widened_module_slices_indices[i+1]
 
-        new_scale.narrow(0, 0, out_channels).copy_(old_scale[beg:end])
-        new_shift.narrow(0, 0, out_channels).copy_(old_shift[beg:end])
-        new_running_var.narrow(0, 0, out_channels).copy_(old_running_var[beg:end])
-        new_running_mean.narrow(0, 0, out_channels).copy_(old_running_mean[beg:end])
+            new_scale_slice = new_scale[beg:end]
+            new_shift_slice = new_shift[beg:end]
+            new_running_mean_slice = new_running_mean[beg:end]
+            new_running_var_slice = new_running_var[beg:end]
 
-        for index in range(out_channels, new_width):
-            new_scale[index] = old_scale[beg:end][extra_channels_mapping[index]]
-            new_shift[index] = old_shift[beg:end][extra_channels_mapping[index]]
-            new_running_mean[index] = old_running_mean[beg:end][extra_channels_mapping[index]]
-            new_running_var[index] = old_running_var[beg:end][extra_channels_mapping[index]]
-
-        new_scale_slices.append(new_scale)
-        new_shift_slices.append(new_shift)
-        new_running_mean_slices.append(new_running_mean)
-        new_running_var_slices.append(new_running_var)
-
-    new_scale = np.concatenate(new_scale_slices)
-    new_shift = np.concatenate(new_shift_slices)
-    new_running_mean = np.concatenate(new_running_mean_slices)
-    new_running_var = np.concatenate(new_running_var_slices)
-
-    _assign_to_batch_norm_(bn, new_scale, new_shift, new_running_mean, new_running_var)
+            _assign_to_batch_norm_(bn[i], new_scale_slice, new_shift_slice, new_running_mean_slice,
+                                   new_running_var_slice)
 
 
-def _net2net_widen_output_channels_(prev_layer, extra_channels, extra_channels_mapping, scaled, noise=False):
+
+
+
+def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, noise=True):
     """
     Helper function for net2widernet. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
     :param prev_layer: A layer before the hidden volume/units being widened
-    :param extra_channels: The number of new conv channels/hidden units to add
-    :param init_type: The type of initialization to use ('He' or 'Xavier')
+    :param channel_map: Mapping of channels to copy for output channels in prev_layer
+    :param input_is_linear: If any of the layers are linear
+    :param noise: If we should add noise
     """
-    if type(prev_layer) is nn.Conv2d:
-        # unpack conv2d params to numpy tensors
-        prev_kernel = prev_layer.weight.data.cpu()
-        prev_bias = prev_layer.bias.data.cpu()
+    # Logic for conv2d and linear is the same in this case, just use smart indexing on output layers
+    if type(prev_layer) in [nn.Conv2d, nn.Linear]:
+        # Get the new weight (kernel/matrix)
+        prev_weight = prev_layer.weight.data.cpu().numpy()
+        new_weight = prev_weight[channel_map]
 
-        # new conv kernel
-        out_channels, in_channels, height, width = prev_kernel.shape
-        layer_extra_channels = extra_channels
+        # Compute the new bias if there is any
+        new_bias = None
+        if prev_layer.bias is not None:
+            prev_bias = prev_layer.bias.data.cpu().numpy()
+            new_bias = prev_bias[channel_map]
 
-        if scaled:
-            layer_extra_channels = out_channels * (
-                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
-
-        new_kernel = prev_kernel.clone()
-        new_kernel.resize_(out_channels + layer_extra_channels, in_channels, height, width)
-
-        new_bias = prev_bias.clone()
-        new_bias.resize_(out_channels + layer_extra_channels)
-
-        new_kernel.narrow(0, 0, out_channels).copy_(prev_kernel)
-        new_bias.narrow(0, 0, out_channels).copy_(prev_bias)
-
-        for index in range(out_channels, out_channels + layer_extra_channels):
-            new_kernel.select(0, index).copy_(prev_kernel.select(0, extra_channels_mapping[index]).clone())
-            new_bias[index] = prev_bias[extra_channels_mapping[index]]
-
+        # Add noise if we wish
         if noise:
-            noise = np.random.normal(scale=5e-5 * new_kernel.std(),
-                                     size=list(new_kernel.size()))
-            new_kernel += t.FloatTensor(noise).type_as(new_kernel)
+            noise = np.random.normal(scale=5e-5 * np.std(new_weight),
+                                     size=new_weight.shape)
+            new_weight += noise
 
-        # assign new conv and bias
-        _assign_kernel_and_bias_to_conv_(prev_layer, new_kernel.numpy(), new_bias.numpy())
+        # Make assignment to module
+        if type(prev_layer) is nn.Conv2d:
+            _assign_kernel_and_bias_to_conv_(prev_layer, new_weight, new_bias)
+        else:
+            _assign_weights_and_bias_to_linear_(prev_layer, new_weight, new_bias)
 
-    elif type(prev_layer) is nn.Linear:
-        # unpack linear params to numpy tensors
-        prev_matrix = prev_layer.weight.data.cpu()
-        prev_bias = prev_layer.bias.data.cpu()
+    # Pooling layers need to clean up caches
+    elif type(prev_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
+        # Unpack, and check consistency
+        prev_input_is_linear = prev_layer.r2r_prev_input_is_linear
+        if prev_input_is_linear != input_is_linear:
+            raise Exception("Pooling layer allows accidental mixing of conv and linear layers at the next layer.")
 
-        # new linear matrix
-        n_out, n_in = prev_matrix.shape
-        layer_extra_channels = extra_channels
-
-        if scaled:
-            layer_extra_channels = n_out * (
-                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
-
-        new_matrix = prev_matrix.clone()
-        new_matrix.resize_(n_out + layer_extra_channels, n_in)
-
-        new_bias = prev_bias.clone()
-        new_bias.resize_(n_out + layer_extra_channels)
-
-        new_matrix.narrow(0, 0, n_out).copy_(prev_matrix)
-        new_bias.narrow(0, 0, n_out).copy_(prev_bias)
-
-        for index in range(n_out, n_out + layer_extra_channels):
-            new_matrix.select(0, index).copy_(prev_matrix.select(0, extra_channels_mapping[index]).clone())
-            new_bias[index] = prev_bias[extra_channels_mapping[index]]
-
-        if noise:
-            noise = np.random.normal(scale=5e-5 * new_matrix.std(),
-                                     size=list(new_matrix.size()))
-            new_matrix += t.FloatTensor(noise).type_as(new_matrix)
-
-        # assign new matrix and bias
-        _assign_weights_and_bias_to_linear_(prev_layer, new_matrix.numpy(), new_bias.numpy())
-
-    else:
-        raise Exception("We can only handle input nn.Modules that are Linear or Conv2d at the moment.")
+        # Delete the values that we stored in the nn.Module as a cache
+        del prev_layer.r2r_prev_input_is_linear
+        del prev_layer.r2r_channel_map_cache
+        del prev_layer.r2r_old_channels_propagated
+        del prev_layer.r2r_volume_slice_indices
 
 
-def _net2net_widen_input_channels_(next_layer, extra_channels, volume_slice_indxs, input_linear,
-                                   new_hidden_units_per_new_channel,
-                                   extra_channels_mappings, scaled):
+
+
+
+def _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel,
+                                   input_is_linear, module_slices_indices):
     """
-    Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
+    Helper function for net2widernet. Containing all of the logic for widening the input channels of the 'next_layers'.
     
     :param next_layer: A layer after the hidden volume/units being widened
-    :param extra_channels: The number of new conv channels/hidden units to add
-    :param volume_slice_indx: The indices to be able to slice the volume 
-    :param extra_params_per_input: The number of extra parameters to add per layer that was input to the hidden volume.
+    :param channel_map: The mapping between layers in the unwidened volume to the widened volume
+    :param new_hidden_units_in_next_layer_per_new_channel: The number of hidden units output per channel from the prev layers
+    :param input_is_linear: If the input to these modules comes from a linear layer
+    :param module_slices_indices: Indicies into the hidden volume (according to the modules that output them).
     """
     # Check that we don't do linear -> conv, as haven't worked this out yet
-    if input_linear and type(next_layer) is nn.Conv2d:
+    if input_is_linear and type(next_layer) is nn.Conv2d:
         raise Exception("We currently don't handle the nn.Linear -> nn.Conv2d case in r_2_wider_r.")
 
-    if type(next_layer) is nn.Conv2d:
-        # unpack conv2d params to numpy tensors
-        next_kernel = next_layer.weight.data.cpu()
+    if type(next_layer) in [nn.Conv2d, nn.Linear]:
+        # Get the old weight (kernel/matrix)
+        old_weight = next_layer.weight.data.cpu().numpy()
+        out_channels = old_weight.shape[0]
 
-        # Compute the new kernel for 'next_kernel' (extending each slice carefully)
+        # If next layer is linear, convert the weight shape from (n_out, n_in) to (n_out, n_in/units_per_channel, units_per_channel, 1)
+        if type(next_layer) is nn.Linear:
+            old_weight = np.reshape(old_weight, (out_channels, -1, new_hidden_units_in_next_layer_per_new_channel, 1))
 
-        out_channels, _, height, width = next_kernel.shape
-        next_kernel_parts = []
+        # Compute divisors (reshaping for unambiguity with broadcasting)
+        counts = defaultdict(float)
+        for i in range(len(channel_map)):
+            counts[channel_map[i]] += 1.0
+        divisors = []
+        for i in range(len(channel_map)):
+            divisors.append(counts[channel_map[i]])
+        divisors = np.reshape(np.array(divisors).astype(np.float32), (1, -1, 1, 1))
 
-        for i in range(1, len(volume_slice_indxs)):
-            beg, end = volume_slice_indxs[i - 1], volume_slice_indxs[i]
-            in_channels = end - beg
-            volume_extra_channels = extra_channels
+        # Duplicate input layers and divide to get new weights
+        new_weight = old_weight[:, channel_map] / divisors
 
-            if scaled:
-                volume_extra_channels = (end - beg) * (
-                        extra_channels - 1)  # to triple number of channels, *add* 2x the current num
+        # Make assignment to module (remembering to reshape the linear layer back)
+        if type(next_layer) is nn.Conv2d:
+            _assign_kernel_and_bias_to_conv_(next_layer, new_weight)
+        else:
+            new_weight = np.reshape(new_weight, (out_channels, -1))
+            _assign_weights_and_bias_to_linear_(next_layer, new_weight)
 
-            original_kernel = next_kernel[:, beg:end]
-            kernel_part = original_kernel.clone()
-            kernel_part.resize_(out_channels, in_channels + volume_extra_channels, height, width)
-            kernel_part = _net2net_extend_filter_input_channels(original_kernel, kernel_part,
-                                                                in_channels, volume_extra_channels,
-                                                                extra_channels_mappings[i - 1])
-
-            next_kernel_parts.append(kernel_part)
-
-        next_kernel = np.concatenate(next_kernel_parts, axis=1)
-
-        # assign new conv (don't need to change bias)
-        _assign_kernel_and_bias_to_conv_(next_layer, next_kernel)
-
-
-    elif type(next_layer) is nn.Linear:
-        # unpack linear params to numpy tensors
-        next_matrix = next_layer.weight.data.cpu()
-
-        # Compute the new matrix for 'next_matrix' (extending each slice carefully)
-        n_out, _ = next_matrix.shape
-        next_matrix.resize_(n_out, volume_slice_indxs[-1], new_hidden_units_per_new_channel)
-
-        next_matrix_parts = []
-        for i in range(1, len(volume_slice_indxs)):
-            beg = volume_slice_indxs[i - 1]
-            end = volume_slice_indxs[i]
-            n_in = end-beg
-            volume_extra_channels = extra_channels
-
-            if scaled:
-                volume_extra_channels = (end - beg)  * (extra_channels - 1)
-                # to triple number of channels, *add* 2x the current num
-
-            original_matrix = next_matrix[:, beg:end]
-            matrix_part = original_matrix.clone()
-
-            matrix_part.resize_(n_out, (n_in + volume_extra_channels), new_hidden_units_per_new_channel)
-            matrix_part = _net2net_extend_filter_input_channels(original_matrix, matrix_part,
-                                                                n_in, volume_extra_channels,
-                                                                extra_channels_mappings[i - 1])
-            next_matrix_parts.append(matrix_part)
-
-        next_matrix = np.concatenate(next_matrix_parts, axis=1)
-        next_matrix = np.reshape(next_matrix, newshape=(n_out, -1))
-
-        # assign new linear params (don't need to change bias)
-        _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
+    # Pooling layers need to store stuff in caches (to be used when they're in prev_layer)
+    elif type(next_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
+        next_layer.r2r_prev_input_is_linear = input_is_linear
+        next_layer.r2r_channel_map_cache = channel_map
+        next_layer.r2r_old_channels_propagated = module_slices_indices[-1]
+        next_layer.r2r_volume_slice_indices = module_slices_indices
 
     else:
         raise Exception("We can only handle output nn.Modules that are Linear or Conv2d at the moment.")
 
 
-def _net2net_extend_filter_input_channels(original_kernel, kernel_part,
-                                          in_channels, extra_channels, extra_channels_mapping):
-    original_kernel = original_kernel.transpose(0, 1)
-    kernel_part = kernel_part.transpose(0, 1)
 
-    kernel_part.narrow(0, 0, in_channels).copy_(original_kernel)
-
-    for index in range(in_channels, in_channels + extra_channels):
-        kernel_part.select(0, index).copy_(original_kernel.select(0, extra_channels_mapping[index]).clone())
-
-    original_channels_mapping = dict()
-    for index in range(in_channels):
-        original_channels_mapping[index] = [index]
-    for key in extra_channels_mapping.keys():
-        original_channels_mapping[extra_channels_mapping[key]].append(key)
-    for _, values in original_channels_mapping.items():
-        for value in values:
-            kernel_part[value].div_(len(values))
-
-    original_kernel.transpose_(0, 1)
-    kernel_part.transpose_(0, 1)
-
-    return kernel_part
 
 
 """
@@ -410,7 +418,10 @@ Widening entire networks (by building graphs over the networks)
 """
 
 
-def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multiplicative_widen=True):
+
+
+
+def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multiplicative_widen=True, add_noise=True):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the
     enum_layers interface. The interface should return, for every hidden volume, the layer before it and
@@ -432,23 +443,35 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multipli
     hvg = network.hvg()
 
     # Iterate through the hvg, widening appropriately in each place
-    for prev_layers, shape, batch_norm, _, pseudo_next_volume_spatial_ratio, next_layers in hvg.node_iterator():
-        feeding_to_linear = (type(prev_layers[0]) is nn.Linear) or (type(next_layers[0]) is nn.Linear)
-        channels_or_nodes_to_add = new_hidden_nodes if feeding_to_linear else new_channels
+    for prev_layers, shape, is_conv_volume, batch_norm, _, next_layers in hvg.node_iterator():
+        channels_or_nodes_to_add = new_channels if is_conv_volume else new_hidden_nodes
 
+        # Sanity check that we haven't made an oopsie with the widening operation with pooling layers
+        for layer in prev_layers:
+            if type(layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d] and not hasattr(layer, 'r2r_channel_map_cache'):
+                raise Exception("Arguments to widen_network_ caused a pooling layer to be 'widened' as part of "
+                                "next_layers in R2WiderR, but, when widening as part of prev_layers using use an "
+                                "inconsistent number of channels.")
+
+        # Perform the widening
         if channels_or_nodes_to_add == 0:
             continue
-        net_2_wider_net_(prev_layers, next_layers, pseudo_next_volume_spatial_ratio, shape, batch_norm,
-                         channels_or_nodes_to_add, multiplicative_widen)
+        net_2_wider_net_(prev_layers, next_layers, shape, batch_norm, extra_channels=channels_or_nodes_to_add,
+                         multiplicative_widen=multiplicative_widen, add_noise=add_noise)
 
     # Return model for if someone want to use this in an assignment form etc
     return network
 
 
 
+
+
 """
 Deepening networks.
 """
+
+
+
 
 
 def net2net_make_deeper_network_(network, layer, batch):
@@ -461,15 +484,17 @@ def net2net_make_deeper_network_(network, layer, batch):
         network = Deepened_Network(network)
     network.deepen(layer)
 
-
     for bn_layer in layer.bn_ble():
         network(batch)
         new_weights = np.sqrt(bn_layer.running_var.numpy())
-        bn_layer.momentum = 0.1
+        # bn_layer.momentum = 0.1
         _assign_to_batch_norm_(bn_layer, new_weights, bn_layer.running_mean.numpy(),
                                bn_layer.running_mean.numpy(), bn_layer.running_var.numpy())
 
     return network
+
+
+
 
 
 class Net2Net_ResBlock_identity(nn.Module):
@@ -518,6 +543,7 @@ class Net2Net_ResBlock_identity(nn.Module):
         self.relu = F.relu
 
 
+
     def update_conv(self, conv_layer, noise=False):
 
         conv_kernel = conv_layer.weight.data.cpu()
@@ -540,6 +566,7 @@ class Net2Net_ResBlock_identity(nn.Module):
             conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
 
         _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
+
 
 
     def forward(self, x):
@@ -571,29 +598,14 @@ class Net2Net_ResBlock_identity(nn.Module):
 
         return out
 
+
+
     def bn_ble(self):
         yield (self.bn1)
         yield (self.bn2)
         yield (self.bn3)
         yield (self.bn4)
 
-    def conv_lle(self):
-        """
-        Conv part of the 'lle' function (see below)
-        """
-        height, width = self.input_spatial_shape
-
-        # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
-        yield ((self.conv.weight.data.size(1), height, width), None, self.conv)
-
-    def lle(self, input_shape=None):
-        """
-        Implement the lle (linear layer enum) to iterate through layers for widening.
-        Input shape must either not be none here or not be none from before
-        :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
-        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
-        """
-        return self.conv_lle()
 
 
     def conv_hvg(self, cur_hvg):
@@ -630,8 +642,11 @@ class Net2Net_ResBlock_identity(nn.Module):
 
         return cur_hvg
 
+
+
     def hvg(self):
         raise Exception("hvg() not implemented directly for net2net conv identity block.")
+
 
 
 
@@ -665,6 +680,7 @@ class Net2Net_conv_identity(nn.Module):
         self.update_conv(self.conv)
 
 
+
     def update_conv(self, conv_layer, noise=False):
 
         conv_kernel = conv_layer.weight.data.cpu()
@@ -689,6 +705,7 @@ class Net2Net_conv_identity(nn.Module):
         _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
 
 
+
     def forward(self, x):
         """
         Forward pass through this residual block
@@ -705,26 +722,12 @@ class Net2Net_conv_identity(nn.Module):
 
         return out
 
+
+
     def bn_ble(self):
         yield (self.bn)
 
-    def conv_lle(self):
-        """
-        Conv part of the 'lle' function (see below)
-        """
-        height, width = self.input_spatial_shape
 
-        # 1st (not 0th) dimension is the number of in channels of a conv, so (in_channels, height, width) is input shape
-        yield ((self.conv.weight.data.size(1), height, width), None, self.conv)
-
-    def lle(self, input_shape=None):
-        """
-        Implement the lle (linear layer enum) to iterate through layers for widening.
-        Input shape must either not be none here or not be none from before
-        :param input_shape: Shape of the input volume, or, None if it wasn't already specified.
-        :return: Iterable over the (in_shape, batch_norm, nn.Module)'s of the resblock
-        """
-        return self.conv_lle()
 
     def conv_hvg(self, cur_hvg):
         """
@@ -737,6 +740,8 @@ class Net2Net_conv_identity(nn.Module):
         cur_hvg.add_hvn((self.conv.weight.data.size(0), self.input_spatial_shape[0], self.input_spatial_shape[1]),
                         input_modules=[self.conv], batch_norm=self.bn)
         return cur_hvg
+
+
 
     def hvg(self):
         raise Exception("hvg() not implemented directly for net2net conv identity block.")
