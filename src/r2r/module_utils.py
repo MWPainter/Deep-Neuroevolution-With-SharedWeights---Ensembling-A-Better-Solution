@@ -40,11 +40,14 @@ def _assign_kernel_and_bias_to_conv_(conv, kernel, bias=None):
         bias = conv.bias.data.cpu().numpy()
     
     # Sanity check new shaping values
-    out_channels, in_channels, kernel_width, kernel_height = kernel.shape
+    out_channels, in_channels, kernel_height, kernel_width = kernel.shape
     if module_has_bias:
         bias_size = bias.shape[0]
         if bias_size != out_channels:
             raise Exception("Trying to assign inconsistend kernel and biases in convolution.")
+    _, _, old_kernel_height, old_kernel_width = conv.weight.data.size()
+    if old_kernel_height != kernel_height or old_kernel_width != kernel_width:
+        raise Exception("Old kernel and new kernel (spatial) shapes are inconsistent in conv assignment.")
     
     # Update weight, bias and shape values in 'conv'
     conv.weight = Parameter(t.tensor(kernel))
@@ -80,6 +83,11 @@ def _assign_to_batch_norm_(batch_norm, scale, bias, run_mean, run_var):
     :param run_var: A numpy tensor to assign to nn.BatchNorm.running_var (the exp running var of batch norm)
     :return: A reference to the updated batch norm module.
     """
+    # Sanity checks
+    l = scale.shape[0]
+    if bias.shape[0] != l or run_mean.shape[0] != l or run_var.shape[0] != l:
+        raise Exception("Attempting to assign tensors with inconsistent shaping in batch norm.")
+
     # Assign new params
     batch_norm.weight = Parameter(t.tensor(scale))
     batch_norm.bias = Parameter(t.tensor(bias))

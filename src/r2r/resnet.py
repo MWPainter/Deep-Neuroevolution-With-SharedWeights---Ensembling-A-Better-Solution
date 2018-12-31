@@ -4,8 +4,8 @@ from torch.nn.parameter import Parameter
 import torch.utils.model_zoo as model_zoo
 
 from r2r import *
-
-
+from r2r.init_utils import _extend_filter_with_repeated_in_channels, _extend_filter_with_repeated_out_channels
+from r2r.module_utils import _assign_kernel_and_bias_to_conv_
 
 
 """
@@ -96,11 +96,11 @@ class BasicBlock(nn.Module):
             # Initialize the conv weights as appropriate, using the helpers
             conv1_filter_shape = (planes, inplanes, 3, 3)
             conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type='He')
-            self.conv1.weight.data = Parameter(t.Tensor(conv1_filter_init))
+            _assign_kernel_and_bias_to_conv_(self.conv1, conv1_filter_init)
 
-            conv2_filter_shape = (planes * self.expansion, planes, 1, 1)
+            conv2_filter_shape = (planes * self.expansion, planes, 3, 3)
             conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', alpha=-1.0)
-            self.conv2.weight.data = Parameter(t.Tensor(conv2_filter_init))
+            _assign_kernel_and_bias_to_conv_(self.conv2, conv2_filter_init)
 
             # Initialize the batch norm variables so that the scale is one and the mean is zero
             nn.init.constant_(self.bn1.weight, 1)
@@ -324,23 +324,22 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes, img_shape=img_shape, use_residual=self.use_residual))
         return nn.ModuleList(layers), img_shape
 
-    def _deepen_layer(self, layer_modules, block, planes, num_blocks):
-        img_shape = layer_modules[-1].img_shape
-        self.inplanes = planes * block.expansion
-        for _ in range(1, num_blocks):
-            identity_block = block(self.inplanes, planes, identity_initialize=self.function_preserving, img_shape=img_shape, use_residual=self.use_residual)
+    def _deepen_layer(self, layer_modules, block, num_blocks):
+        # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
+        planes, h, w = layer_modules[-1]._out_shape()
+        inplanes = planes * block.expansion
+
+        # Add the new block
+        for _ in range(num_blocks):
+            identity_block = block(inplanes, planes, identity_initialize=self.function_preserving, img_shape=(h,w), use_residual=self.use_residual)
             layer_modules.append(identity_block)
 
 
-    def deepen(self, num_layers):
-        layer1_planes = self.layer1_modules[-1].conv1.weight.data.size(1)
-        self._deepen_layer(self.layer1_modules, self.block, layer1_planes, num_layers[0])
-        layer2_planes = self.layer2_modules[-1].conv1.weight.data.size(1)
-        self._deepen_layer(self.layer2_modules, self.block, layer2_planes, num_layers[1])
-        layer3_planes = self.layer3_modules[-1].conv1.weight.data.size(1)
-        self._deepen_layer(self.layer3_modules, self.block, layer3_planes, num_layers[2])
-        layer4_planes = self.layer4_modules[-1].conv1.weight.data.size(1)
-        self._deepen_layer(self.layer4_modules, self.block, layer4_planes, num_layers[3])
+    def deepen(self, num_blocks):
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0])
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1])
+        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2])
+        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3])
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
