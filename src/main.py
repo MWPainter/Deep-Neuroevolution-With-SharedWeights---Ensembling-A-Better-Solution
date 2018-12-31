@@ -14,7 +14,7 @@ from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
 from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
 from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
-from run import r2r_faster_test
+from run import r2r_faster_test_part_1, r2r_faster_test_part_2
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
@@ -612,18 +612,32 @@ def get_defaults(script_name):
     #######
     # Fast training tests
     #######
-    elif script == "r2fasterr":
+    elif script == "r2fasterr_part_1":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 90,
+            "epochs": 5,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [3000,6000], # unused (probably widen at 30 and 60, deepen at 45 and 75)
-            "deepen_times": [4500,7500], # unused
+            "widen_times": [20019*2,20019*3], # unused (probably widen at 30 and 60, deepen at 45 and 75)
+            "deepen_times": [20019,20019*4], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "r2fasterr_part_2":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 5,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [], # unused (probably widen at 30 and 60, deepen at 45 and 75)
+            "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
 
@@ -805,8 +819,10 @@ if __name__ == "__main__":
     #######
     # Fast training tests
     #######
-    elif script == "r2fasterr":
-        r2r_faster_test(args)
+    elif script == "r2fasterr_part1":
+        r2r_faster_test_part_1(args)
+    elif script == "r2fasterr_part_2":
+        r2r_faster_test_part_2(args)
 
 
     else:

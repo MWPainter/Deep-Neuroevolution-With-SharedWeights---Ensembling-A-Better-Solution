@@ -288,6 +288,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Train for zero epochs, to run a single validation epoch on the base network
     args.shard = "teacher"
+    args.total_flops = 0
     epochs_cache = args.epochs
     args.epochs = 0
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -296,6 +297,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Widen the network with R2R and train
     args.shard = "student_R2R"
+    args.total_flops = 0
     model = cudafy(widen_network_(model, new_channels=1.4, new_hidden_nodes=0, init_type='match_std',
                            function_preserving=True, multiplicative_widen=True))
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -303,6 +305,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Widen the network with Net2Net and train
     args.shard = "student_net2net"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     # TODO: widen the network with Net2Net
@@ -311,6 +314,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Widen the network with NetMorph and train
     args.shard = "student_netmorph"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     # TODO: widen the network with NetMorph
@@ -319,6 +323,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Widen with random padding and train
     args.shard = "student_random_padding"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='match_std',
@@ -328,6 +333,7 @@ def _net_2_wider_net_inception_test(args):
 
     # Make an inception network without any pretraining
     args.shard = "randomly_initialized"
+    args.total_flops = 0
     del model
     model = inceptionv4(pretrained=False)
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -361,6 +367,7 @@ def net_2_wider_net_resnet(args):
 
     # Teacher network training loop
     args.shard = "teacher_w_residual"
+    args.total_flops = 0
     initial_model = resnet18(thin=True, thinning_ratio=1.414)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
@@ -369,6 +376,7 @@ def net_2_wider_net_resnet(args):
     model = copy.deepcopy(teacher_model)
     model.widen(1.414)
     args.shard = "R2R_student"
+    args.total_flops = 0
     train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -384,6 +392,7 @@ def net_2_wider_net_resnet(args):
     model.function_preserving = False
     model.widen(1.414)
     args.shard = "RandomPadding_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -391,11 +400,13 @@ def net_2_wider_net_resnet(args):
     model_= resnet18(thin=True, thinning_ratio=1.414)
     model.widen(1.414)
     args.shard = "Completely_Random_Init"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # # Net2Net teacher
     # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
     # initial_model = resnet18(thin=True, thinning_ratio=1.414, use_residual=False)
     # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #                            _validation_loss, args)
@@ -404,6 +415,7 @@ def net_2_wider_net_resnet(args):
     # model = copy.deepcopy(teacher_model)
     # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -435,6 +447,7 @@ def net_2_deeper_net_resnet(args):
 
     # Teacher network training loop
     args.shard = "teacher_w_residual"
+    args.total_flops = 0
     initial_model = resnet10()
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
@@ -443,12 +456,14 @@ def net_2_deeper_net_resnet(args):
     model = copy.deepcopy(teacher_model)
     model.deepen([1,1,1,1])
     args.shard = "R2R_student"
+    args.total_flops = 0
     train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # # NetMorph
     # model = copy.deepcopy(teacher_model)
     # model.deepen([1,1,1,1]) # TODO: add NetMorph widening to resnet
+    # args.total_flops = 0
     # args.shard = "NetMorph_student"
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
@@ -458,6 +473,7 @@ def net_2_deeper_net_resnet(args):
     model.function_preserving = False
     model.deepen([1,1,1,1])
     args.shard = "RandomPadding_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -465,11 +481,13 @@ def net_2_deeper_net_resnet(args):
     model_= resnet10()
     model.deepen([1,1,1,1])
     args.shard = "Completely_Random_Init"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # # Net2Net teacher
     # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
     # initial_model = resnet10(use_residual=False)
     # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #                            _validation_loss, args)
@@ -478,6 +496,7 @@ def net_2_deeper_net_resnet(args):
     # model = copy.deepcopy(teacher_model)
     # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -518,6 +537,7 @@ def _r_2_wider_r_inception_test(args):
 
     # Train for zero epochs, to run a single validation epoch on the base network
     args.shard = "teacher"
+    args.total_flops = 0
     epochs_cache = args.epochs
     args.epochs = 0
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -526,12 +546,14 @@ def _r_2_wider_r_inception_test(args):
 
     # Widen the network with R2R and train
     args.shard = "student_R2R"
+    args.total_flops = 0
     # TODO: specify to widen the network with R2R (in the training loop)
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
 
     # Widen the network with Net2Net and train
     args.shard = "student_net2net"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     # TODO: specify to widen the network with Net2Net (in the training loop)
@@ -540,6 +562,7 @@ def _r_2_wider_r_inception_test(args):
 
     # Widen the network with NetMorph and train
     args.shard = "student_netmorph"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     # TODO: specify to widen the network with NetMorph (in the training loop)
@@ -548,6 +571,7 @@ def _r_2_wider_r_inception_test(args):
 
     # Widen with random padding and train
     args.shard = "student_random_padding"
+    args.total_flops = 0
     del model
     model = inceptionv4()
     # TODO: specify to widen the network with random padding (in the training loop)
@@ -556,6 +580,7 @@ def _r_2_wider_r_inception_test(args):
 
     # Make an inception network without any pretraining
     args.shard = "randomly_initialized"
+    args.total_flops = 0
     del model
     model = inceptionv4(pretrained=False)
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -583,6 +608,7 @@ def r_2_wider_r_resnet(args):
     # R2R
     model = resnet18(thin=True, thinning_ratio=1.414)
     args.shard = "R2R_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -590,12 +616,14 @@ def r_2_wider_r_resnet(args):
     # model = resnet18(thin=True, thinning_ratio=1.414)
     # TODO: add Net2WiderNet widening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
     # RandomPadding
     model_= resnet18(thin=True, thinning_ratio=1.414, function_preserving=False)
     args.shard = "RandomPadding_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -603,6 +631,7 @@ def r_2_wider_r_resnet(args):
     # model = resnet18(thin=True, thinning_ratio=1.414)
     # TODO: add NetMorph widening to resnet
     # args.shard = "NetMorph_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -610,6 +639,7 @@ def r_2_wider_r_resnet(args):
     model_= resnet18(thin=True, thinning_ratio=1.414)
     model.widen(1.414)
     args.shard = "Completely_Random_Init"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -618,6 +648,7 @@ def r_2_wider_r_resnet(args):
     # Teacher network training loop
     model = resnet18(thin=True, thinning_ratio=1.414)
     args.shard = "teacher_w_residual"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -626,6 +657,7 @@ def r_2_wider_r_resnet(args):
     # Net2Net teacher
     model = resnet18(thin=True, thinning_ratio=1.414, use_residual=False)
     args.shard = "teacher_w_out_residual"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -654,6 +686,7 @@ def r_2_deeper_r_resnet(args):
     model = resnet10()
     args.deepen_indidces_list = [[1,1,1,1]]
     args.shard = "R2R_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -662,6 +695,7 @@ def r_2_deeper_r_resnet(args):
     # args.deepen_indidces_list = [[1,1,1,1]]
     # TODO: add Net2DeeperNet deepening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -669,6 +703,7 @@ def r_2_deeper_r_resnet(args):
     model = resnet10(function_preserving=False)
     args.deepen_indidces_list = [[1,1,1,1]]
     args.shard = "RandomPadding_student"
+    args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -676,6 +711,7 @@ def r_2_deeper_r_resnet(args):
     model_= resnet10()
     model.deepen([1,1,1,1])
     args.shard = "Completely_Random_Init"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -684,6 +720,7 @@ def r_2_deeper_r_resnet(args):
     # Teacher network training loop
     model = resnet10()
     args.shard = "teacher_w_residual"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -692,6 +729,7 @@ def r_2_deeper_r_resnet(args):
     # Net2Net teacher
     initial_model = resnet10(use_residual=False)
     args.shard = "teacher_w_out_residual"
+    args.total_flops = 0
     args.widen_times = []
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -738,6 +776,7 @@ def quadruple_widen_run(args):
     # model = resnet18(thin=True, thinning_ratio=4)
     # TODO: add Net2WiderNet widening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -774,6 +813,7 @@ def double_deepen_run(args):
     # model = resnet18()
     # TODO: add Net2WiderNet widening to resnet
     # args.shard = "Net2Net_student"
+    # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
     #            _validation_loss, args)
 
@@ -830,7 +870,10 @@ Showing that R2R == faster training tests
 
 
 
-def r2r_faster_test(args):
+def r2r_faster_test_part_1(args):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
@@ -850,6 +893,30 @@ def r2r_faster_test(args):
     args.shard = "R2R_Then_Widened"
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_part_2(args):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 0:
+        raise Exception("Widening times needs to be a list of length 0 for this test")
+    if len(args.deepen_times) != 0:
+        raise Exception("Deepening times needs to be a list of length 0 for this test")
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
     # Larger model trained staight up
     model = resnet26(thin=True, thinning_ratio=2)
