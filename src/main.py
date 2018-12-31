@@ -340,7 +340,35 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_r2r":
         return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": range(383*10, 383*100, 383*10),
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz_r2r_conv":
+        return {
             "lr": 1.0e-2,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": range(235*10, 235*100, 235*10),
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_r2r_conv":
+        return {
+            "lr": 1.0e-3,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -380,6 +408,34 @@ def get_defaults(script_name):
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
+    elif script == "mnist_weight_viz_net2net_conv":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_net2net_conv":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
     elif script == "mnist_weight_viz_netmorph":
         return {
             "lr": 1.0e-1,
@@ -395,6 +451,34 @@ def get_defaults(script_name):
             "flops_budget": 0 # unused
         }
     elif script == "cifar_weight_viz_netmorph":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz_netmorph_conv":
+        return {
+            "lr": 1.0e-1,
+            "weight_decay": 1.0e-5,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [3000], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_netmorph_conv":
         return {
             "lr": 1.0e-1,
             "weight_decay": 1.0e-5,
@@ -536,10 +620,10 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
-            "widen_times": [], # unused (probably widen at 30 and 60, deepen at 45 and 75)
-            "deepen_times": [], # unused
+            "widen_times": [3000,6000], # unused (probably widen at 30 and 60, deepen at 45 and 75)
+            "deepen_times": [4500,7500], # unused
             "flops_budget": 0 # unused
         }
 
@@ -675,14 +759,26 @@ if __name__ == "__main__":
         _mnist_weight_visuals(args, widen_method="r2r")
     elif script == "cifar_weight_viz_r2r":
         _cifar_weight_visuals(args, widen_method="r2r")
+    elif script == "mnist_weight_viz_r2r_conv":
+        _mnist_weight_visuals(args, widen_method="r2r", use_conv=True)
+    elif script == "cifar_weight_viz_r2r_conv":
+        _cifar_weight_visuals(args, widen_method="r2r", use_conv=True)
     elif script == "mnist_weight_viz_net2net":
         _mnist_weight_visuals(args, widen_method="net2net")
     elif script == "cifar_weight_viz_net2net":
         _cifar_weight_visuals(args, widen_method="net2net")
+    elif script == "mnist_weight_viz_net2net_conv":
+        _mnist_weight_visuals(args, widen_method="net2net", use_conv=True)
+    elif script == "cifar_weight_viz_net2net_conv":
+        _cifar_weight_visuals(args, widen_method="net2net", use_conv=True)
     elif script == "mnist_weight_viz_netmorph":
         _mnist_weight_visuals(args, widen_method="netmorph")
     elif script == "cifar_weight_viz_netmorph":
         _cifar_weight_visuals(args, widen_method="netmorph")
+    elif script == "mnist_weight_viz_netmorph_conv":
+        _mnist_weight_visuals(args, widen_method="netmorph", use_conv=True)
+    elif script == "cifar_weight_viz_netmorph_conv":
+        _cifar_weight_visuals(args, widen_method="netmorph", use_conv=True)
 
     #######
     # Net 2 Net Style tests, and R2R style tests

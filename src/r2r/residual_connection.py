@@ -2,6 +2,19 @@
 
 
 
+
+
+def _round_up_multiply(a, b, m):
+    """
+    Performs a*b and rounds up to the nearest m. Note that (x+m-1)//m, is a divide by m rounded up
+    """
+    prod = int(math.ceil(((a*b + m - 1) // m) * m))
+    return prod
+
+
+
+
+
 class Residual_Connection(object):
     """
     This file defines a class that wraps a residual connection. As a residual connection will propogate (by addition) a
@@ -145,7 +158,7 @@ class Residual_Connection(object):
             # Work out how many new channels will be added for this input slice
             input_slice_extra_channels = extra_channels
             if multiplicative_widen:
-                input_slice_extra_channels = (vs_end - vs_beg) * (extra_channels - 1)
+                input_slice_extra_channels = _round_up_multiply((extra_channels-1), vs_end-vs_beg, 2)
             half_input_slice_extra_channels = input_slice_extra_channels // 2
 
             # Compute new residual slice mappings for the additional volume being added by a widening transform

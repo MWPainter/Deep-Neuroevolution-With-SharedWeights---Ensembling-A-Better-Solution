@@ -93,7 +93,7 @@ class FC_Net(nn.Module):
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="He", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             raise NotImplementedError()
         elif self.widen_method == 'netmorph':
@@ -124,13 +124,13 @@ class Conv_Net(nn.Module):
         self.multiplicative_widen = multiplicative_widen
         self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=7, padding=3)
         self.pool1 = nn.MaxPool2d(kernel_size=2)
-        self.W1 = nn.Linear(conv_channels * 16 * 16, hidden_units)
+        self.W1 = nn.Linear(conv_channels * 32 * 32, hidden_units)
         self.bn = nn.BatchNorm1d(num_features=hidden_units)
         self.W2 = nn.Linear(hidden_units, 10)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.pool1(x)
+        # x = self.pool1(x)
         x = flatten(x)
         x = self.W1(x)
         x = F.relu(x)
@@ -144,8 +144,8 @@ class Conv_Net(nn.Module):
 
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
-            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
-                         init_type="He", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
+                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             raise NotImplementedError()
         elif self.widen_method == 'netmorph':
@@ -276,9 +276,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     # Widen or deepen the network at the correct times
     if iter in args.widen_times:
-        model.widen(2)
-        args.lr /= 2.0
-        args.weight_decay /= 2.0
+        model.widen(4)
+        # args.lr /= 2.0
+        # args.weight_decay /= 2.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
@@ -310,6 +310,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
         losses['update_mag'] = param_update_mag
         losses['update_ratio'] = param_update_ratio
 
+    if iter % 10 == 0:
         img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), "weight_visuals")
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
@@ -387,7 +388,7 @@ Tests
 
 
 
-def _mnist_weight_visuals(args, widen_method="r2r"):
+def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -401,8 +402,10 @@ def _mnist_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    # model = FC_Net(2, in_channels=3, widen_method=widen_method)
-    model = Conv_Net(10, 2, widen_method=widen_method)
+    if use_conv:
+        model = Conv_Net(10, 8, widen_method=widen_method)
+    else:
+        model = FC_Net(2, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -415,7 +418,7 @@ def _mnist_weight_visuals(args, widen_method="r2r"):
 
 
 
-def _cifar_weight_visuals(args, widen_method="r2r"):
+def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -429,8 +432,10 @@ def _cifar_weight_visuals(args, widen_method="r2r"):
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    # model = FC_Net(2, in_channels=3, widen_method=widen_method)
-    model = Conv_Net(10, 2, in_channels=3, widen_method=widen_method)
+    if use_conv:
+        model = Conv_Net(10, 8, widen_method=widen_method)
+    else:
+        model = FC_Net(2, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
