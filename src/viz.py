@@ -142,7 +142,7 @@ class Conv_Net(nn.Module):
         for p in self.parameters():
             p.data.clamp_(-1.0, 1.0)
 
-    def widen(self, num_channels=2):
+    def widen(self, num_channels=8):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
                          init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
@@ -276,7 +276,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     # Widen or deepen the network at the correct times
     if iter in args.widen_times:
-        model.widen(4)
+        model.widen()
         # args.lr /= 2.0
         # args.weight_decay /= 2.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)

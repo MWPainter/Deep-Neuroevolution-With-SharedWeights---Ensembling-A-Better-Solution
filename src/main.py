@@ -819,7 +819,7 @@ if __name__ == "__main__":
     #######
     # Fast training tests
     #######
-    elif script == "r2fasterr_part1":
+    elif script == "r2fasterr_part_1":
         r2r_faster_test_part_1(args)
     elif script == "r2fasterr_part_2":
         r2r_faster_test_part_2(args)
