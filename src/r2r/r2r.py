@@ -153,7 +153,7 @@ Widening hidden volumes
 
 
 def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residual_connection=None, extra_channels=0,
-                 init_type="He", function_preserving=True, multiplicative_widen=True):
+                 init_type="match_std", function_preserving=True, multiplicative_widen=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
 
@@ -960,7 +960,7 @@ class HVE(object):
         
 
         
-def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='He', function_preserving=True,
+def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match_std', function_preserving=True,
                    multiplicative_widen=True):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the 
