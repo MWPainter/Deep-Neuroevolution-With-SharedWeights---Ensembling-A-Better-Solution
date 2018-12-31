@@ -325,7 +325,7 @@ class ResNet(nn.Module):
         return nn.ModuleList(layers), img_shape
 
     def _deepen_layer(self, layer_modules, block, planes, num_blocks):
-        img_shape = layer_modules[-1]
+        img_shape = layer_modules[-1].img_shape
         self.inplanes = planes * block.expansion
         for _ in range(1, num_blocks):
             identity_block = block(self.inplanes, planes, identity_initialize=self.function_preserving, img_shape=img_shape, use_residual=self.use_residual)
@@ -333,10 +333,14 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_layers):
-        self._deepen_layer(self.layer1_modules, self.block, self.r(64) * self.approx_widened_ratio, num_layers[0])
-        self._deepen_layer(self.layer2_modules, self.block, self.r(128) * self.approx_widened_ratio, num_layers[1])
-        self._deepen_layer(self.layer3_modules, self.block, self.r(256) * self.approx_widened_ratio, num_layers[2])
-        self._deepen_layer(self.layer4_modules, self.block, self.r(512) * self.approx_widened_ratio, num_layers[3])
+        layer1_planes = self.layer1_modules[-1].conv1.weight.data.size(1)
+        self._deepen_layer(self.layer1_modules, self.block, layer1_planes, num_layers[0])
+        layer2_planes = self.layer2_modules[-1].conv1.weight.data.size(1)
+        self._deepen_layer(self.layer2_modules, self.block, layer2_planes, num_layers[1])
+        layer3_planes = self.layer3_modules[-1].conv1.weight.data.size(1)
+        self._deepen_layer(self.layer3_modules, self.block, layer3_planes, num_layers[2])
+        layer4_planes = self.layer4_modules[-1].conv1.weight.data.size(1)
+        self._deepen_layer(self.layer4_modules, self.block, layer4_planes, num_layers[3])
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
