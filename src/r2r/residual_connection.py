@@ -112,7 +112,7 @@ class Residual_Connection(object):
 
 
 
-    def _widen_(self, volume_slice_indices, extra_channels, multiplicative_widen):
+    def _widen_(self, volume_slice_indices, extra_channels, multiplicative_widen, mfactor):
         """
         A function that will widen the residual connection, and is strongly tied to R2WiderR's implementation. It made
         more sense to keep the implementation of this as part of the class however.
@@ -130,6 +130,8 @@ class Residual_Connection(object):
         :param volume_slice_indices: TODO
         :param extra_channels: TODO
         :param multiplicative_widen: TODO
+        :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+                'mfactor'. This parameter has no effect if multiplicative_widen == False.
         :return: TODO
         """
         # if we currently have no slice map, then, initialize it according to the first (assumed correct) volume slice indices
@@ -158,7 +160,7 @@ class Residual_Connection(object):
             # Work out how many new channels will be added for this input slice
             input_slice_extra_channels = extra_channels
             if multiplicative_widen:
-                input_slice_extra_channels = _round_up_multiply((extra_channels-1), vs_end-vs_beg, 2)
+                input_slice_extra_channels = _round_up_multiply((extra_channels-1), vs_end-vs_beg, mfactor)
             half_input_slice_extra_channels = input_slice_extra_channels // 2
 
             # Compute new residual slice mappings for the additional volume being added by a widening transform

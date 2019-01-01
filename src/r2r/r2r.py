@@ -277,7 +277,8 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:
-        _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear, function_preserving)
+        _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
+                                function_preserving, mfactor)
     
     # Widen batch norm appropriately 
     if batch_norm:
@@ -285,12 +286,13 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
 
     # Widen the residual connection appropriately
     if residual_connection:
-        residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen)
+        residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen, mfactor)
     
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for next_layer in next_layers:
         _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
-                               new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving)
+                               new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen,
+                               function_preserving, mfactor)
 
 
 
