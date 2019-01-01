@@ -453,7 +453,7 @@ def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving
 
 
 
-def resnet26(thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
+def resnet26(thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, **kwargs):
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)

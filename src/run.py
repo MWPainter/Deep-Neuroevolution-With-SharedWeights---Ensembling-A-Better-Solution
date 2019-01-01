@@ -915,8 +915,16 @@ def r2r_faster_test_part_2(args):
         raise Exception("Deepening times needs to be a list of length 0 for this test")
 
     # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
 
     # Larger model trained staight up
     model = resnet26(thin=True, thinning_ratio=2)
