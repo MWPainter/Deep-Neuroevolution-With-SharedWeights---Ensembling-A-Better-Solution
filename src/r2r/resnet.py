@@ -60,7 +60,7 @@ def conv_out_shape(spatial_shape, out_planes, kernel_size, stride, padding):
 
 def reduce_size_function(ratio):
     """Reduces by ratio r, to give an interger, and force it to be a multiple of two"""
-    return lambda x: int((((x // ratio) + 1) // 2) * 2)
+    return lambda x: int((((x // ratio) + 3) // 4) * 4)
 
 
 
@@ -339,7 +339,7 @@ class ResNet(nn.Module):
     def _deepen_layer(self, layer_modules, block, num_blocks):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
-        planes = int(((inplanes // block.expansion + 1) // 2) * 2)
+        planes = inplanes // block.expansion # int(((inplanes // block.expansion + 1) // 2) * 2)
 
         # Add the new block
         for _ in range(num_blocks):
