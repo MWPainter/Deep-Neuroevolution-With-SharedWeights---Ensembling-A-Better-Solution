@@ -50,6 +50,10 @@ def conv_out_shape(spatial_shape, out_planes, kernel_size, stride, padding):
             (((h + 2*pd[0] - ks[0]) // st[0]) + 1),
             (((w + 2*pd[1] - ks[1]) // st[1]) + 1))
 
+def reduce_size_function(ratio):
+    """Reduces by ratio r, to give an interger, and force it to be a multiple of two"""
+    return lambda x: int((((x // ratio) + 1) // 2) * 2)
+
 
 
 
@@ -413,7 +417,7 @@ def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residua
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [1, 1, 1, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     return model
 
@@ -426,7 +430,7 @@ def resnet18(pretrained=False, thin=False, thinning_ratio=2, function_preserving
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
@@ -441,7 +445,7 @@ def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
@@ -452,7 +456,7 @@ def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving
 def resnet26(thin=False, thinning_ratio=4, function_preserving=True, **kwargs):
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(Bottleneck, [2, 2, 2, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     return model
 
@@ -474,7 +478,7 @@ def resnet50(pretrained=False, thin=False, thinning_ratio=4, function_preserving
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(Bottleneck, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
@@ -499,7 +503,7 @@ def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preservin
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(Bottleneck, [3, 4, 23, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
@@ -516,7 +520,7 @@ def resnet152(pretrained=False, thin=False, thinning_ratio=4, function_preservin
     """
     r = lambda x: x
     if thin:
-        r = lambda x: int(x // thinning_ratio)
+        r = reduce_size_function(thinning_ratio)
     model = ResNet(Bottleneck, [3, 8, 36, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
