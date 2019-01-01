@@ -968,7 +968,7 @@ class HVE(object):
 
         
 def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match_std', function_preserving=True,
-                   multiplicative_widen=True):
+                   multiplicative_widen=True, mfactor=2):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the 
     enum_layers interface. The interface should return, for every hidden volume, the layer before it and 
@@ -987,6 +987,8 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match
     :param init_type: The initialization type to use for new variables
     :param function_preserving: If we want the widening to be function preserving
     :param multiplicative_widen: If we want to extend channels by scaling (multiplying num channels) rather than adding
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     :return: A reference to the widened network
     """
     # Create the hidden volume graph
@@ -1010,7 +1012,7 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match
         if channels_or_nodes_to_add == 0:
             continue
         r_2_wider_r_(prev_layers, shape, next_layers, batch_norm, residual_connection,
-                     channels_or_nodes_to_add, init_type, function_preserving, multiplicative_widen)
+                     channels_or_nodes_to_add, init_type, function_preserving, multiplicative_widen, mfactor)
         
     # Return model for if someone want to use this in an assignment form etc
     return network
