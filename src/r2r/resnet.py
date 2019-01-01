@@ -361,7 +361,7 @@ class ResNet(nn.Module):
 
     def widen(self, ratio):
         widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
-                       function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=4)
+                       function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8)
 
 
     def forward(self, x):
