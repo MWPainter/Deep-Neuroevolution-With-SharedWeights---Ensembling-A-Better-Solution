@@ -212,7 +212,7 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
         next_layers = [next_layers]
         
     _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen)
+                  function_preserving, multiplicative_widen, mfactor)
 
 
 
