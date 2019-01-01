@@ -282,7 +282,7 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     
     # Widen batch norm appropriately 
     if batch_norm:
-        _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen)
+        _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen, mfactor)
 
     # Widen the residual connection appropriately
     if residual_connection:
@@ -342,7 +342,7 @@ def _compute_new_volume_slices_from_layer(base_index, prev_layer):
 
 
 
-def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicative_widen):
+def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicative_widen, mfactor):
     """
     Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
     Really this is just a helper function for R2WiderR
@@ -353,6 +353,8 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
             batch norm(s) appropriately for a concatinated input).
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs (rather than additive)
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     """
     # Sanity checks
     bn_is_array = hasattr(bn, '__len__')
