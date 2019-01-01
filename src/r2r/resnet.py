@@ -339,7 +339,7 @@ class ResNet(nn.Module):
     def _deepen_layer(self, layer_modules, block, num_blocks):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
-        planes = inplanes // block.expansion # int(((inplanes // block.expansion + 1) // 2) * 2)
+        planes = inplanes // block.expansion
 
         # Add the new block
         for _ in range(num_blocks):
@@ -361,7 +361,7 @@ class ResNet(nn.Module):
 
     def widen(self, ratio):
         widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
-                       function_preserving=self.function_preserving, multiplicative_widen=True)
+                       function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=4)
 
 
     def forward(self, x):

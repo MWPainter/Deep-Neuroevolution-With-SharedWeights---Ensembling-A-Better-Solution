@@ -153,7 +153,7 @@ Widening hidden volumes
 
 
 def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residual_connection=None, extra_channels=0,
-                 init_type="match_std", function_preserving=True, multiplicative_widen=True):
+                 init_type="match_std", function_preserving=True, multiplicative_widen=True, mfactor=2):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
 
@@ -202,6 +202,8 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
     :param function_preserving: If we wish for the widening to preserve the function I/O
     :param multiplicative_widen: If we want the number of extra channels to be multiplicative (i.e. 2 = double number
             of layers) or additive (i.e. 2 = add two layers)
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     """
     # Handle inputting of single input/output layers
     if type(prev_layers) != list:
@@ -389,7 +391,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
         end = module_slices_indices[i+1]
         
         # to triple number of channels, *add* 2x the current num
-        new_channels = new_channels_per_slice if not multiplicative_widen else _round_up_multiply(new_channels_per_slice - 1, (end-beg), 2)
+        new_channels = new_channels_per_slice if not multiplicative_widen else _round_up_multiply(new_channels_per_slice - 1, (end-beg), mfactor)
         
         new_scale_slices.append(_mean_pad_1d(old_scale[beg:end], new_channels))
         new_shift_slices.append(_mean_pad_1d(old_shift[beg:end], new_channels))
@@ -417,7 +419,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
     
     
 def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
-                            function_preserving):
+                            function_preserving, mfactor):
     """
     Helper function for r2widerr. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -428,6 +430,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
             number of outputs, rather than additive
     :param input_is_linear: If input is from a linear layer previously
     :param function_preserving: If we want the widening to be done in a function preserving fashion
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     """
     if type(prev_layer) is nn.Conv2d:
         # If we have a bias in the conv
@@ -442,7 +446,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         # new conv kernel
         old_out_channels, in_channels, height, width = prev_kernel.shape
         if multiplicative_widen:
-            extra_channels = _round_up_multiply(old_out_channels, (extra_channels - 1), 2) # to triple number of channels, *add* 2x the current num
+            extra_channels = _round_up_multiply(old_out_channels, (extra_channels - 1), mfactor) # to triple number of channels, *add* 2x the current num
         kernel_extra_shape = (extra_channels, in_channels, height, width)
         prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
 
@@ -466,7 +470,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         # new linear matrix
         old_n_out, n_in = prev_matrix.shape
         if multiplicative_widen:
-            extra_channels = _round_up_multiply(old_n_out, (extra_channels - 1), 2) # to triple number of channels, *add* 2x the current num
+            extra_channels = _round_up_multiply(old_n_out, (extra_channels - 1), mfactor) # to triple number of channels, *add* 2x the current num
         matrix_extra_shape = (extra_channels, n_in)
         prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
 
@@ -500,7 +504,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
                             
                             
 def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
-                           new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving):
+                           new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving,
+                           mfactor):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -515,6 +520,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
     :param multiplicative_widen: If true, then we should interpret "extra channels" as a multiplicative factor for the
             number of outputs, rather than additive
     :param function_preserving: If we want the widening to be done in a function preserving fashion
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     """
     # Check that we don't do linear -> conv, as haven't worked this out yet
     if input_is_linear and type(next_layer) is nn.Conv2d:
@@ -532,7 +539,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             beg, end = volume_slices_indices[i-1], volume_slices_indices[i]
             slice_extra_channels = extra_channels
             if multiplicative_widen:
-                slice_extra_channels = _round_up_multiply((end-beg), (extra_channels - 1), 2) # to triple num channels, *add* 2x the current num
+                slice_extra_channels = _round_up_multiply((end-beg), (extra_channels - 1), mfactor) # to triple num channels, *add* 2x the current num
             kernel_extra_shape = (out_channels, slice_extra_channels, height, width)
             kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
                                                                    init_type, alpha)
@@ -555,7 +562,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             end = volume_slices_indices[i] * new_hidden_units_in_next_layer_per_new_channel
             extra_params_per_input_layer = extra_channels * new_hidden_units_in_next_layer_per_new_channel
             if multiplicative_widen:
-                extra_params_per_input_layer = _round_up_multiply((end-beg), (extra_channels - 1), 2) # triple num outputs = *add* 2x the current num
+                extra_params_per_input_layer = _round_up_multiply((end-beg), (extra_channels - 1), mfactor) # triple num outputs = *add* 2x the current num
             matrix_extra_shape = (n_out, extra_params_per_input_layer)
             matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end], init_type, alpha)
             next_matrix_parts.append(matrix_part)
