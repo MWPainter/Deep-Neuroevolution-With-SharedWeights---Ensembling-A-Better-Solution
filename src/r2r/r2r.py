@@ -218,7 +218,7 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
 
 
 def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen):
+                  function_preserving, multiplicative_widen, mfactor):
     """  
     The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
     More helper functions are used.
