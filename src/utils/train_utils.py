@@ -163,8 +163,6 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
         model, optimizer, losses = step_op(model, optimizer, minibatch_data, global_iter, args)
         batch_total_time.update(time.time() - iter_end_time)
 
-        raise Exception()
-
         # Tensorboard plotting, logging per minibatch and updating averages
         # if global_iter % args.tb_log_freq == 0:
         for key in losses:
