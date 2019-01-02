@@ -78,17 +78,18 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
     start_epoch = 0
     best_val_loss = 0.0
     optimizer = make_optimizer_fn(model, args.lr, args.weight_decay)
-    if args.load:
+    if args.load is not None:
         print("Loading from checkpoint...")
         model, optimizer, start_epoch, best_val_loss = load_fn(model, optimizer, args.load)
         print("Loaded checkpoint!")
 
     # Run a validation epoch on the randomly initialized network
-    print("Epoch {epoch} validation:".format(epoch=start_epoch))
-    model.eval()
-    validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
-    avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
-                                       writer, "val/", args)
+    if args.load is None:
+        print("Epoch {epoch} validation:".format(epoch=start_epoch))
+        model.eval()
+        validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
+        avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
+                                           writer, "val/", args)
 
     # Log the initial validation stats
     for key in avg_val_losses:
