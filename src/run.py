@@ -146,6 +146,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices)
+        model = cudafy(model)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
@@ -924,6 +925,7 @@ def r2r_faster_test_part_2(args):
     model.widen(1.414)
     model.deepen([0,1,2,1])
     model.widen(1.414)
+    model = cufafy(model)
     args.shard = "Full_Model"
     args.widen_times = []
     args.deepen_times = []
