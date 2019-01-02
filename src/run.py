@@ -923,7 +923,7 @@ def r2r_faster_test_part_2(args):
     model.widen(1.414)
     model.deepen([0,1,2,1])
     model.widen(1.414)
-    model = cufafy(model)
+    model = cudafy(model)
     args.shard = "Full_Model"
     args.widen_times = []
     args.deepen_times = []
