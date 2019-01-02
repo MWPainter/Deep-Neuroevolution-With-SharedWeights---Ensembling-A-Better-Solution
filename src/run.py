@@ -456,23 +456,17 @@ def net_2_deeper_net_resnet(args):
     # R2R
     model = copy.deepcopy(teacher_model)
     model.deepen([1,1,1,1])
+    model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
-    train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
-
-    # # NetMorph
-    # model = copy.deepcopy(teacher_model)
-    # model.deepen([1,1,1,1]) # TODO: add NetMorph widening to resnet
-    # args.total_flops = 0
-    # args.shard = "NetMorph_student"
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
 
     # RandomPadding
     model = copy.deepcopy(teacher_model)
     model.function_preserving = False
     model.deepen([1,1,1,1])
+    model = cudafy(model)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -481,6 +475,7 @@ def net_2_deeper_net_resnet(args):
     # Random init start
     model_= resnet10(thin=True, thinning_ratio=4)
     model.deepen([1,1,1,1])
+    model = cudafy(model)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -495,7 +490,8 @@ def net_2_deeper_net_resnet(args):
 
     # Net2Net
     # model = copy.deepcopy(teacher_model)
-    # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
+    # model.deepen([1,1,1,1]) # TODO: add Net2DeeperNet widening to resnet
+    # model = cudafy(model)
     # args.shard = "Net2Net_student"
     # args.total_flops = 0
     # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
