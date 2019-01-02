@@ -876,7 +876,6 @@ def r2r_faster_test_part_1(args):
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
     if len(args.widen_times) != 2:
@@ -907,7 +906,6 @@ def r2r_faster_test_part_2(args):
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
     # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
     if hasattr(args, "flops_budget"):
         del args.flops_budget
     if len(args.widen_times) != 0:
