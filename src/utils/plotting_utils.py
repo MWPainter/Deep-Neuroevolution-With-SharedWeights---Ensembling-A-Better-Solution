@@ -11,7 +11,8 @@ A collection of utility functions/classes, such as keeping track of averages and
 
 
 __all__ = ['AverageMeter', 
-           'count_parameters', 
+           'count_parameters',
+           'count_parameters_in_list',
            'parameter_magnitude', 
            'gradient_magnitude', 
            'update_magnitude', 
@@ -53,6 +54,19 @@ def count_parameters(model):
     for p in model.parameters():
         if p.requires_grad:
             count += np.prod(p.size())
+    return count
+
+
+def count_parameters_in_list(models):
+    """
+    Count the trainable parameters of a list of models
+    (Something to be plotted)
+    """
+    count = 0
+    for model in models:
+        for p in model.parameters():
+            if p.requires_grad:
+                count += np.prod(p.size())
     return count
 
 

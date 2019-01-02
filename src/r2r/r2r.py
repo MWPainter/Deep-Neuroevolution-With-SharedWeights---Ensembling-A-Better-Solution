@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from r2r.init_utils import *
 from r2r.module_utils import *
 from utils.pytorch_utils import cudafy
+from utils.plotting_utils import count_parameters_in_list
 
 import copy
 import math
@@ -153,7 +154,7 @@ Widening hidden volumes
 
 
 def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residual_connection=None, extra_channels=0,
-                 init_type="match_std", function_preserving=True, multiplicative_widen=True, mfactor=2):
+                 init_type="match_std", function_preserving=True, multiplicative_widen=True, mfactor=2, net_morph=False):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
 
@@ -204,6 +205,7 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
             of layers) or additive (i.e. 2 = add two layers)
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
+    :param net_morph: If we wish to provide a netmorph widening (rather than R2R widening).
     """
     # Handle inputting of single input/output layers
     if type(prev_layers) != list:
@@ -212,13 +214,13 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
         next_layers = [next_layers]
         
     _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen, mfactor)
+                  function_preserving, multiplicative_widen, mfactor, net_morph)
 
 
 
 
 def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen, mfactor):
+                  function_preserving, multiplicative_widen, mfactor, net_morph):
     """  
     The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
     More helper functions are used.
@@ -274,25 +276,39 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     if ((_is_conv_volume_shape(volume_shape) and volume_slices_indices[-1] != volume_shape[0]) or
         (_is_linear_volume_shape(volume_shape) and volume_slices_indices[-1] * new_hidden_units_in_next_layer_per_new_channel != volume_shape[0])):
         raise Exception("The shape output from the input layers is inconsistent with the hidden volume provided in R2WiderR.")
+
+    # Net morph sets the sparser
+    # This is unused by R2R portion of this subroutine
+    is_prev_layer_sparse = False
+    is_next_layer_sparse = False
+    if net_morph and function_preserving:
+        prev_layer_params = count_parameters_in_list(prev_layers)
+        next_layer_params = count_parameters_in_list(next_layers)
+        if prev_layer_params > next_layer_params:
+            is_next_layer_sparse = True
+        else:
+            is_prev_layer_sparse = True
+
     
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:
         _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
-                                function_preserving, mfactor)
+                                    function_preserving, mfactor, net_morph, is_prev_layer_sparse)
     
     # Widen batch norm appropriately 
     if batch_norm:
         _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen, mfactor)
 
-    # Widen the residual connection appropriately
-    if residual_connection:
-        residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen, mfactor)
+    # Widen the residual connection appropriately (and don't for function preserving net morph)
+    if residual_connection and not (net_morph and function_preserving):
+        alpha = 1.0 if not function_preserving else -1.0
+        residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen, alpha, mfactor)
     
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for next_layer in next_layers:
         _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
-                               new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen,
-                               function_preserving, mfactor)
+                                   new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen,
+                                   function_preserving, mfactor, net_morph, is_next_layer_sparse)
 
 
 
@@ -423,7 +439,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
     
     
 def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
-                            function_preserving, mfactor):
+                            function_preserving, mfactor, net_morph, is_prev_layer_sparse):
     """
     Helper function for r2widerr. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -436,6 +452,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
     :param function_preserving: If we want the widening to be done in a function preserving fashion
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
+    :param net_morph: If we actually would like to use the NetMorph widening, rather than the R2R widening.
+    :param is_prev_layer_sparse: If the prev layers are sparser than next layers (only used for net morph)
     """
     if type(prev_layer) is nn.Conv2d:
         # If we have a bias in the conv
@@ -452,7 +470,12 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         if multiplicative_widen:
             extra_channels = _round_up_multiply(old_out_channels, (extra_channels - 1), mfactor) # to triple number of channels, *add* 2x the current num
         kernel_extra_shape = (extra_channels, in_channels, height, width)
-        prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
+
+        if not net_morph:
+            prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
+        else:
+            prev_kernel_init_type = init_type if not function_preserving or not is_prev_layer_sparse else 'zero'
+            prev_kernel = _extend_filter_repeated_in_channels(kernel_extra_shape, prev_kernel, prev_kernel_init_type)
 
         # zero pad the bias
         if module_has_bias:
@@ -471,12 +494,19 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         if module_has_bias:
             prev_bias = prev_layer.bias.data.cpu().numpy()
         
-        # new linear matrix
+        # work out the shape of what we need to add
         old_n_out, n_in = prev_matrix.shape
         if multiplicative_widen:
             extra_channels = _round_up_multiply(old_n_out, (extra_channels - 1), mfactor) # to triple number of channels, *add* 2x the current num
         matrix_extra_shape = (extra_channels, n_in)
-        prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
+
+        # Compute the new matrix using the widening method chosen
+        if not net_morph:
+            prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
+        else:
+            prev_matrix_init_type = init_type if not function_preserving or not is_prev_layer_sparse else 'zero'
+            prev_matrix = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type)
+
 
         # zero pad the bias
         if module_has_bias:
@@ -509,7 +539,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
                             
 def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                            new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving,
-                           mfactor):
+                           mfactor, net_morph, is_next_layer_sparse):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -526,6 +556,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
     :param function_preserving: If we want the widening to be done in a function preserving fashion
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
+    :param net_morph: If we actually would like to use the NetMorph widening, rather than the R2R widening.
+    :param is_next_layer_sparse: If the next layers are sparser than prev layers (only used for net morph)
     """
     # Check that we don't do linear -> conv, as haven't worked this out yet
     if input_is_linear and type(next_layer) is nn.Conv2d:
@@ -540,17 +572,24 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
         out_channels, old_in_channels, height, width = next_kernel.shape
         next_kernel_parts = []
         for i in range(1, len(volume_slices_indices)):
+            # Compute the shape of what we need to add
             beg, end = volume_slices_indices[i-1], volume_slices_indices[i]
             slice_extra_channels = extra_channels
             if multiplicative_widen:
                 slice_extra_channels = _round_up_multiply((end-beg), (extra_channels - 1), mfactor) # to triple num channels, *add* 2x the current num
             kernel_extra_shape = (out_channels, slice_extra_channels, height, width)
-            kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], 
-                                                                   init_type, alpha)
+
+            # Extedn t the kernel according to the widening paradigm we wish to use
+            if not net_morph:
+                kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end],
+                                                                       init_type, alpha)
+            else:
+                kernel_part_init_type = init_type if not function_preserving or not is_next_layer_sparse else 'zero'
+                kernel_part = _extend_filter_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], kernel_part_init_type)
             next_kernel_parts.append(kernel_part)
+
+        # Join all of the kernel parts, and then assign new conv (don't need to change bias)
         next_kernel = np.concatenate(next_kernel_parts, axis=1)
-        
-        # assign new conv (don't need to change bias)
         _assign_kernel_and_bias_to_conv_(next_layer, next_kernel)
         
     elif type(next_layer) is nn.Linear:            
@@ -562,17 +601,28 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
         n_out, old_n_in = next_matrix.shape 
         next_matrix_parts = []
         for i in range(1, len(volume_slices_indices)):
+            # Compute the shape of what we need to add
             beg = volume_slices_indices[i-1] * new_hidden_units_in_next_layer_per_new_channel
             end = volume_slices_indices[i] * new_hidden_units_in_next_layer_per_new_channel
             extra_params_per_input_layer = extra_channels * new_hidden_units_in_next_layer_per_new_channel
             if multiplicative_widen:
                 extra_params_per_input_layer = _round_up_multiply((end-beg), (extra_channels - 1), mfactor) # triple num outputs = *add* 2x the current num
             matrix_extra_shape = (n_out, extra_params_per_input_layer)
-            matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end], init_type, alpha)
+
+            # Extend the matrix according to the widening paradigm we wish to use
+            if not net_morph:
+                matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
+                                                                      init_type, alpha)
+            else:
+                matrix_part_init_type = init_type if not function_preserving or not is_next_layer_sparse else 'zero'
+                matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
+                                                                      matrix_part_init_type)
+
+            # Add this matrix part to the list
             next_matrix_parts.append(matrix_part)
-        next_matrix = np.concatenate(next_matrix_parts, axis=1)        
-        
-        # assign new linear params (don't need to change bias)
+
+        # Put together all of the parts, and, assign new linear params (don't need to change bias)
+        next_matrix = np.concatenate(next_matrix_parts, axis=1)
         _assign_weights_and_bias_to_linear_(next_layer, next_matrix)
 
     elif type(next_layer) in [nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d]:
@@ -972,7 +1022,7 @@ class HVE(object):
 
         
 def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match_std', function_preserving=True,
-                   multiplicative_widen=True, mfactor=2):
+                   multiplicative_widen=True, mfactor=2, net_morph=False):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the 
     enum_layers interface. The interface should return, for every hidden volume, the layer before it and 
@@ -993,6 +1043,7 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match
     :param multiplicative_widen: If we want to extend channels by scaling (multiplying num channels) rather than adding
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
+    :param net_morph: If we should widen according to the net morph widening alghorithm, rather than R2WiderR.
     :return: A reference to the widened network
     """
     # Create the hidden volume graph
@@ -1015,8 +1066,8 @@ def widen_network_(network, new_channels=0, new_hidden_nodes=0, init_type='match
         # Perform the widening
         if channels_or_nodes_to_add == 0:
             continue
-        r_2_wider_r_(prev_layers, shape, next_layers, batch_norm, residual_connection,
-                     channels_or_nodes_to_add, init_type, function_preserving, multiplicative_widen, mfactor)
+        r_2_wider_r_(prev_layers, shape, next_layers, batch_norm, residual_connection, channels_or_nodes_to_add,
+                     init_type, function_preserving, multiplicative_widen, mfactor, net_morph)
         
     # Return model for if someone want to use this in an assignment form etc
     return network

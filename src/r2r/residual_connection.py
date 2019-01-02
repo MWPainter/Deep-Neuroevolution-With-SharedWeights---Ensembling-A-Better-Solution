@@ -112,7 +112,7 @@ class Residual_Connection(object):
 
 
 
-    def _widen_(self, volume_slice_indices, extra_channels, multiplicative_widen, mfactor):
+    def _widen_(self, volume_slice_indices, extra_channels, multiplicative_widen, alpha=-1.0, mfactor=2):
         """
         A function that will widen the residual connection, and is strongly tied to R2WiderR's implementation. It made
         more sense to keep the implementation of this as part of the class however.
@@ -130,6 +130,8 @@ class Residual_Connection(object):
         :param volume_slice_indices: TODO
         :param extra_channels: TODO
         :param multiplicative_widen: TODO
+        :param alpha: A constant to multiply repeated output by in residual connections. For function preserving transforms,
+                use -1.0. To use vanilla/unmodified residual connections, use 1.0.
         :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
                 'mfactor'. This parameter has no effect if multiplicative_widen == False.
         :return: TODO

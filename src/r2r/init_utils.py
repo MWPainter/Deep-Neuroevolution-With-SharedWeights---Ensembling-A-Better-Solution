@@ -16,6 +16,10 @@ __all__ = ['_conv_xavier_initialize',
            '_extend_filter_with_repeated_out_channels', 
            '_extend_matrix_with_repeated_in_weights', 
            '_extend_matrix_with_repeated_out_weights',
+           '_extend_filter_in_channels',
+           '_extend_filter_out_channels',
+           '_extend_matrix_in_weights',
+           '_extend_matrix_out_weights',
            '_zero_pad_1d', 
            '_one_pad_1d',
            '_mean_pad_1d',
@@ -105,8 +109,7 @@ def _conv_match_scale_initialize(filter_shape, scale=1.0):
 
 
 
-def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_filter=None, 
-                                              init_type='He', alpha=1.0):
+def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0):
     """
     We want to extend filter by adding output channels with appropriately initialized weights.
     
@@ -169,9 +172,56 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
 
 
 
+def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0):
+    """
+    We want to extend filter by adding output channels.
 
-def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_filter=None, 
-                                             init_type='He', alpha=1.0):
+    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [2*C2,I,H,W]
+    :param existing_filter: If not None, it must have shape [C1,I,H,W]. This is the existing filter.
+    :param init_type: The type of initialization to use for new weights.
+    :return: A filter of shape [C1+2*C2, I, H, W], which is the 'existing_filter' extended by 2*C2 output channels.
+            I.e. the filter [F;E;alpha*E]
+    """
+    # Unpack params input.
+    twoC2, I, H, W = extending_filter_shape
+    C1 = 0 if existing_filter is None else existing_filter.shape[0]
+
+    # Error checking.
+    if existing_filter is not None and (H != existing_filter.shape[2]
+        or W != existing_filter.shape[3] or I != existing_filter.shape[1]):
+        raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
+
+    # Canvas for the new numpy array to return. Copy existing filter weights.
+    canvas = np.zeros((C1+twoC2, I, H, W)).astype(np.float32)
+    if existing_filter is not None:
+        canvas[:C1,:,:,:] = existing_filter
+
+    # If init with zero's, then we're done
+    if init_type == 'zero':
+        return canvas
+
+    # Initialize the new weights, and copy that into the canvas (twice).
+    new_channels_weights = None
+    if init_type == 'He':
+        new_channels_weights = _conv_he_initialize((twoC2,I,H,W))
+    elif init_type == 'Xavier':
+        new_channels_weights = _conv_xavier_initialize((twoC2,I,H,W), override_output_channels=C1+twoC2)
+    elif init_type == 'match_std':
+        scale = np.std(existing_filter) / np.prod([twoC2,I,H,W])
+        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
+    else:
+        raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
+
+    canvas[C1:C1+twoC2,:,:,:] = new_channels_weights
+
+    # Done :)
+    return canvas
+
+
+
+
+
+def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0):
     """
     We want to extend filter by adding input channels with appropriately initialized weights.
     
@@ -234,13 +284,61 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
 
     # Done :)
     return canvas
+
+
+
+
+
+def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0):
+    """
+    We want to extend filter by adding input channels
+
+    :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [C,2*I2,H,W]
+    :param existing_filter: If not None, it must have shape [C,I1,H,W]. This is the existing filter.
+    :param init_type: The type of initialization to use for new weights.
+    :return: A filter of shape [C, I1+2*I2, H, W], which is the 'existing_filter' extended by 2*I2 input channels.
+            I.e. the filter [F;E;alpha*E]
+    """
+    # Unpack params input.
+    C, twoI2, H, W = extending_filter_shape
+    I1 = 0 if existing_filter is None else existing_filter.shape[1]
+
+    # Error checking.
+    if existing_filter is not None and (H != existing_filter.shape[2]
+        or W != existing_filter.shape[3] or C != existing_filter.shape[0]):
+        raise Exception("Dimensions of 'extending_filter_shape' and 'existing_filter' are incompatible.")
+
+    # Canvas for the new numpy array to return. Copy existing filter weights.
+    canvas = np.zeros((C, I1+twoI2, H, W)).astype(np.float32)
+    if existing_filter is not None:
+        canvas[:,:I1,:,:] = existing_filter
+
+    # If init with zero's, then we're done
+    if init_type == 'zero':
+        return canvas
+
+    # Initialize the new weights, and copy that into the canvas (twice).
+    new_channels_weights = None
+    if init_type == 'He':
+        new_channels_weights = _conv_he_initialize((C,twoI2,H,W))
+    elif init_type == 'Xavier':
+        new_channels_weights = _conv_xavier_initialize((C,twoI2,H,W), override_input_channels=I1+twoI2)
+    elif init_type == 'match_std':
+        scale = np.std(existing_filter) / np.prod([C,twoI2,H,W])
+        new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
+    else:
+        raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
+
+    canvas[:,I1:I1+twoI2,:,:] = new_channels_weights
+
+    # Done :)
+    return canvas
     
 
     
     
     
-def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_matrix=None, 
-                                              init_type='He', alpha=1.0):
+def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_matrix=None, init_type='He', alpha=1.0):
     """
     Re-implement _extend_filter_with_repeated_out_channels, but for fully connected layers.
     We can reshape our inputs to just re-use _extend_filter_with_repeated_out_channels.
@@ -252,15 +350,31 @@ def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_ma
     :param alpha: The coefficient of the repeated weights
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_with_repeated_out_channels, extending_matrix_shape, 
-                                 existing_matrix, init_type, alpha)
+    return _extend_matrix_helper(_extend_filter_with_repeated_out_channels, extending_matrix_shape, existing_matrix,
+                                 init_type, alpha)
+
+
+
+
+
+def _extend_matrix_out_weights(extending_matrix_shape, existing_matrix=None, init_type='He'):
+    """
+    Re-implement _extend_filter_out_channels, but for fully connected layers.
+    We can reshape our inputs to just re-use _extend_filter_out_channels.
+
+    :param extending_matrix_shape: The shape of the matrix for which we wish to to the existing matrix
+    :param existing_matrix: The existing weights of a linear layer (can be None to initialize a new matrix with
+            duplicated weights)
+    :param init_type: The type of initialization to use for the new weights.
+    :return: The new, widened matrix for the fully connected layer
+    """
+    return _extend_matrix_helper(_extend_filter_out_channels, extending_matrix_shape, existing_matrix, init_type, 1.0)
     
     
     
     
 
-def _extend_matrix_with_repeated_in_weights(extending_matrix_shape, existing_matrix=None, 
-                                              init_type='He', alpha=1.0):
+def _extend_matrix_with_repeated_in_weights(extending_matrix_shape, existing_matrix=None, init_type='He', alpha=1.0):
     """
     Re-implement _extend_filter_with_repeated_in_channels, but for fully connected layers.
     We can reshape our inputs to just re-use _extend_filter_with_repeated_in_channels.
@@ -272,8 +386,25 @@ def _extend_matrix_with_repeated_in_weights(extending_matrix_shape, existing_mat
     :param alpha: The coefficient of the repeated weights
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_with_repeated_in_channels, extending_matrix_shape, 
-                                 existing_matrix, init_type, alpha)
+    return _extend_matrix_helper(_extend_filter_with_repeated_in_channels, extending_matrix_shape, existing_matrix,
+                                 init_type, alpha)
+
+
+
+
+
+def _extend_matrix_in_weights(extending_matrix_shape, existing_matrix=None, init_type='He'):
+    """
+    Re-implement _extend_filter_in_channels, but for fully connected layers.
+    We can reshape our inputs to just re-use _extend_filter_in_channels.
+
+    :param extending_matrix_shape: The shape of the matrix for which we wish to to the existing matrix
+    :param existing_matrix: The existing weights of a linear layer (can be None to initialize a new matrix with
+            duplicated weights)
+    :param init_type: The type of initialization to use for the new weights.
+    :return: The new, widened matrix for the fully connected layer
+    """
+    return _extend_matrix_helper(_extend_filter_in_channels, extending_matrix_shape, existing_matrix, init_type, 1.0)
 
 
 
