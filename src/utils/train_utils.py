@@ -91,10 +91,10 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
                                            writer, "val/", args)
 
-    # Log the initial validation stats
-    for key in avg_val_losses:
-        scalar_name = ''.join(['epoch/', key])
-        writer.add_scalars(scalar_name, {'test': avg_val_losses[key]}, start_epoch)
+        # Log the initial validation stats
+        for key in avg_val_losses:
+            scalar_name = ''.join(['epoch/', key])
+            writer.add_scalars(scalar_name, {'test': avg_val_losses[key]}, start_epoch)
 
     # Main train loop
     for epoch in range(start_epoch, args.epochs):
