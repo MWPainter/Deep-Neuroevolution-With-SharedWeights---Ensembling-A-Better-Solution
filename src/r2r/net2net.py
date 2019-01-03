@@ -40,7 +40,7 @@ def _round_up_multiply(a, b, m):
 
 
 def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
-                     extra_channels=0, multiplicative_widen=True, add_noise=True):
+                     extra_channels=0, multiplicative_widen=True, add_noise=True, mfactor=2):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
     
@@ -71,6 +71,8 @@ def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
     :param extra_channels: The number of new conv channels/hidden units to add
     :param init_type: The type of initialization to use ('He' or 'Xavier')
     :param function_preserving: If we wish for the widening to preserve the function I/O
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     """
     # Handle inputting of single input/output layers
     if type(prev_layers) != list:
@@ -79,14 +81,14 @@ def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
         next_layers = [next_layers]
 
     _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels,
-                      multiplicative_widen, add_noise)
+                      multiplicative_widen, add_noise, mfactor)
 
 
 
 
 
 def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_channels,
-                      multiplicative_widen, add_noise):
+                      multiplicative_widen, add_noise, mfactor):
     """  
     The full internal implementation of net_2_wider_net_. See description of net_2_wider_net_.
     More helper functions are used.
@@ -144,7 +146,7 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
         widened_base_index = widened_module_slices_indices[-1]
         channels_to_add_for_module = len(local_slice_indices) * extra_channels
         if multiplicative_widen:
-            channels_to_add_for_module = _round_up_multiply(local_slice_indices[-1], extra_channels-1, 2)
+            channels_to_add_for_module = _round_up_multiply(local_slice_indices[-1], extra_channels-1, mfactor)
         widened_module_slices_indices.append(widened_base_index + local_slice_indices[-1] + channels_to_add_for_module)
 
     # Compute a mapping between old channels of the volume and new channels of the widened volume
@@ -164,7 +166,7 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
 
             map_extra_channels = extra_channels
             if multiplicative_widen:
-                map_extra_channels = _round_up_multiply(out_channels, extra_channels - 1, 2)
+                map_extra_channels = _round_up_multiply(out_channels, extra_channels - 1, mfactor)
 
             extra_local_channels_map = np.random.randint(out_channels, size=map_extra_channels)
             local_channel_map = np.concatenate([identity_local_map, extra_local_channels_map], axis=0)
@@ -190,7 +192,8 @@ def _net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm, extra_
 
     # Iterate through all of the next layers, and widen them appropriately. (Needs the slicing information to deal with concat)
     for (layer_index, next_layer) in enumerate(next_layers):
-        _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel, input_is_linear, module_slices_indices)
+        _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel,
+                                       input_is_linear, module_slices_indices)
 
 
 
@@ -306,7 +309,7 @@ def _net2net_extend_bn_(bn, channel_map, module_slices_indices, widened_module_s
 
 
 
-def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, noise=True):
+def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, mfactor, noise=True):
     """
     Helper function for net2widernet. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -357,7 +360,7 @@ def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, no
 
 
 def _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel,
-                                   input_is_linear, module_slices_indices):
+                                   input_is_linear, module_slices_indices, mfactor):
     """
     Helper function for net2widernet. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -421,7 +424,8 @@ Widening entire networks (by building graphs over the networks)
 
 
 
-def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multiplicative_widen=True, add_noise=True):
+def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multiplicative_widen=True, add_noise=True,
+                           mfactor=2):
     """
     We implement a loop that loops through all the layers of a network, according to what we will call the
     enum_layers interface. The interface should return, for every hidden volume, the layer before it and
@@ -436,6 +440,8 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multipli
     :param init_type: The initialization type to use for new variables
     :param function_preserving: If we want the widening to be function preserving
     :param multiplicative_widen: If we want to extend channels by scaling (multiplying num channels) rather than adding
+    :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
+            'mfactor'. This parameter has no effect if multiplicative_widen == False.
     :return: A reference to the widened network
     """
     #  Create the hidden volume graph
@@ -457,7 +463,7 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multipli
         if channels_or_nodes_to_add == 0:
             continue
         net_2_wider_net_(prev_layers, next_layers, shape, batch_norm, extra_channels=channels_or_nodes_to_add,
-                         multiplicative_widen=multiplicative_widen, add_noise=add_noise)
+                         multiplicative_widen=multiplicative_widen, add_noise=add_noise, mfactor=mfactor)
 
     # Return model for if someone want to use this in an assignment form etc
     return network
