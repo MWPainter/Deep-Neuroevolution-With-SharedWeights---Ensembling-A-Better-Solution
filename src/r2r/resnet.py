@@ -3,9 +3,11 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 import torch.utils.model_zoo as model_zoo
 
-from r2r import *
+from r2r.r2r import *
+from r2r.net2net import *
 from r2r.init_utils import _extend_filter_with_repeated_in_channels, _extend_filter_with_repeated_out_channels
-from r2r.module_utils import _assign_kernel_and_bias_to_conv_
+from r2r.module_utils import _assign_kernel_and_bias_to_conv_, _assign_to_batch_norm_
+from r2r.residual_connection import Residual_Connection
 
 
 """
@@ -57,10 +59,51 @@ def conv_out_shape(spatial_shape, out_planes, kernel_size, stride, padding):
 
 
 
+def _identity_init_conv(conv_layer, noise=True):
+    """ Identity inits a convolutional filter. """
+    conv_kernel = conv_layer.weight.data.cpu()
+    conv_kernel.zero_()
+    if conv_layer.bias is not None:
+        conv_bias = conv_layer.bias.data.cpu()
+        conv_bias.zero_()
+
+    out_channels, in_channels, height, width = conv_kernel.shape
+    center_height = (height - 1) // 2
+    center_width = (width - 1) // 2
+
+    for i in range(0, out_channels):
+        conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
+
+    if noise:
+        noise = np.random.normal(scale=5e-5, size=list(conv_kernel.size()))
+        conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
+
+    new_weights = conv_kernel.numpy()
+    new_bias = None if conv_layer.bias is None else conv_bias.numpy()
+
+    _assign_kernel_and_bias_to_conv_(conv_layer, new_weights, new_bias)
+
+
+
+
+def _identity_init_batch_norm(batch_norm, entire_resnet, batch):
+    """ Identity inits a batch norm, using the batch statistics from 'batch'. """
+    bn_momentum = batch_norm.momentum
+    batch_norm.reset_running_stats()
+    batch_norm.momentum = 1.0
+    entire_resnet(batch)
+    batch_norm.momentum = bn_momentum
+    new_weights = np.sqrt(batch_norm.running_var.numpy() + batch_norm.eps)
+    _assign_to_batch_norm_(batch_norm, new_weights, batch_norm.running_mean.numpy(),
+                           batch_norm.running_mean.numpy(), batch_norm.running_var.numpy())
+
+
+
+
 
 def reduce_size_function(ratio):
-    """Reduces by ratio r, to give an interger, and force it to be a multiple of two"""
-    return lambda x: int((((x // ratio) + 3) // 4) * 4)
+    """Reduces by ratio r, to give an interger, and force it to be a multiple of eight"""
+    return lambda x: int((((x // ratio) + 7) // 8) * 8)
 
 
 
@@ -86,7 +129,8 @@ def conv1x1(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None, use_residual=True):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None,
+                 use_residual=True, use_net2net=False, add_noise=True):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -100,7 +144,8 @@ class BasicBlock(nn.Module):
         self.img_shape = img_shape
         self.use_residual = use_residual
 
-        if identity_initialize:
+        # R2DeeperR
+        if identity_initialize and not use_net2net:
             # When deepening, we shouldn't decrease the spatial dimension (for now at least
             if self.downsample:
                 raise Exception("Can't deepen/identity initialize a residual block when it's downsampling spatial dimensions")
@@ -119,6 +164,30 @@ class BasicBlock(nn.Module):
             nn.init.constant_(self.bn1.bias, 0)
             nn.init.constant_(self.bn2.weight, 1)
             nn.init.constant_(self.bn2.bias, 0)
+
+        # Net2DeeperNet - note that the batch norms need to be edited in the deepening after
+        elif identity_initialize and use_net2net:
+            # Error checking
+            if use_residual:
+                raise Exception("Cannot identity initialize a res block when using it's residual connection.")
+
+            # Identity init all of the convolutions
+            _identity_init_conv(self.conv1, noise=add_noise)
+            _identity_init_conv(self.conv2, noise=add_noise)
+
+
+    def _net2deepernet_batch_norm_correction(self, entire_resnet, batch):
+        """
+        In net2deepernet we need to set parameters in the batch norm so that it "undoes" the normalization. We need
+        to iterate through the layers and do that for each layer.
+
+        :param entire_resnet: The nn.Module for the entire resenet, so we can run the forward pass (including this
+                resblock)
+        :param batch: A minibatch to run through the network.
+        """
+        _identity_init_batch_norm(self.bn1, entire_resnet, batch)
+        _identity_init_batch_norm(self.bn2, entire_resnet, batch)
+
 
 
     def forward(self, x):
@@ -140,12 +209,14 @@ class BasicBlock(nn.Module):
 
         return out
 
+
     def _out_shape(self):
         """
         Output shape takes into account the spatial reduction from conv2, and sets the out channels using conv3
         :return:
         """
         return conv_out_shape(self.img_shape, self.conv2.weight.data.size(0), kernel_size=3, stride=self.stride, padding=1)
+
 
     def extend_hvg(self, hvg, hvn):
         conv1_shape = conv_out_shape(self.img_shape, self.conv1.weight.data.size(0), kernel_size=3, stride=self.stride, padding=1)
@@ -169,7 +240,8 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None, use_residual=True):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None,
+                 use_residual=True, use_net2net=False, add_noise=True):
         super(Bottleneck, self).__init__()
         self.conv1 = conv1x1(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -185,7 +257,8 @@ class Bottleneck(nn.Module):
         self.img_shape = img_shape
         self.use_residual = use_residual
 
-        if identity_initialize:
+        # R2DeeperR
+        if identity_initialize and not use_net2net:
             # When deepening, we shouldn't decrease the spatial dimension (for now at least
             if self.downsample:
                 raise Exception("Can't deepen/identity initialize a residual block when it's downsampling spatial dimensions")
@@ -206,6 +279,31 @@ class Bottleneck(nn.Module):
             nn.init.constant_(self.bn2.bias, 0)
             nn.init.constant_(self.bn3.weight, 1)
             nn.init.constant_(self.bn3.bias, 0)
+
+        # Net2DeeperNet - note that the batch norms need to be edited in the deepening after
+        elif identity_initialize and use_net2net:
+            # Error checking
+            if use_residual:
+                raise Exception("Cannot identity initialize a res block when using it's residual connection.")
+
+            # Identity init all of the convolutions
+            _identity_init_conv(self.conv1, noise=add_noise)
+            _identity_init_conv(self.conv2, noise=add_noise)
+            _identity_init_conv(self.conv3, noise=add_noise)
+
+
+    def _net2deepernet_batch_norm_correction(self, entire_resnet, batch):
+        """
+        In net2deepernet we need to set parameters in the batch norm so that it "undoes" the normalization. We need
+        to iterate through the layers and do that for each layer.
+
+        :param entire_resnet: The nn.Module for the entire resenet, so we can run the forward pass (including this
+                resblock)
+        :param batch: A minibatch to run through the network.
+        """
+        _identity_init_batch_norm(self.bn1, entire_resnet, batch)
+        _identity_init_batch_norm(self.bn2, entire_resnet, batch)
+        _identity_init_batch_norm(self.bn3, entire_resnet, batch)
 
 
     def forward(self, x):
@@ -271,7 +369,8 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x), function_preserving=True, use_residual=True):
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x),
+                 function_preserving=True, use_residual=True, morphism_scheme="r2r"):
         super(ResNet, self).__init__()
 
         self.block = block
@@ -282,6 +381,7 @@ class ResNet(nn.Module):
         self.out_shape = (num_classes,)
         self.r = r
         self.use_residual = use_residual
+        self.morphism_scheme = morphism_scheme.lower()
 
         self.inplanes = r(64)
         self.conv1 = nn.Conv2d(3, r(64), kernel_size=7, stride=2, padding=3,
@@ -320,6 +420,7 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
+
     def _make_layer(self, block, planes, img_shape, num_blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
@@ -336,22 +437,28 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes, img_shape=img_shape, use_residual=self.use_residual))
         return nn.ModuleList(layers), img_shape
 
-    def _deepen_layer(self, layer_modules, block, num_blocks):
+
+    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
         planes = inplanes // block.expansion
 
         # Add the new block
         for _ in range(num_blocks):
-            identity_block = block(inplanes, planes, identity_initialize=self.function_preserving, img_shape=(h,w), use_residual=self.use_residual)
+            use_net2net_deepening = (self.morphism_scheme in ["net2net", "netmorph"])
+            identity_block = block(inplanes, planes, identity_initialize=self.function_preserving, img_shape=(h,w),
+                                   use_residual=self.use_residual, use_net2net=use_net2net_deepening, add_noise=add_noise)
+            if use_net2net_deepening:
+                identity_block._net2deepernet_batch_norm_correction(self, minibatch)
             layer_modules.append(identity_block)
 
 
-    def deepen(self, num_blocks):
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0])
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1])
-        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2])
-        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3])
+
+    def deepen(self, num_blocks, minibatch=None, add_noise=True):
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise)
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise)
+        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise)
+        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
@@ -360,8 +467,15 @@ class ResNet(nn.Module):
 
 
     def widen(self, ratio):
-        widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
-                       function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8)
+        if not self.morphism_scheme == "net2net":
+            use_network_morphism_scheme = self.morphism_scheme == "netmorph"
+            widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
+                           function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8,
+                           net_morph=use_network_morphism_scheme)
+        else:
+            net2net_widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, multiplicative_widen=True,
+                                   add_noise=True, mfactor=8)
+
 
 
     def forward(self, x):

@@ -284,11 +284,12 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     if net_morph and function_preserving:
         prev_layer_params = count_parameters_in_list(prev_layers)
         next_layer_params = count_parameters_in_list(next_layers)
-        if prev_layer_params > next_layer_params:
-            is_next_layer_sparse = True
-        else:
+        if _contains_pooling_module(next_layers): # If next layers contains a pooling layer,
             is_prev_layer_sparse = True
-
+        elif prev_layer_params < next_layer_params or residual_connection is not None:
+            is_prev_layer_sparse = True
+        else:
+            is_next_layer_sparse = True
     
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:
@@ -297,10 +298,10 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     
     # Widen batch norm appropriately 
     if batch_norm:
-        _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen, mfactor)
+        _extend_bn_(batch_norm, extra_channels, module_slices_indices, multiplicative_widen, mfactor, net_morph)
 
     # Widen the residual connection appropriately (and don't for function preserving net morph)
-    if residual_connection and not (net_morph and function_preserving):
+    if residual_connection:
         alpha = 1.0 if not function_preserving else -1.0
         residual_connection._widen_(volume_slices_indices, extra_channels, multiplicative_widen, alpha, mfactor)
     
@@ -309,6 +310,16 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
         _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                                    new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen,
                                    function_preserving, mfactor, net_morph, is_next_layer_sparse)
+
+
+
+
+def _contains_pooling_module(modules):
+    """Given a list of nn.Module's, returns true if any are a pooling layer"""
+    for module in modules:
+        if type(module) in [nn.MaxPool2d, nn.AdaptiveAvgPool2d, nn.AvgPool2d]:
+            return True
+    return False
 
 
 
@@ -358,7 +369,7 @@ def _compute_new_volume_slices_from_layer(base_index, prev_layer):
 
 
 
-def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicative_widen, mfactor):
+def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicative_widen, mfactor, net_morph):
     """
     Extend batch norm with 'new_channels' many extra units. Initialize values to zeros and ones appropriately.
     Really this is just a helper function for R2WiderR
@@ -371,6 +382,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
             number of outputs (rather than additive)
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
+    :param net_morph: If we actually would like to use the NetMorph widening, rather than the R2R widening.
     """
     # Sanity checks
     bn_is_array = hasattr(bn, '__len__')
@@ -412,9 +424,13 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
         
         # to triple number of channels, *add* 2x the current num
         new_channels = new_channels_per_slice if not multiplicative_widen else _round_up_multiply(new_channels_per_slice - 1, (end-beg), mfactor)
-        
-        new_scale_slices.append(_mean_pad_1d(old_scale[beg:end], new_channels))
-        new_shift_slices.append(_mean_pad_1d(old_shift[beg:end], new_channels))
+
+        if net_morph:
+            new_scale_slices.append(_zero_pad_1d(old_scale[beg:end], new_channels))
+            new_shift_slices.append(_zero_pad_1d(old_shift[beg:end], new_channels))
+        else:
+            new_scale_slices.append(_mean_pad_1d(old_scale[beg:end], new_channels))
+            new_shift_slices.append(_mean_pad_1d(old_shift[beg:end], new_channels))
         new_running_mean_slices.append(_zero_pad_1d(old_running_mean[beg:end], new_channels))
         new_running_var_slices.append(_one_pad_1d(old_running_var[beg:end], new_channels))
 
@@ -474,8 +490,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         if not net_morph:
             prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
         else:
-            prev_kernel_init_type = init_type if not function_preserving or not is_prev_layer_sparse else 'zero'
-            prev_kernel = _extend_filter_repeated_in_channels(kernel_extra_shape, prev_kernel, prev_kernel_init_type)
+            prev_kernel_init_type = init_type if not is_prev_layer_sparse else 'zero'
+            prev_kernel = _extend_filter_out_channels(kernel_extra_shape, prev_kernel, prev_kernel_init_type)
 
         # zero pad the bias
         if module_has_bias:
@@ -504,8 +520,8 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
         if not net_morph:
             prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
         else:
-            prev_matrix_init_type = init_type if not function_preserving or not is_prev_layer_sparse else 'zero'
-            prev_matrix = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type)
+            prev_matrix_init_type = init_type if not is_prev_layer_sparse else 'zero'
+            prev_matrix = _extend_matrix_out_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type)
 
 
         # zero pad the bias
@@ -584,8 +600,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
                 kernel_part = _extend_filter_with_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end],
                                                                        init_type, alpha)
             else:
-                kernel_part_init_type = init_type if not function_preserving or not is_next_layer_sparse else 'zero'
-                kernel_part = _extend_filter_repeated_in_channels(kernel_extra_shape, next_kernel[:,beg:end], kernel_part_init_type)
+                kernel_part_init_type = init_type if not is_next_layer_sparse else 'zero'
+                kernel_part = _extend_filter_in_channels(kernel_extra_shape, next_kernel[:,beg:end], kernel_part_init_type)
             next_kernel_parts.append(kernel_part)
 
         # Join all of the kernel parts, and then assign new conv (don't need to change bias)
@@ -614,8 +630,8 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
                 matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
                                                                       init_type, alpha)
             else:
-                matrix_part_init_type = init_type if not function_preserving or not is_next_layer_sparse else 'zero'
-                matrix_part = _extend_matrix_with_repeated_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
+                matrix_part_init_type = init_type if not is_next_layer_sparse else 'zero'
+                matrix_part = _extend_matrix_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
                                                                       matrix_part_init_type)
 
             # Add this matrix part to the list

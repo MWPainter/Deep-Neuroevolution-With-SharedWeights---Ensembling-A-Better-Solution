@@ -309,7 +309,7 @@ def _net2net_extend_bn_(bn, channel_map, module_slices_indices, widened_module_s
 
 
 
-def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, mfactor, noise=True):
+def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, noise=True):
     """
     Helper function for net2widernet. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -360,7 +360,7 @@ def _net2net_widen_output_channels_(prev_layer, channel_map, input_is_linear, mf
 
 
 def _net2net_widen_input_channels_(next_layer, channel_map, new_hidden_units_in_next_layer_per_new_channel,
-                                   input_is_linear, module_slices_indices, mfactor):
+                                   input_is_linear, module_slices_indices):
     """
     Helper function for net2widernet. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -445,7 +445,6 @@ def net2net_widen_network_(network, new_channels=0, new_hidden_nodes=0, multipli
     :return: A reference to the widened network
     """
     #  Create the hidden volume graph
-
     hvg = network.hvg()
 
     # Iterate through the hvg, widening appropriately in each place
@@ -491,11 +490,14 @@ def net2net_make_deeper_network_(network, layer, batch):
     network.deepen(layer)
 
     for bn_layer in layer.bn_ble():
+        momentum = bn_layer.momentum
+        bn_layer.reset_running_stats()
+        bn_layer.momentum = 1.0
         network(batch)
-        new_weights = np.sqrt(bn_layer.running_var.numpy())
-        # bn_layer.momentum = 0.1
+        new_weights = np.sqrt(bn_layer.running_var.numpy() + bn_layer.eps)
         _assign_to_batch_norm_(bn_layer, new_weights, bn_layer.running_mean.numpy(),
                                bn_layer.running_mean.numpy(), bn_layer.running_var.numpy())
+        bn_layer.momentum = momentum
 
     return network
 
@@ -519,10 +521,6 @@ class Net2Net_ResBlock_identity(nn.Module):
         # Check that we gave the correct number of intermediate channels
         if len(intermediate_channels) != 3:
             raise Exception("Need to specify 3 intemediate channels in the resblock")
-
-        # Make the residual connection object (using the input_volume_slices_inddices)
-        if input_volume_slices_indices is None:
-            input_volume_slices_indices = [0, input_channels]
 
         # Stuff that we need to remember
         self.input_spatial_shape = input_spatial_shape
@@ -567,8 +565,7 @@ class Net2Net_ResBlock_identity(nn.Module):
             conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
 
         if noise:
-            noise = np.random.normal(scale=5e-5,
-                                     size=list(conv_kernel.size()))
+            noise = np.random.normal(scale=5e-5, size=list(conv_kernel.size()))
             conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
 
         _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
@@ -583,7 +580,6 @@ class Net2Net_ResBlock_identity(nn.Module):
         :return: THe output of applying this residual block to the input
         """
         # Forward pass through residual part of the network
-
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -601,7 +597,6 @@ class Net2Net_ResBlock_identity(nn.Module):
         x = self.relu(x)
 
         out = x
-
         return out
 
 
@@ -704,8 +699,7 @@ class Net2Net_conv_identity(nn.Module):
             conv_kernel.narrow(0, i, 1).narrow(1, i, 1).narrow(2, center_height, 1).narrow(3, center_width, 1).fill_(1)
 
         if noise:
-            noise = np.random.normal(scale=5e-5,
-                                     size=list(conv_kernel.size()))
+            noise = np.random.normal(scale=5e-5, size=list(conv_kernel.size()))
             conv_kernel += t.FloatTensor(noise).type_as(conv_kernel)
 
         _assign_kernel_and_bias_to_conv_(conv_layer, conv_kernel.numpy(), conv_bias.numpy())
@@ -723,7 +717,7 @@ class Net2Net_conv_identity(nn.Module):
 
         x = self.conv(x)
         x = self.bn(x)
-        #x = self.relu(x)
+        x = self.relu(x)
         out = x
 
         return out

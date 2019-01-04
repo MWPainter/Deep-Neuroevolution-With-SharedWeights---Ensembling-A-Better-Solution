@@ -174,7 +174,7 @@ class Residual_Connection(object):
 
             new_res_beg += half_input_slice_extra_channels
             new_res_end += half_input_slice_extra_channels
-            new_residual_slice_map[(new_res_beg, new_res_end)] = (-1.0, (new_out_beg, new_out_end))
+            new_residual_slice_map[(new_res_beg, new_res_end)] = (alpha, (new_out_beg, new_out_end))
 
             # Update parameters for the next input
             self.next_output_index += half_input_slice_extra_channels

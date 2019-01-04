@@ -72,7 +72,7 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
 
 
 
-def test_function_preserving_r2widerr(model, thresh, function_preserving=True, data_channels=1, verbose=False, deep=False, spatial_dim=32):
+def test_function_preserving_r2widerr(model, thresh, function_preserving=True, data_channels=1, verbose=False, deep=False, spatial_dim=32, net_morph=False):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -88,10 +88,10 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
     if not deep:
         model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
-                               function_preserving=function_preserving, multiplicative_widen=False)
+                               function_preserving=function_preserving, multiplicative_widen=True, net_morph=net_morph)
     else:
-        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
-                               function_preserving=function_preserving, multiplicative_widen=True)
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std',
+                               function_preserving=function_preserving, multiplicative_widen=True, net_morph=net_morph)
 
     
     for i in range(10):
@@ -109,10 +109,8 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         print("Params after the transform is: {param}".format(param=params_after))
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    # model = widen_network_(model, new_channels=6, new_hidden_nodes=10, init_type='He',
-    #                        function_preserving=function_preserving, multiplicative_widen=False)
-        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
-                               function_preserving=function_preserving, multiplicative_widen=True)
+    model = widen_network_(model, new_channels=16, new_hidden_nodes=16, init_type='match_std',
+                           function_preserving=function_preserving, multiplicative_widen=False, net_morph=net_morph)
 
 
     for i in range(10):
@@ -380,207 +378,207 @@ class _Baby_Inception(nn.Module):
 
 if __name__ == "__main__":
     verbose = True
-    if verbose:
-        print("Testing Res_Block identity initialize:")
-    test_res_block_identity_initialize()
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Mnist Resnet:")
-    test_function_preserving_r2widerr(Mnist_Resnet(), 1e-5, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding for Mnist Resnet:")
-    test_function_preserving_r2widerr(Mnist_Resnet(), 1e5, False, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet(), 1e-5, data_channels=3, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet(), 1e5, False, data_channels=3, verbose=verbose)
-    
-    
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 1e-5, layer1=rblock, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding deepening for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
-                       identity_initialize=False, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
-                       identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 1e5, layer1=rblock, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 1e-5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding deepening for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=False, input_spatial_shape=(4,4))
-    rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 1e5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
-    
-    
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR + R2WiderR for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_deepen_then_widen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR + R2WiderR for Cifar Resnet:")
-    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_deepen_then_widen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR + R2DeeperR for Mnist Resnet:")
-    # insert wider resblock, because widen before deepen this time
-    rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
-                       identity_initialize=True, input_spatial_shape=(4,4)) 
-    test_function_preserving_widen_then_deepen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR + R2DeeperR for Cifar Resnet:")
-    # insert wider resblock, because widen before deepen this time
-    rblock = Res_Block(input_channels=128, intermediate_channels=[32,32,32], output_channels=128,
-                       identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_widen_then_deepen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
-    
-    
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese(), 1e-5, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding widening for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese(), 1e5, False, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR for Siamese network:")
-    rblock1 = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
-                       identity_initialize=True, input_spatial_shape=(16,16))
-    rblock2 = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
-                       identity_initialize=True, input_spatial_shape=(16,16))
-    test_function_preserving_r2deeperr(_Baby_Siamese(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding deepening for Siamese network:")
-    rblock1 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
-                       identity_initialize=False, input_spatial_shape=(16,16))
-    rblock2 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
-                       identity_initialize=False, input_spatial_shape=(16,16))
-    test_function_preserving_r2deeperr(_Baby_Siamese(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR + R2WiderR for Siamese Network:")
-    rblock = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
-                       identity_initialize=True, input_spatial_shape=(16,16))
-    test_function_preserving_deepen_then_widen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR + R2DeeperR for Siamese Network:")
-    rblock = Res_Block(input_channels=80, intermediate_channels=[20,20,20], output_channels=80,
-                       identity_initialize=True, input_spatial_shape=(32,32))
-    test_function_preserving_widen_then_deepen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
-
-
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception(), 1e-5, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR hvg.concat works:")
-    test_function_preserving_r2widerr(_Baby_Inception(test_concat=True), 1e-4, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding widening for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception(), 1e5, False, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR for Baby Inception network:")
-    rblock1 = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
-                       identity_initialize=True, input_spatial_shape=(8,8))
-    rblock2 = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
-                       identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_r2deeperr(_Baby_Inception(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding deepening for Baby Inception network:")
-    rblock1 = Res_Block(input_channels=60, intermediate_channels=[32,32,32], output_channels=60,
-                       identity_initialize=False, input_spatial_shape=(8,8))
-    rblock2 = Res_Block(input_channels=60, intermediate_channels=[32,32,32], output_channels=60,
-                       identity_initialize=False, input_spatial_shape=(8,8))
-    test_function_preserving_r2deeperr(_Baby_Inception(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2DeeperR + R2WiderR for Baby Inception Network:")
-    rblock = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
-                       identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_deepen_then_widen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR + R2DeeperR for Baby Inception Network:")
-    rblock = Res_Block(input_channels=120, intermediate_channels=[20,20,20], output_channels=120,
-                       identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_widen_then_deepen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose)
-
-
-
-    if verbose:
-        print("\n"*4)
-        print("Testing R2WiderR for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
-
-    if verbose:
-        print("\n"*4)
-        print("Testing random padding for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
-
-
-
+    # if verbose:
+    #     print("Testing Res_Block identity initialize:")
+    # test_res_block_identity_initialize()
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Mnist Resnet:")
+    # test_function_preserving_r2widerr(Mnist_Resnet(), 1e-5, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding for Mnist Resnet:")
+    # test_function_preserving_r2widerr(Mnist_Resnet(), 1e5, False, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Cifar Resnet:")
+    # test_function_preserving_r2widerr(Cifar_Resnet(), 1e-5, data_channels=3, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding for Cifar Resnet:")
+    # test_function_preserving_r2widerr(Cifar_Resnet(), 1e5, False, data_channels=3, verbose=verbose)
+    #
+    #
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR for Mnist Resnet:")
+    # rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_r2deeperr(Mnist_Resnet(), 1e-5, layer1=rblock, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding deepening for Mnist Resnet:")
+    # rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    #                    identity_initialize=False, input_spatial_shape=(4,4))
+    # rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    #                    identity_initialize=False, input_spatial_shape=(4,4))
+    # test_function_preserving_r2deeperr(Mnist_Resnet(), 1e5, layer1=rblock, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR for Cifar Resnet:")
+    # rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_r2deeperr(Cifar_Resnet(), 1e-5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding deepening for Cifar Resnet:")
+    # rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=False, input_spatial_shape=(4,4))
+    # rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=False, input_spatial_shape=(4,4))
+    # test_function_preserving_r2deeperr(Cifar_Resnet(), 1e5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
+    #
+    #
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR + R2WiderR for Mnist Resnet:")
+    # rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_deepen_then_widen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR + R2WiderR for Cifar Resnet:")
+    # rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_deepen_then_widen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR + R2DeeperR for Mnist Resnet:")
+    # # insert wider resblock, because widen before deepen this time
+    # rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_widen_then_deepen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR + R2DeeperR for Cifar Resnet:")
+    # # insert wider resblock, because widen before deepen this time
+    # rblock = Res_Block(input_channels=128, intermediate_channels=[32,32,32], output_channels=128,
+    #                    identity_initialize=True, input_spatial_shape=(4,4))
+    # test_function_preserving_widen_then_deepen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
+    #
+    #
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Siamese network:")
+    # test_function_preserving_r2widerr(_Baby_Siamese(), 1e-5, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding widening for Siamese network:")
+    # test_function_preserving_r2widerr(_Baby_Siamese(), 1e5, False, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR for Siamese network:")
+    # rblock1 = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
+    #                    identity_initialize=True, input_spatial_shape=(16,16))
+    # rblock2 = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
+    #                    identity_initialize=True, input_spatial_shape=(16,16))
+    # test_function_preserving_r2deeperr(_Baby_Siamese(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding deepening for Siamese network:")
+    # rblock1 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
+    #                    identity_initialize=False, input_spatial_shape=(16,16))
+    # rblock2 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
+    #                    identity_initialize=False, input_spatial_shape=(16,16))
+    # test_function_preserving_r2deeperr(_Baby_Siamese(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR + R2WiderR for Siamese Network:")
+    # rblock = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
+    #                    identity_initialize=True, input_spatial_shape=(16,16))
+    # test_function_preserving_deepen_then_widen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR + R2DeeperR for Siamese Network:")
+    # rblock = Res_Block(input_channels=80, intermediate_channels=[20,20,20], output_channels=80,
+    #                    identity_initialize=True, input_spatial_shape=(32,32))
+    # test_function_preserving_widen_then_deepen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    #
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Baby Inception network:")
+    # test_function_preserving_r2widerr(_Baby_Inception(), 1e-5, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR hvg.concat works:")
+    # test_function_preserving_r2widerr(_Baby_Inception(test_concat=True), 1e-4, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding widening for Baby Inception network:")
+    # test_function_preserving_r2widerr(_Baby_Inception(), 1e5, False, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR for Baby Inception network:")
+    # rblock1 = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
+    #                    identity_initialize=True, input_spatial_shape=(8,8))
+    # rblock2 = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
+    #                    identity_initialize=True, input_spatial_shape=(8,8))
+    # test_function_preserving_r2deeperr(_Baby_Inception(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding deepening for Baby Inception network:")
+    # rblock1 = Res_Block(input_channels=60, intermediate_channels=[32,32,32], output_channels=60,
+    #                    identity_initialize=False, input_spatial_shape=(8,8))
+    # rblock2 = Res_Block(input_channels=60, intermediate_channels=[32,32,32], output_channels=60,
+    #                    identity_initialize=False, input_spatial_shape=(8,8))
+    # test_function_preserving_r2deeperr(_Baby_Inception(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2DeeperR + R2WiderR for Baby Inception Network:")
+    # rblock = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
+    #                    identity_initialize=True, input_spatial_shape=(8,8))
+    # test_function_preserving_deepen_then_widen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR + R2DeeperR for Baby Inception Network:")
+    # rblock = Res_Block(input_channels=120, intermediate_channels=[20,20,20], output_channels=120,
+    #                    identity_initialize=True, input_spatial_shape=(8,8))
+    # test_function_preserving_widen_then_deepen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose)
+    #
+    #
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing R2WiderR for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    #
+    # if verbose:
+    #     print("\n"*4)
+    #     print("Testing random padding for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    #
+    #
+    #
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for ResNet50 network:")
@@ -612,4 +610,92 @@ if __name__ == "__main__":
     test_function_preserving_r2deeperr(resnet18(function_preserving=False), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
 
-    # TODO: add the same set of tests for NetMorph widening...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for Mnist Resnet:")
+    test_function_preserving_r2widerr(Mnist_Resnet().eval(), 1e-5, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding for Mnist Resnet:")
+    test_function_preserving_r2widerr(Mnist_Resnet().eval(), 1e5, False, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for Cifar Resnet:")
+    test_function_preserving_r2widerr(Cifar_Resnet().eval(), 1e-5, data_channels=3, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding for Cifar Resnet:")
+    test_function_preserving_r2widerr(Cifar_Resnet().eval(), 1e5, False, data_channels=3, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for Siamese network:")
+    test_function_preserving_r2widerr(_Baby_Siamese().eval(), 1e-5, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding widening for Siamese network:")
+    test_function_preserving_r2widerr(_Baby_Siamese().eval(), 1e5, False, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for Baby Inception network:")
+    test_function_preserving_r2widerr(_Baby_Inception().eval(), 1e-5, verbose=verbose, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding widening for Baby Inception network:")
+    test_function_preserving_r2widerr(_Baby_Inception().eval(), 1e5, False, verbose=verbose, net_morph=True)
+
+    # if verbose:
+    #     print("\n" * 4)
+    #     print("Testing NetMorph Widening for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True,
+    #                                   spatial_dim=299, net_morph=True)
+    #
+    # if verbose:
+    #     print("\n" * 4)
+    #     print("Testing random padding for Inception network:")
+    # test_function_preserving_r2widerr(InceptionV4().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+    #                                   spatial_dim=299, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+                                      spatial_dim=224, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing NetMorph Widening for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
+
+    if verbose:
+        print("\n" * 4)
+        print("Testing random padding for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+                                      spatial_dim=224, net_morph=True)
