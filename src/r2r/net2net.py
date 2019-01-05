@@ -39,8 +39,8 @@ def _round_up_multiply(a, b, m):
 
 
 
-def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm,
-                     extra_channels=0, multiplicative_widen=True, add_noise=True, mfactor=2):
+def net_2_wider_net_(prev_layers, next_layers, volume_shape, batch_norm=None, extra_channels=0,
+                    multiplicative_widen=True, add_noise=True, mfactor=2):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
     

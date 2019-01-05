@@ -14,7 +14,7 @@ from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import flatten
 
-from r2r import r_2_wider_r_
+from r2r import r_2_wider_r_, net_2_wider_net_
 
 
 
@@ -35,20 +35,20 @@ Network Definition
 
 
 
-def _visualize_grid(Xs, ubound=255.0, padding=1):
+def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0):
   """
   Taken from the cs231n starter code.
   """
   (N, H, W, C) = Xs.shape
-  grid_size = int(math.ceil(math.sqrt(N)))
-  grid_height = H * grid_size + padding * (grid_size - 1)
-  grid_width = W * grid_size + padding * (grid_size - 1)
+  viz_height = int(math.ceil(N / viz_width))
+  grid_height = H * viz_height + padding * (viz_height - 1)
+  grid_width = W * viz_width + padding * (viz_width - 1)
   grid = np.zeros((grid_height, grid_width, C))
   next_idx = 0
   y0, y1 = 0, H
-  for y in range(grid_size):
+  for y in range(grid_height):
     x0, x1 = 0, W
-    for x in range(grid_size):
+    for x in range(grid_width):
       if next_idx < N:
         img = Xs[next_idx]
         low, high = np.min(img), np.max(img)
@@ -95,21 +95,24 @@ class FC_Net(nn.Module):
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
                          init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
-            raise NotImplementedError()
+            net_2_wider_net_(self.W1, self.W2, (self.hidden_units,), extra_channels=num_channels,
+                             multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
-            raise NotImplementedError()
+            r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
+                         init_type="match_std", function_preserving=True,
+                         multiplicative_widen=self.multiplicative_widen, net_morph=False)
 
         if self.multiplicative_widen:
             self.hidden_units *= (num_channels - 1)
         else:
             self.hidden_units += num_channels
 
-    def save_weights(self, iter, dir):
+    def save_weights(self, iter, dir, viz_width):
         shape = (self.hidden_units, self.in_channels, 32, 32)
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -147,15 +150,18 @@ class Conv_Net(nn.Module):
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
                          init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
-            raise NotImplementedError()
+            net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),32,32), extra_channels=num_channels,
+                             multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
-            raise NotImplementedError()
+            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
+                         init_type="match_std", function_preserving=True,
+                         multiplicative_widen=self.multiplicative_widen, net_morph=False)
 
-    def save_weights(self, iter, dir):
+    def save_weights(self, iter, dir, viz_width):
         weights = self.conv1.weight.data.detach().cpu().numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -314,7 +320,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
         img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), "weight_visuals")
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
-        model.save_weights(iter, img_dir)
+        model.save_weights(iter, img_dir, args.initial_channels)
 
     # Return the model, optimizer and dictionary of 'losses'
     return model, optimizer, losses
@@ -403,9 +409,11 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
 
     # Make the model
     if use_conv:
-        model = Conv_Net(10, 8, widen_method=widen_method)
+        args.initial_channels = 8
+        model = Conv_Net(10, args.initial_channels, widen_method=widen_method)
     else:
-        model = FC_Net(2, in_channels=3, widen_method=widen_method)
+        args.initial_channels = 2
+        model = FC_Net(args.initial_channels, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,

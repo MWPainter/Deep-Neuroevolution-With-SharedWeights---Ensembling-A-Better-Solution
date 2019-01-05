@@ -382,11 +382,12 @@ def net_2_wider_net_resnet(args):
                _validation_loss, args)
 
     # # NetMorph
-    # model = copy.deepcopy(teacher_model)
-    # model.widen(1.414) # TODO: add NetMorph widening to resnet
-    # args.shard = "NetMorph_student"
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = copy.deepcopy(teacher_model)
+    model.morphism_scheme="netmorph"
+    model.widen(1.414) 
+    args.shard = "NetMorph_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
     # RandomPadding
     model = copy.deepcopy(teacher_model)
@@ -405,20 +406,20 @@ def net_2_wider_net_resnet(args):
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
-    # # Net2Net teacher
-    # initial_model = resnet18(thin=True, thinning_ratio=4*1.414, use_residual=False)
-    # args.shard = "teacher_w_out_residual"
-    # args.total_flops = 0
-    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #                            _validation_loss, args)
+    # Net2Net teacher
+    initial_model = resnet18(thin=True, thinning_ratio=4*1.414, use_residual=False, morphism_scheme="net2net")
+    args.shard = "teacher_w_out_residual"
+    args.total_flops = 0
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
 
     # Net2Net
-    # model = copy.deepcopy(teacher_model)
-    # model.widen(1.414) # TODO: add Net2WiderNet widening to resnet
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = copy.deepcopy(teacher_model)
+    model.widen(1.414)
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 
@@ -481,21 +482,21 @@ def net_2_deeper_net_resnet(args):
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
-    # # Net2Net teacher
-    # initial_model = resnet10(thin=True, thinning_ratio=4, use_residual=False)
-    # args.shard = "teacher_w_out_residual"
-    # args.total_flops = 0
-    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #                            _validation_loss, args)
+    # Net2Net teacher
+    initial_model = resnet10(thin=True, thinning_ratio=4, use_residual=False, morphism_scheme="net2net")
+    args.shard = "teacher_w_out_residual"
+    args.total_flops = 0
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                               _validation_loss, args)
 
     # Net2Net
-    # model = copy.deepcopy(teacher_model)
-    # model.deepen([1,1,1,1]) # TODO: add Net2DeeperNet widening to resnet
-    # model = cudafy(model)
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = copy.deepcopy(teacher_model)
+    model.deepen([1,1,1,1])
+    model = cudafy(model)
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 
@@ -610,12 +611,11 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # Net2Net
-    # model = resnet18(thin=True, thinning_ratio=4*1.414)
-    # TODO: add Net2WiderNet widening to resnet
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet18(thin=True, thinning_ratio=4*1.414, morphism_scheme="net2net")
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
     # RandomPadding
     model_= resnet18(thin=True, thinning_ratio=4*1.414, function_preserving=False)
@@ -625,12 +625,11 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # # NetMorph
-    # model = resnet10(thin=True, thinning_ratio=4*1.414)
-    # TODO: add NetMorph widening to resnet
-    # args.shard = "NetMorph_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet18(thin=True, thinning_ratio=4*1.414, morphism_scheme="netmorph")
+    args.shard = "NetMorph_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
     # Random init start
     model_= resnet18(thin=True, thinning_ratio=4*1.414)
@@ -688,13 +687,12 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # Net2Net
-    # model = resnet10(thin=True, thinning_ratio=4, use_residual=False)
-    # args.deepen_indidces_list = [[1,1,1,1]]
-    # TODO: add Net2DeeperNet deepening to resnet
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet10(thin=True, thinning_ratio=4, use_residual=False, morphism_scheme="net2net")
+    args.deepen_indidces_list = [[1,1,1,1]]
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
     # RandomPadding
     model = resnet10(thin=True, thinning_ratio=4, function_preserving=False)
@@ -770,12 +768,11 @@ def quadruple_widen_run(args):
                _validation_loss, args)
 
     # Net2Net
-    # model = resnet18(thin=True, thinning_ratio=4*4)
-    # TODO: add Net2WiderNet widening to resnet
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet18(thin=True, thinning_ratio=4*4, morphism_scheme="net2net")
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 
@@ -807,12 +804,11 @@ def double_deepen_run(args):
                _validation_loss, args)
 
     # Net2Net
-    # model = resnet10(thin=True, thinning_ratio=4)
-    # TODO: add Net2WiderNet widening to resnet
-    # args.shard = "Net2Net_student"
-    # args.total_flops = 0
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet10(thin=True, thinning_ratio=4, morphism_scheme="net2net")
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 
@@ -845,11 +841,11 @@ def double_widen_and_deepen_run(args):
                _validation_loss, args)
 
     # Net2Net
-    # model = resnet10(thin=True, thinning_ratio=4*2)
-    # TODO: add Net2WiderNet widening to resnet
-    # args.shard = "Net2Net_student"
-    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    model = resnet10(thin=True, thinning_ratio=4*2, morphism_scheme="net2net")
+    TODO: add Net2WiderNet widening to resnet
+    args.shard = "Net2Net_student"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 

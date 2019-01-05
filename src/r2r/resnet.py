@@ -532,7 +532,7 @@ class ResNet(nn.Module):
 
 
 
-def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, **kwargs):
+def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -540,12 +540,12 @@ def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residua
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(BasicBlock, [1, 1, 1, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(BasicBlock, [1, 1, 1, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     return model
 
 
 
-def resnet18(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, **kwargs):
+def resnet18(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -553,14 +553,14 @@ def resnet18(pretrained=False, thin=False, thinning_ratio=2, function_preserving
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
 
-def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, **kwargs):
+def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -568,24 +568,24 @@ def resnet34(pretrained=False, thin=False, thinning_ratio=2, function_preserving
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(BasicBlock, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
 
 
 
-def resnet26(thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, **kwargs):
+def resnet26(thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(Bottleneck, [2, 2, 2, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(Bottleneck, [2, 2, 2, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     return model
 
 
 
-def resnet26_r2r(thin=False, thinning_ratio=4):
-    model = resnet26(thin=True, thinning_ratio=thinning_ratio)
+def resnet26_r2r(thin=False, thinning_ratio=4, morphism_scheme="r2r"):
+    model = resnet26(thin=True, thinning_ratio=thinning_ratio, morphism_scheme=morphism_scheme)
     if not thin:
         model.widen(thinning_ratio)
     return model
@@ -593,7 +593,7 @@ def resnet26_r2r(thin=False, thinning_ratio=4):
 
 
 
-def resnet50(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, **kwargs):
+def resnet50(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -601,7 +601,7 @@ def resnet50(pretrained=False, thin=False, thinning_ratio=4, function_preserving
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(Bottleneck, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(Bottleneck, [3, 4, 6, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
@@ -618,7 +618,7 @@ def resnet50_r2r(thin=False, thinning_ratio=4):
 
 
 
-def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, **kwargs):
+def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -626,7 +626,7 @@ def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preservin
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(Bottleneck, [3, 4, 23, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(Bottleneck, [3, 4, 23, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
     return model
@@ -635,7 +635,7 @@ def resnet101(pretrained=False, thin=False, thinning_ratio=4, function_preservin
 
 
 
-def resnet152(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, **kwargs):
+def resnet152(pretrained=False, thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
     """Constructs a ResNet-152 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -643,7 +643,7 @@ def resnet152(pretrained=False, thin=False, thinning_ratio=4, function_preservin
     r = lambda x: x
     if thin:
         r = reduce_size_function(thinning_ratio)
-    model = ResNet(Bottleneck, [3, 8, 36, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, **kwargs)
+    model = ResNet(Bottleneck, [3, 8, 36, 3], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
