@@ -616,14 +616,14 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 5,
+            "epochs": 25,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20019*2,20019*3], # unused (probably widen at 30 and 60, deepen at 45 and 75)
-            "deepen_times": [20019,20019*4], # unused
+            "widen_times": [20019*5*2,20019*5*3], # unused (probably widen at 30 and 60, deepen at 45 and 75)
+            "deepen_times": [20019*5,20019*5*4], # unused
             "flops_budget": 0 # unused
         }
     elif script == "r2fasterr_part_2":
