@@ -384,7 +384,7 @@ def net_2_wider_net_resnet(args):
     # # NetMorph
     model = copy.deepcopy(teacher_model)
     model.morphism_scheme="netmorph"
-    model.widen(1.414) 
+    model.widen(1.414)
     args.shard = "NetMorph_student"
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
@@ -842,7 +842,6 @@ def double_widen_and_deepen_run(args):
 
     # Net2Net
     model = resnet10(thin=True, thinning_ratio=4*2, morphism_scheme="net2net")
-    TODO: add Net2WiderNet widening to resnet
     args.shard = "Net2Net_student"
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
