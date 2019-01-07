@@ -622,8 +622,8 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20019*5*2,20019*5*3], # unused (probably widen at 30 and 60, deepen at 45 and 75)
-            "deepen_times": [20019*5,20019*5*4], # unused
+            "widen_times": [20019*5*2,20019*5*3],
+            "deepen_times": [20019*5,20019*5*4],
             "flops_budget": 0 # unused
         }
     elif script == "r2fasterr_part_2":

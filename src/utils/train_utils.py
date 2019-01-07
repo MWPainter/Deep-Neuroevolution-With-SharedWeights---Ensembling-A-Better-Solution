@@ -78,13 +78,13 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
     start_epoch = 0
     best_val_loss = 0.0
     optimizer = make_optimizer_fn(model, args.lr, args.weight_decay)
-    if args.load is not None:
+    if args.load:
         print("Loading from checkpoint...")
         model, optimizer, start_epoch, best_val_loss = load_fn(model, optimizer, args.load)
         print("Loaded checkpoint!")
 
     # Run a validation epoch on the randomly initialized network
-    if args.load is None:
+    else:
         print("Epoch {epoch} validation:".format(epoch=start_epoch))
         model.eval()
         validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
