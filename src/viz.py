@@ -410,7 +410,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        model = Conv_Net(10, args.initial_channels, widen_method=widen_method)
+        model = Conv_Net(10, args.initial_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
         model = FC_Net(args.initial_channels, in_channels=1, widen_method=widen_method)
@@ -441,9 +441,11 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False):
 
     # Make the model
     if use_conv:
-        model = Conv_Net(10, 8, in_channels=3, widen_method=widen_method)
+        args.initial_channels = 8
+        model = Conv_Net(10, args.initial_channels, in_channels=3, widen_method=widen_method)
     else:
-        model = FC_Net(2, in_channels=3, widen_method=widen_method)
+        args.initial_channels = 2
+        model = FC_Net(args.initial_channels, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
