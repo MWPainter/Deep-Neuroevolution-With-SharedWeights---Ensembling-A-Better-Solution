@@ -46,9 +46,9 @@ def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0):
   grid = np.zeros((grid_height, grid_width, C))
   next_idx = 0
   y0, y1 = 0, H
-  for y in range(grid_height):
+  for y in range(viz_height):
     x0, x1 = 0, W
-    for x in range(grid_width):
+    for x in range(viz_width):
       if next_idx < N:
         img = Xs[next_idx]
         low, high = np.min(img), np.max(img)
