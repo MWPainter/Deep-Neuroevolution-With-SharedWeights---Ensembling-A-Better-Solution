@@ -441,7 +441,7 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False):
 
     # Make the model
     if use_conv:
-        model = Conv_Net(10, 8, widen_method=widen_method)
+        model = Conv_Net(10, 8, in_channels=3, widen_method=widen_method)
     else:
         model = FC_Net(2, in_channels=3, widen_method=widen_method)
 
