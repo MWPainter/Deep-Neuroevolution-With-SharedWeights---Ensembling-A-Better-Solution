@@ -326,7 +326,7 @@ def get_defaults(script_name):
     #######
     elif script == "mnist_weight_viz_r2r":
         return {
-            "lr": 1.0e-2,
+            "lr": 1.0e-3,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -354,7 +354,7 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_r2r_conv":
         return {
-            "lr": 1.0e-2,
+            "lr": 1.0e-3,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -382,8 +382,8 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_net2net":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -396,8 +396,8 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_net2net":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -410,8 +410,8 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_net2net_conv":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -424,8 +424,8 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_net2net_conv":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -438,8 +438,8 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_netmorph":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -452,8 +452,8 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_netmorph":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -466,8 +466,8 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_netmorph_conv":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -480,8 +480,8 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_netmorph_conv":
         return {
-            "lr": 1.0e-1,
-            "weight_decay": 1.0e-5,
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -500,7 +500,7 @@ def get_defaults(script_name):
     elif script == "n2wn":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
+            "weight_decay": 1.0e-3,
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -514,7 +514,7 @@ def get_defaults(script_name):
     elif script == "n2dn":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
+            "weight_decay": 1.0e-3,
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -528,7 +528,7 @@ def get_defaults(script_name):
     elif script == "r2wr":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
+            "weight_decay": 1.0e-3,
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -543,7 +543,7 @@ def get_defaults(script_name):
     elif script == "r2dr":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
+            "weight_decay": 1.0e-3,
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
