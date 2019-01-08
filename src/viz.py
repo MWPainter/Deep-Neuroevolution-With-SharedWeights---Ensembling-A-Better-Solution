@@ -112,7 +112,7 @@ class FC_Net(nn.Module):
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -161,7 +161,7 @@ class Conv_Net(nn.Module):
         weights = self.conv1.weight.data.detach().cpu().numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
