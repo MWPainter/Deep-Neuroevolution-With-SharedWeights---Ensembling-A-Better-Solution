@@ -51,7 +51,7 @@ def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0):
     for x in range(viz_width):
       if next_idx < N:
         img = Xs[next_idx]
-        low, high = np.min(img), np.max(img)
+        low, high = 0.0, 1.0 # np.min(img), np.max(img)
         grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low)
         # grid[y0:y1, x0:x1] = Xs[next_idx]
         next_idx += 1
