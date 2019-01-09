@@ -394,7 +394,7 @@ Tests
 
 
 
-def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
+def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=False):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -410,10 +410,12 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        model = Conv_Net(10, args.initial_channels, in_channels=1, widen_method=widen_method)
+        init_channels = 80 if start_wide else 8
+        model = Conv_Net(10, init_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        model = FC_Net(args.initial_channels, in_channels=1, widen_method=widen_method)
+        init_channels = 20 if start_wide else 2
+        model = FC_Net(init_channels, in_channels=1, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -426,7 +428,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False):
 
 
 
-def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False):
+def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=False):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -442,10 +444,12 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False):
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        model = Conv_Net(10, args.initial_channels, in_channels=3, widen_method=widen_method)
+        init_channels = 80 if start_wide else 8
+        model = Conv_Net(10, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        model = FC_Net(args.initial_channels, in_channels=3, widen_method=widen_method)
+        init_channels = 20 if start_wide else 2
+        model = FC_Net(init_channels, in_channels=3, widen_method=widen_method)
 
     # Train
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,

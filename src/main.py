@@ -354,7 +354,7 @@ def get_defaults(script_name):
         }
     elif script == "mnist_weight_viz_r2r_conv":
         return {
-            "lr": 1.0e-3,
+            "lr": 1.0e-4,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -368,7 +368,7 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_r2r_conv":
         return {
-            "lr": 1.0e-3,
+            "lr": 1.0e-4,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -390,7 +390,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(235*10, 235*100, 235*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
@@ -404,13 +404,13 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(383*10, 383*100, 383*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "mnist_weight_viz_net2net_conv":
         return {
-            "lr": 1.0e-3,
+            "lr": 1.0e-4,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -418,13 +418,13 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(235*10, 235*100, 235*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "cifar_weight_viz_net2net_conv":
         return {
-            "lr": 1.0e-3,
+            "lr": 1.0e-4,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -432,7 +432,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(383*10, 383*100, 383*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
@@ -446,7 +446,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(235*10, 235*100, 235*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
@@ -460,13 +460,13 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(383*10, 383*100, 383*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "mnist_weight_viz_netmorph_conv":
         return {
-            "lr": 1.0e-3,
+            "lr": 1.0e-4,
             "weight_decay": 1.0,
             "epochs": 100,
             "tb_dir": tb_log_dir,
@@ -474,11 +474,25 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": range(235*10, 235*100, 235*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
     elif script == "cifar_weight_viz_netmorph_conv":
+        return {
+            "lr": 1.0e-4,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": range(383*10, 383*100, 383*10),
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz":
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0,
@@ -488,7 +502,49 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [3000], # unused
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz":
+        return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "mnist_weight_viz_conv":
+        return {
+            "lr": 1.0e-4,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0 # unused
+        }
+    elif script == "cifar_weight_viz_conv":
+        return {
+            "lr": 1.0e-4,
+            "weight_decay": 1.0,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }
@@ -793,6 +849,14 @@ if __name__ == "__main__":
         _mnist_weight_visuals(args, widen_method="netmorph", use_conv=True)
     elif script == "cifar_weight_viz_netmorph_conv":
         _cifar_weight_visuals(args, widen_method="netmorph", use_conv=True)
+    elif script == "mnist_weight_viz":
+        _mnist_weight_visuals(args, widen_method="netmorph", start_wide=True)
+    elif script == "cifar_weight_viz":
+        _cifar_weight_visuals(args, widen_method="netmorph", start_wide=True)
+    elif script == "mnist_weight_viz_conv":
+        _mnist_weight_visuals(args, widen_method="netmorph", use_conv=True, start_wide=True)
+    elif script == "cifar_weight_viz_conv":
+        _cifar_weight_visuals(args, widen_method="netmorph", use_conv=True, start_wide=True)
 
     #######
     # Net 2 Net Style tests, and R2R style tests
