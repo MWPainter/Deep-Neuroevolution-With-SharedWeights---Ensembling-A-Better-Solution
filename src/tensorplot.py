@@ -1,3 +1,11 @@
+import os
+import sys
+import numpy as np
+import seaborn as sns
+import pandas as pd
+import tensorflow as tf
+from matplotlib import pyplot as plt
+
 
 
 
@@ -20,7 +28,7 @@ def _listify(val):
     """
     If val is not a list, return the list [val], otherwise, return val.
     """
-    if not hasattr(val, '__len__'):
+    if type(val) is str or not hasattr(val, '__len__'):
         return [val]
     return val
 
@@ -65,6 +73,19 @@ def _clean_sequence(logdir, scalar_name):
 
 
 
+def _remove_discontinuity(logdir, scalar_name):
+    """
+    For a given scalar with name 'scalar_name' we remove a discontinuity from the plot. Sometime in restarting plots
+    values are reset. This method assumes that the value is monotonically increasing, and that the value should never
+    drop. If it does drop by some value v, then it shifts the rest of the curve upwards by 'v'.
+
+    :param logdir: The filepath of the TB log directory
+    :param scalar_name: The scalar that we wish to clean values for in this log
+    """
+    pass
+
+
+
 
 def _read_sequence(logdir, scalar_name):
     """
@@ -74,28 +95,23 @@ def _read_sequence(logdir, scalar_name):
     :param scalar_name: The scalar that we wish to get the values for
     :return: np.array with shape (N,2) for the sequence in
     """
-    pass
+    for e in tf.train.summary_iterator(logdir):
+        for v in e.summary.value:
+            if v.tag == scalar_name:
+                print(v.simple_value)
 
 
 
 
-def _plot_sequence(sequence, color):
+def _plot_sequence(sequence, xaxis_name, yaxis_name):
     """
     Adds the plot 'sequence' with color 'color' to the current Seaboarn figure.
 
     :param sequence: A np.array with shape (N,2) for the sequence we wish to add to the current figure.
     :param color: The color that we wish to plot with.
     """
-    pass
-
-
-
-
-def _get_color_palet(palet_name):
-    """
-    :return: The seaboarn color pallet with name 'palet_name'
-    """
-    pass
+    df = pd.DataFrame(data=sequence, columns=["x","y"])
+    sns.lineplot(x=xaxis_name, y=yaxis_name, hue="region", style="event", data=df)
 
 
 
@@ -104,6 +120,8 @@ def _save_current_fig(out_filename):
     """
     Saves the current seaboarn figure in the file with name 'out_filename'.
     """
+    plt.savefig(out_filename)
+
 
 
 
@@ -193,24 +211,34 @@ Section: TensorPlot interface
 
 
 
-def normal_plots(logdir, out_filename, sclar_names):
+def normal_plots(logdirs, out_filename, scalar_names):
     """
     Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
 
-    :param logdir: The filepath of the TB log directory
+    :param logdirs: The filepath(s) of the TB log directory
     :param out_filename: The name of the file to save an image of the figure at
     :param sclar_names: The scalars to plot
     """
-    sclar_names = _listify(sclar_names)
-    for scalar_name in sclar_names:
+    plt.figure()
+    sns.set(style="darkgrid")
+
+    scalar_names = _listify(scalar_names)
+    logdirs = _listify(logdirs)
+    if len(logdirs) == 1:
+        logdirs = logdirs * len(scalar_names)
+    assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
+
+    for i in range(len(scalar_names)):
+        logdir = logdirs[i]
+        scalar_name = scalar_names[i]
         scalar_sequence = _read_sequence(logdir, scalar_name)
-        _plot_sequence(scalar_sequence, ...)
+        _plot_sequence(scalar_sequence)
     _save_current_fig(out_filename)
 
 
 
 
-def parametric_plots(logdir, out_filename, scalar_names_one, scalar_names_two, missing_value_completion="use_last"):
+def parametric_plots(logdirs, out_filename, scalar_names_one, scalar_names_two, missing_value_completion="use_last"):
     """
     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
     [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
@@ -226,20 +254,67 @@ def parametric_plots(logdir, out_filename, scalar_names_one, scalar_names_two, m
     Typical usage of this should be that we have two values y and y' that are recorded over a period of time, and
     rather than plotting y vs time and y' vs time, we wish to plot y vs y'.
 
-    :param logdir: The filepath of the TB log directory
+    :param logdirs: The filepath of the TB log directory(s)
     :param out_filename: The name of the file to save an image of the figure at
     :param scalar_names_one: The first scalar from TB to use in the parametric plot
     :param scalar_names_two: The second scalar from TB to use in the parametric plot
     :param missing_value_completion: How we should complete any missing values for the latent parameters
     """
+    plt.figure()
+    sns.set(style="darkgrid")
+
     scalar_names_one = _listify(scalar_names_one)
     scalar_names_two = _listify(scalar_names_two)
-    assert(len(scalar_names_one) == len(scalar_names_two), "Invalid input to plot multiple parametric curves on a single axis.")
+    logdirs = _listify(logdirs)
+    if len(logdirs) == 1:
+        logdirs = logdirs * len(scalar_names_one)
+    assert len(scalar_names_one) == len(scalar_names_two), "Invalid input to plot multiple parametric curves on a single axis."
+    assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
+
     for i in range(len(scalar_names_one)):
+        logdir = logdirs[i]
         scalar_name_one = scalar_names_one[i]
         scalar_name_two = scalar_names_two[i]
         scalar_sequence_one = _read_sequence(logdir, scalar_name_one)
         scalar_sequence_two = _read_sequence(logdir, scalar_name_two)
         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two, missing_value_completion)
-        _plot_sequence(parametric_sequence, ...)
+        _plot_sequence(parametric_sequence)
     _save_current_fig(out_filename)
+
+
+
+
+def repair_discontinuity(logdir, scalar_name):
+    """
+    For a given scalar with name 'scalar_name' we remove a discontinuity from the plot. Sometime in restarting plots
+    values are reset. This method assumes that the value is monotonically increasing, and that the value should never
+    drop. If it does drop by some value v, then it shifts the rest of the curve upwards by 'v'.
+
+    :param logdir: The filepath of the TB log directory
+    :param scalar_name: The scalar that we wish to clean values for in this log
+    """
+    raise NotImplementedError()
+
+
+
+
+def clean_scalar(logdir, scalar_name):
+    """
+    For a given scalar with name 'scalar_name' we clean the values in the summaries in 'logdir'. Clean means that we
+    remove any out of sequence values recorded for the scalar.
+
+    :param logdir: The filepath of the TB log directory
+    :param scalar_name: The scalar that we wish to clean values for in this log
+    """
+    raise NotImplementedError()
+
+
+
+
+if __name__ == "__main__":
+    base_dir = sys.argv[1]
+    out_dir = sys.argv[2]
+
+    r2wr_test_dir = os.path.join(base_dir, "r2wr_default_tb_log", "R2R_student")
+    outfile = os.path.join(out_dir, "r2wr_test_plot")
+    parametric_plots(r2wr_test_dir, outfile, "iter/train/total_flops", "iter/train/accuracy_1")
