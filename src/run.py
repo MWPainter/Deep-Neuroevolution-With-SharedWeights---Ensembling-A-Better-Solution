@@ -58,6 +58,16 @@ def _load_fn(model, optimizer, load_file):
     :param load_file: The filename for a checkpoint dict, saved using 'checkpoint_fn' below.
     :return: The restored model, optimizer and the current epoch with the best validation loss seen so far.
     """
+    for widen in model.load_with_widens:
+        if widen:
+            model.widen(1.414)
+        else:
+            if len(model.deepen_indidces_list) == 0:
+                raise Exception("Too many deepen times for this test.")
+            deepen_indices = model.deepen_indidces_list.pop(0)
+            model.deepen(deepen_indices)
+        model = cudafy(model)
+
     # Load state dict, and update the model and
     checkpoint = t.load(load_file)
     cur_epoch = checkpoint['next_epoch']
@@ -881,6 +891,10 @@ def r2r_faster_test_part_1(args):
 
     # R2R
     model = resnet26(thin=True, thinning_ratio=2)
+    # HACK
+    model.load_with_widens = [False]
+    model.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+    # HACK
     args.shard = "R2R_Then_Widened"
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
@@ -914,6 +928,10 @@ def r2r_faster_test_part_2(args):
     model.widen(1.414)
     model.deepen([0,1,2,1])
     model.widen(1.414)
+    # HACK
+    model.load_with_widens = []
+    model.deepen_indidces_list = []
+    # HACK
     model = cudafy(model)
     args.shard = "Full_Model"
     args.widen_times = []
