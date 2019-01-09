@@ -6,6 +6,9 @@ import pandas as pd
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
+
 
 
 
@@ -95,11 +98,19 @@ def _read_sequence(logdir, scalar_name):
     :param scalar_name: The scalar that we wish to get the values for
     :return: np.array with shape (N,2) for the sequence in
     """
-    for e in tf.train.summary_iterator(logdir):
-        for v in e.summary.value:
-            if v.tag == scalar_name:
-                print(v.simple_value)
+    summary_iterators = [EventAccumulator(logdir).Reload()]
 
+    out = []
+
+    steps = [[e.step] for e in summary_iterators[0].Scalars(scalar_name)]
+
+    for events in zip(*[acc.Scalars(scalar_name) for acc in summary_iterators]):
+        assert len(set(e.step for e in events)) == 1
+        out.append([e.value for e in events])
+
+    result = np.array(np.concatenate([np.array(steps), np.array(out)], axis=1))
+
+    return result
 
 
 
@@ -111,7 +122,7 @@ def _plot_sequence(sequence, xaxis_name, yaxis_name):
     :param color: The color that we wish to plot with.
     """
     df = pd.DataFrame(data=sequence, columns=["x","y"])
-    sns.lineplot(x=xaxis_name, y=yaxis_name, hue="region", style="event", data=df)
+    sns.lineplot(x=xaxis_name, y=yaxis_name, data=df)
 
 
 
@@ -152,6 +163,7 @@ def _compute_parametric_curve(seq1, seq2, missing_value_completion):
     :param missing_value_completion: How we should complete any missing values for the latent parameters
     :return: The parametric curve, an np.array with shape (N',2)
     """
+
     N = seq1.shape[0]
     M = seq2.shape[0]
     i = j = 0
@@ -278,7 +290,7 @@ def parametric_plots(logdirs, out_filename, scalar_names_one, scalar_names_two, 
         scalar_sequence_one = _read_sequence(logdir, scalar_name_one)
         scalar_sequence_two = _read_sequence(logdir, scalar_name_two)
         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two, missing_value_completion)
-        _plot_sequence(parametric_sequence)
+        _plot_sequence(parametric_sequence, 'x', 'y')
     _save_current_fig(out_filename)
 
 
@@ -315,6 +327,6 @@ if __name__ == "__main__":
     base_dir = sys.argv[1]
     out_dir = sys.argv[2]
 
-    r2wr_test_dir = os.path.join(base_dir, "r2wr_default_tb_log", "R2R_student")
+    r2wr_test_dir = os.path.join(base_dir, "mnist_widen_0_tb_log", "Net2Widernet")
     outfile = os.path.join(out_dir, "r2wr_test_plot")
-    parametric_plots(r2wr_test_dir, outfile, "iter/train/total_flops", "iter/train/accuracy_1")
+    parametric_plots(r2wr_test_dir, outfile, "iter/train/total_flops", "iter/train/accuracy")
