@@ -8,7 +8,8 @@ import torchvision.datasets as datasets
 
 
 
-ROOT = "/raid/local_scratch/mmp10-ihp03/imagenet" # os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
+#ROOT =  os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
+ROOT = "/raid/local_scratch/mmp10-ihp03-{jobid}/imagenet".format(jobid=os.environ["SLURM_JOB_ID"]) # will raise an exception if $SLURM_JOB_ID is not a bash variable.
 ROOT_TRAIN = os.path.join(ROOT, 'train')
 ROOT_VAL = os.path.join(ROOT, 'val')
 ROOT_TEST = os.path.join(ROOT, 'test')
@@ -22,6 +23,7 @@ class ImagenetDataset(Dataset):
     def __init__(self, mode="train", inception=True):
         Dataset.__init__(self)
 
+
         # Normalization stats
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
@@ -33,7 +35,7 @@ class ImagenetDataset(Dataset):
         mode = mode.lower()
         if mode == "train":
             dataset = datasets.ImageFolder(
-                ROOT_TRAIN,
+                ROOT_TRAIN.format(jobid=jobid),
                 transforms.Compose([
                     transforms.RandomResizedCrop(input_dim),
                     transforms.RandomHorizontalFlip(),
@@ -43,7 +45,7 @@ class ImagenetDataset(Dataset):
 
         elif mode in ["val", "validation"]:
             dataset = datasets.ImageFolder(
-                ROOT_VAL,
+                ROOT_VAL.format(jobid=jobid),
                 transforms.Compose([
                     transforms.Resize(resize_dim),
                     transforms.CenterCrop(input_dim),
@@ -53,7 +55,7 @@ class ImagenetDataset(Dataset):
 
         if mode == "test":
             dataset = datasets.ImageFolder(
-                ROOT_TEST,
+                ROOT_TEST.format(jobid=jobid),
                 transforms.Compose([
                     transforms.Resize(resize_dim),
                     transforms.CenterCrop(input_dim),
@@ -84,5 +86,5 @@ class ImagenetDataset(Dataset):
 
 
 def get_imagenet_dataloader(mode="train", batch_size=0, shuffle=True, num_workers=1, pin_memory=True):
-    return DataLoader(dataset=ImagenetDataset(mode), batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
-                      pin_memory=pin_memory)
+    return DataLoader(dataset=ImagenetDataset(mode), batch_size=batch_size, shuffle=shuffle,
+                      num_workers=num_workers, pin_memory=pin_memory)
