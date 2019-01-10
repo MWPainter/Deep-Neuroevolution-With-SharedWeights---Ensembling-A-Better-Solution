@@ -35,7 +35,7 @@ class ImagenetDataset(Dataset):
         mode = mode.lower()
         if mode == "train":
             dataset = datasets.ImageFolder(
-                ROOT_TRAIN.format(jobid=jobid),
+                ROOT_TRAIN,
                 transforms.Compose([
                     transforms.RandomResizedCrop(input_dim),
                     transforms.RandomHorizontalFlip(),
@@ -45,7 +45,7 @@ class ImagenetDataset(Dataset):
 
         elif mode in ["val", "validation"]:
             dataset = datasets.ImageFolder(
-                ROOT_VAL.format(jobid=jobid),
+                ROOT_VAL,
                 transforms.Compose([
                     transforms.Resize(resize_dim),
                     transforms.CenterCrop(input_dim),
@@ -55,7 +55,7 @@ class ImagenetDataset(Dataset):
 
         if mode == "test":
             dataset = datasets.ImageFolder(
-                ROOT_TEST.format(jobid=jobid),
+                ROOT_TEST,
                 transforms.Compose([
                     transforms.Resize(resize_dim),
                     transforms.CenterCrop(input_dim),
