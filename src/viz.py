@@ -113,9 +113,6 @@ class FC_Net(nn.Module):
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        print(np.max(weights_normalized))
-        print(np.min(weights_normalized))
-        print()
         weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
@@ -194,7 +191,8 @@ def _make_optimizer_fn(model, lr, weight_decay):
         training loop functions
     """
     # return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
-    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    return t.optim.SGD(model.parmeters(), lr=lr, weight_decay=weight_decay)
+    # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
 
 
 
