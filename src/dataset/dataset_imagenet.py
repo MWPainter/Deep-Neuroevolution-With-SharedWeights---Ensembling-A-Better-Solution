@@ -8,11 +8,6 @@ import torchvision.datasets as datasets
 
 
 
-#ROOT =  os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
-ROOT = "/raid/local_scratch/mmp10-ihp03-{jobid}/imagenet".format(jobid=os.environ["SLURM_JOB_ID"]) # will raise an exception if $SLURM_JOB_ID is not a bash variable.
-ROOT_TRAIN = os.path.join(ROOT, 'train')
-ROOT_VAL = os.path.join(ROOT, 'val')
-ROOT_TEST = os.path.join(ROOT, 'test')
 
 
 
@@ -20,8 +15,16 @@ class ImagenetDataset(Dataset):
     """
     Our wrapper for the imagenet dataset (just an "ImageFolder" dataset) and it's corresponding normalizations.
     """
+
     def __init__(self, mode="train", inception=True):
         Dataset.__init__(self)
+
+        # Directories
+        #ROOT =  os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'imagenet'))
+        ROOT = "/raid/local_scratch/mmp10-ihp03-{jobid}/imagenet".format(jobid=os.environ["SLURM_JOB_ID"]) # will raise an exception if $SLURM_JOB_ID is not a bash variable.
+        ROOT_TRAIN = os.path.join(ROOT, 'train')
+        ROOT_VAL = os.path.join(ROOT, 'val')
+        ROOT_TEST = os.path.join(ROOT, 'test')
 
 
         # Normalization stats
