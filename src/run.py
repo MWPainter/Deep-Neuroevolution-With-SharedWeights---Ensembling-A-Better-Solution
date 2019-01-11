@@ -953,9 +953,9 @@ def r2r_faster_test_part_3(args):
     # Fix some args for the test (shouldn't ever be loading anythin)
     if hasattr(args, "flops_budget"):
         del args.flops_budget
-    if len(args.widen_times) != 2:
+    if len(args.widen_times) != 0:
         raise Exception("Widening times needs to be a list of length 2 for this test")
-    if len(args.deepen_times) != 2:
+    if len(args.deepen_times) != 0:
         raise Exception("Deepening times needs to be a list of length 2 for this test")
     args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
 
@@ -987,7 +987,7 @@ def r2r_faster_test_part_4(args):
     # Fix some args for the test (shouldn't ever be loading anythin)
     if hasattr(args, "flops_budget"):
         del args.flops_budget
-    if len(args.widen_times) != 2:
+    if len(args.widen_times) != 1:
         raise Exception("Widening times needs to be a list of length 2 for this test")
     if len(args.deepen_times) != 2:
         raise Exception("Deepening times needs to be a list of length 2 for this test")
