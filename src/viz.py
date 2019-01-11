@@ -94,13 +94,13 @@ class FC_Net(nn.Module):
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.W1, self.W2, (self.hidden_units,), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True,
+                         init_type="match_std_exact", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=True)
 
         if self.multiplicative_widen:
@@ -152,13 +152,13 @@ class Conv_Net(nn.Module):
     def widen(self, num_channels=8):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),32,32), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),32,32), self.W1, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True,
+                         init_type="match_std_exact", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=False)
 
     def save_weights(self, iter, dir, viz_width):

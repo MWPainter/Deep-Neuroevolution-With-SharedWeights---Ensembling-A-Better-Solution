@@ -209,6 +209,9 @@ def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, in
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([twoC2,I,H,W])
         new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
+    elif init_type == 'match_std_exact':
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
 
@@ -276,6 +279,9 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([C,I2,H,W])
         new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale)
+    elif init_type == 'match_std_exact':
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
