@@ -938,3 +938,71 @@ def r2r_faster_test_part_2(args):
     args.deepen_times = []
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_part_3(args):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet26(thin=True, thinning_ratio=1.414)
+    # HACK
+    model.load_with_widens = []
+    model.deepen_indidces_list = []
+    # HACK
+    args.shard = "R2R_Teacher"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_part_4(args):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet26(thin=True, thinning_ratio=1.414)
+    # HACK
+    model.load_with_widens = []
+    model.deepen_indidces_list = []
+    # HACK
+    args.shard = "R2R_One_Widen"
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
