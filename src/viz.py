@@ -45,14 +45,15 @@ def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0):
   grid_width = W * viz_width + padding * (viz_width - 1)
   grid = np.zeros((grid_height, grid_width, C))
   next_idx = 0
+  low, high = np.min(Xs), np.max(Xs)
+  Xs_norm = (Xs - low) / (high - low)
   y0, y1 = 0, H
   for y in range(viz_height):
     x0, x1 = 0, W
     for x in range(viz_width):
       if next_idx < N:
-        img = Xs[next_idx]
-        low, high = 0.0, 1.0 # np.min(img), np.max(img)
-        grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low)
+        img = Xs_norm[next_idx]
+        grid[y0:y1, x0:x1] = ubound * img
         # grid[y0:y1, x0:x1] = Xs[next_idx]
         next_idx += 1
       x0 += W + padding
@@ -112,6 +113,9 @@ class FC_Net(nn.Module):
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
+        print(np.max(weights_normalized))
+        print(np.min(weights_normalized))
+        print()
         weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
