@@ -413,7 +413,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     if use_conv:
         args.initial_channels = 8
         init_channels = 80 if start_wide else 8
-        model = Conv_Net(100, init_channels, in_channels=1, widen_method=widen_method)
+        model = Conv_Net(80, init_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
         init_channels = 20 if start_wide else 2
@@ -447,7 +447,7 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     if use_conv:
         args.initial_channels = 8
         init_channels = 80 if start_wide else 8
-        model = Conv_Net(200, init_channels, in_channels=3, widen_method=widen_method)
+        model = Conv_Net(80, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
         init_channels = 20 if start_wide else 2
