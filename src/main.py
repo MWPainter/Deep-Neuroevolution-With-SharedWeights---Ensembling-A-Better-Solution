@@ -488,7 +488,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [100,200], #range(383*10, 383*100, 383*10),
+            "widen_times": range(383*10, 383*100, 383*10),
             "deepen_times": [], # unused
             "flops_budget": 0 # unused
         }

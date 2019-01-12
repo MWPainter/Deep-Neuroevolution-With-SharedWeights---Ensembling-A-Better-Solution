@@ -290,8 +290,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     if iter in args.widen_times:
         model.widen()
-        args.lr /= 2.0
-        args.weight_decay /= 2.0
+        # args.lr /= 2.0
+        # args.weight_decay /= 2.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
     # Forward pass - compute a loss
