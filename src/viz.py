@@ -35,38 +35,40 @@ Network Definition
 
 
 
-def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0):
-  """
-  Taken from the cs231n starter code.
-  """
-  (N, H, W, C) = Xs.shape
-  viz_height = int(math.ceil(N / viz_width))
-  grid_height = H * viz_height + padding * (viz_height - 1)
-  grid_width = W * viz_width + padding * (viz_width - 1)
-  grid = np.zeros((grid_height, grid_width, C))
-  next_idx = 0
-  low, high = np.min(Xs), np.max(Xs)
-  Xs_norm = (Xs - low) / (high - low)
-  y0, y1 = 0, H
-  for y in range(viz_height):
-    x0, x1 = 0, W
-    for x in range(viz_width):
-      if next_idx < N:
-        # img = Xs_norm[next_idx]
-        # grid[y0:y1, x0:x1] = ubound * img
-        img = Xs[next_idx]
-        low, high = np.min(img), np.max(img)
-        grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low)
-        # grid[y0:y1, x0:x1] = Xs[next_idx]
-        next_idx += 1
-      x0 += W + padding
-      x1 += W + padding
-    y0 += H + padding
-    y1 += H + padding
-  # grid_max = np.max(grid)
-  # grid_min = np.min(grid)
-  # grid = ubound * (grid - grid_min) / (grid_max - grid_min)
-  return grid
+def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0, kernel_norm=False):
+    """
+    Taken from the cs231n starter code.
+    """
+    (N, H, W, C) = Xs.shape
+    viz_height = int(math.ceil(N / viz_width))
+    grid_height = H * viz_height + padding * (viz_height - 1)
+    grid_width = W * viz_width + padding * (viz_width - 1)
+    grid = np.zeros((grid_height, grid_width, C))
+    next_idx = 0
+    low, high = np.min(Xs), np.max(Xs)
+    Xs_norm = (Xs - low) / (high - low)
+    y0, y1 = 0, H
+    for y in range(viz_height):
+        x0, x1 = 0, W
+        for x in range(viz_width):
+            if next_idx < N:
+                if kernel_norm:
+                    img = Xs_norm[next_idx]
+                    grid[y0:y1, x0:x1] = ubound * img
+                else:
+                    img = Xs[next_idx]
+                    low, high = np.min(img), np.max(img)
+                    grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low)
+                # grid[y0:y1, x0:x1] = Xs[next_idx]
+                next_idx += 1
+            x0 += W + padding
+            x1 += W + padding
+        y0 += H + padding
+        y1 += H + padding
+    # grid_max = np.max(grid)
+    # grid_min = np.min(grid)
+    # grid = ubound * (grid - grid_min) / (grid_max - grid_min)
+    return grid
 
 
 
@@ -116,7 +118,7 @@ class FC_Net(nn.Module):
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=(self.widen_method=='netmorph')))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -159,13 +161,13 @@ class Conv_Net(nn.Module):
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
                          init_type="match_std_exact", function_preserving=True,
-                         multiplicative_widen=self.multiplicative_widen, net_morph=False)
+                         multiplicative_widen=self.multiplicative_widen, net_morph=True)
 
     def save_weights(self, iter, dir, viz_width):
         weights = self.conv1.weight.data.detach().cpu().numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=(self.widen_method=='netmorph')))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -321,7 +323,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
         losses['update_mag'] = param_update_mag
         losses['update_ratio'] = param_update_ratio
 
-    if iter % 10 == 0:
+
+    widen_pm = [w-1 for w in args.widen_times] + [w for w in args.widen_times] + [w+1 for w in args.widen_times]
+    if iter % 10 == 0 or iter in widen_pm:
         img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), "weight_visuals")
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
