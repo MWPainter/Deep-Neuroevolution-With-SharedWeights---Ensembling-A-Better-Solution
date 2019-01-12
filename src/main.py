@@ -536,7 +536,7 @@ def get_defaults(script_name):
         }
     elif script == "cifar_weight_viz_conv":
         return {
-            "lr": 1.0e-2,
+            "lr": 1.0e-3,
             "weight_decay": 1.0e-2,
             "epochs": 100,
             "tb_dir": tb_log_dir,
