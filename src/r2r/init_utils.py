@@ -336,7 +336,7 @@ def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, ini
         scale = np.std(existing_filter) / np.prod([C,twoI2,H,W])
         new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
     elif init_type == 'match_std_exact':
-        scale = np.std(existing_filter) 
+        scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
