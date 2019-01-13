@@ -155,7 +155,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
             if len(args.deepen_indidces_list) == 0:
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
-            model.deepen(deepen_indices)
+            model.deepen(deepen_indices, minibatch=xs)
         model = cudafy(model)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
 
@@ -517,7 +517,7 @@ def net_2_deeper_net_resnet(args):
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
-    model.deepen([1,1,1,1])
+    model.deepen([1,1,1,1], minibatch=next(iter(train_loader)))
     model = cudafy(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
