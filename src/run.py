@@ -500,7 +500,7 @@ def net_2_deeper_net_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model_= resnet10(thin=True, thinning_ratio=4)
+    model = resnet10(thin=True, thinning_ratio=4)
     model.deepen([1,1,1,1])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
