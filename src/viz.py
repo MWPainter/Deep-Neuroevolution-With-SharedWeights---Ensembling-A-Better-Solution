@@ -151,15 +151,22 @@ class Conv_Net(nn.Module):
         for p in self.parameters():
             p.data.clamp_(-1.0, 1.0)
 
-    def widen(self, num_channels=8):
+    def widen(self, num_channels=8, num_hidden=50):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
+                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+            r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
                          init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),16,16), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
+            net_2_wider_net_(self.W1, self.W2, (self.W1.weight.data.size(0),), extra_channels=num_hidden,
+                             multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
+                         init_type="match_std_exact", function_preserving=True,
+                         multiplicative_widen=self.multiplicative_widen, net_morph=True)
+            r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
                          init_type="match_std_exact", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=True)
 
@@ -419,8 +426,9 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        init_channels = 80 if start_wide else 8
-        model = Conv_Net(250, init_channels, in_channels=1, widen_method=widen_method)
+        init_channels = 32 if start_wide else 8
+        init_hidden = 250 if start_wide else 50
+        model = Conv_Net(init_hidden, init_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
         init_channels = 20 if start_wide else 2
@@ -454,7 +462,8 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     if use_conv:
         args.initial_channels = 8
         init_channels = 80 if start_wide else 8
-        model = Conv_Net(500, init_channels, in_channels=3, widen_method=widen_method)
+        init_hidden = 250 if start_wide else 50
+        model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
         init_channels = 20 if start_wide else 2
