@@ -290,10 +290,6 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
             is_prev_layer_sparse = True
         else:
             is_next_layer_sparse = True
-    print(net_morph)
-    print(function_preserving)
-    print(is_prev_layer_sparse)
-    print(is_next_layer_sparse)
     
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:

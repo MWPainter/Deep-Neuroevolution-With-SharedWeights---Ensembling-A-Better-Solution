@@ -10,6 +10,7 @@ from utils import cudafy
 from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import model_flops
+from utils import count_parameters
 
 from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26
 
@@ -388,7 +389,7 @@ def net_2_wider_net_resnet(args):
     model.widen(1.414)
     args.shard = "R2R_student"
     args.total_flops = 0
-    train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # # NetMorph
@@ -642,7 +643,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model_= resnet18(thin=True, thinning_ratio=4*1.414)
+    model = resnet18(thin=True, thinning_ratio=4*1.414)
     model.widen(1.414)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
@@ -713,7 +714,7 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model_= resnet10(thin=True, thinning_ratio=4)
+    model = resnet10(thin=True, thinning_ratio=4)
     model.deepen([1,1,1,1])
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
@@ -732,7 +733,7 @@ def r_2_deeper_r_resnet(args):
                                _validation_loss, args)
 
     # Net2Net teacher
-    initial_model = resnet10(thin=True, thinning_ratio=4, use_residual=False)
+    model = resnet10(thin=True, thinning_ratio=4, use_residual=False)
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.widen_times = []
