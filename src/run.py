@@ -10,7 +10,6 @@ from utils import cudafy
 from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
 from utils import model_flops
-from utils import count_parameters
 
 from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26
 
@@ -384,8 +383,9 @@ def net_2_wider_net_resnet(args):
     args.shard = "teacher_w_residual"
     args.total_flops = 0
     initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+    teacher_model = initial_model
 
     # R2R
     model = copy.deepcopy(teacher_model)
