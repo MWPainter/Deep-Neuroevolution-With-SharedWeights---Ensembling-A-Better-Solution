@@ -408,7 +408,7 @@ def net_2_wider_net_resnet(args):
 
 
     scaling_factor = 1.414
-    """
+
     # Teacher network training loop
     args.shard = "teacher_w_residual"
     args.total_flops = 0
@@ -456,7 +456,7 @@ def net_2_wider_net_resnet(args):
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
-    """
+
     # Net2Net teacher
     initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
@@ -473,8 +473,6 @@ def net_2_wider_net_resnet(args):
     args.weight_decay = 2.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
-
-
 
 
 
