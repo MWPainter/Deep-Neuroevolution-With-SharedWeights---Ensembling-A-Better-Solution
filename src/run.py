@@ -1056,15 +1056,8 @@ def r2r_faster_test_redo(args, shardname):
     args.deepen_indidces_list = [[1,1,1,1]]
 
     # Make the data loaders for imagenet
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
     # R2R
     model = resnet10(thin=True, thinning_ratio=1.414)
