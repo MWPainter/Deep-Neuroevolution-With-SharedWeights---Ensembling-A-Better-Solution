@@ -891,11 +891,11 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 60,
+            "epochs": 25,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [0],
             "deepen_times": [0],
