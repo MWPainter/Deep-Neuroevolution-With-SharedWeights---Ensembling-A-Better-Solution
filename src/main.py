@@ -12,6 +12,7 @@ from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 
 from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
 from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
+from run import net_2_wider_net_resnet_hyper_search, net_2_deeper_net_resnet_hyper_search
 from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
 from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
@@ -692,6 +693,40 @@ def get_defaults(script_name):
             "lr_drops": [], # unused
             "lr_drop_mag": 0.0 # unused
         }
+    elif script == "n2wn_hps":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": 0.0 # unused
+        }
+    elif script == "n2dn_hps":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": 0.0 # unused
+        }
     elif script == "r2wr":
         return {
             "lr": 3.0e-3,
@@ -1112,6 +1147,10 @@ if __name__ == "__main__":
         net_2_wider_net_resnet(args)
     elif script == "n2dn":
         net_2_deeper_net_resnet(args)
+    elif script == "n2wn_hps":
+        net_2_wider_net_resnet_hyper_search(args)
+    elif script == "n2dn_hps":
+        net_2_deeper_net_resnet_hyper_search(args)
     elif script == "r2wr":
         r_2_wider_r_resnet(args)
     elif script == "r2dr":
