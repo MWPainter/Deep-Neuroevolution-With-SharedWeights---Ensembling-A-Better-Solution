@@ -469,7 +469,7 @@ class ResNet(nn.Module):
     def widen(self, ratio):
         if not self.morphism_scheme == "net2net":
             use_network_morphism_scheme = self.morphism_scheme == "netmorph"
-            widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
+            widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std_exact',
                            function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8,
                            net_morph=use_network_morphism_scheme)
         else:

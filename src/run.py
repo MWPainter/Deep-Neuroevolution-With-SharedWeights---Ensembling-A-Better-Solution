@@ -33,7 +33,7 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay):
+def _make_optimizer_fn(model, lr, weight_decay, args):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
@@ -44,6 +44,22 @@ def _make_optimizer_fn(model, lr, weight_decay):
         training loop functions
     """
     return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+
+
+
+
+
+def _make_optimizer_fn_sgd(model, lr, weight_decay, args):
+    """
+    The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
+
+    :param model: The model to make an optimizer for.
+    :param lr: The learning rate to use
+    :param weight_decay: THe weight decay to use
+    :return: The optimizer for the network optimizer, which is passed into the remaining
+        training loop functions
+    """
+    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=args.momentum)
 
 
 
@@ -121,6 +137,17 @@ def _checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_be
 
 
 
+def _adjust_learning_rate(args, iter, optimizer):
+    """
+    Helper to adjust learning rate dynamically, and updates it in the optimizer
+    """
+    if iter in args.lr_drops:
+        args.lr /= args.lr_drop_mag
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = args.lr
+
+
+
 
 def _update_op(model, optimizer, minibatch, iter, args):
     """
@@ -147,6 +174,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     model.train()
     xs, ys = cudafy(minibatch[0]), cudafy(minibatch[1])
 
+    # Adjust the learning rate if need be
+    _adjust_learning_rate(args, iter, optimizer)
+
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
@@ -157,7 +187,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
         model = cudafy(model)
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -504,6 +534,7 @@ def net_2_deeper_net_resnet(args):
 
     # Random init start
     model = resnet10(thin=True, thinning_ratio=16)
+
     model.deepen([1,1,1,1])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
@@ -916,12 +947,8 @@ def r2r_faster_test_part_1(args):
 
     # R2R
     model = resnet26(thin=True, thinning_ratio=2)
-    # HACK
-    model.load_with_widens = [False]
-    model.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
-    # HACK
     args.shard = "R2R_Then_Widened"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -953,15 +980,11 @@ def r2r_faster_test_part_2(args):
     model.widen(1.414)
     model.deepen([0,1,2,1])
     model.widen(1.414)
-    # HACK
-    model.load_with_widens = []
-    model.deepen_indidces_list = []
-    # HACK
     model = cudafy(model)
     args.shard = "Full_Model"
     args.widen_times = []
     args.deepen_times = []
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -990,12 +1013,8 @@ def r2r_faster_test_part_3(args):
 
     # R2R
     model = resnet26(thin=True, thinning_ratio=1.414)
-    # HACK
-    model.load_with_widens = []
-    model.deepen_indidces_list = []
-    # HACK
     args.shard = "R2R_Teacher"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -1022,10 +1041,65 @@ def r2r_faster_test_part_4(args):
 
     # R2R
     model = resnet26(thin=True, thinning_ratio=1.414)
-    # HACK
-    model.load_with_widens = []
-    model.deepen_indidces_list = []
-    # HACK
     args.shard = "R2R_One_Widen"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_redo(args, shardname):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) > 1:
+        raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    if len(args.deepen_times) > 1:
+        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    args.deepen_indidces_list = [[1,1,1,1]]
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet10(thin=True, thinning_ratio=1.414)
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_redo_18(args, shardname):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 0:
+        raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    if len(args.deepen_times) != 0:
+        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet18()
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)

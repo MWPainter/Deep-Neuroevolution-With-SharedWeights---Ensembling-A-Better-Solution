@@ -192,7 +192,7 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay):
+def _make_optimizer_fn(model, lr, weight_decay, args):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
@@ -203,8 +203,8 @@ def _make_optimizer_fn(model, lr, weight_decay):
         training loop functions
     """
     # return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
-    # return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
-    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
+    # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
 
 
 
@@ -299,7 +299,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
         model.widen()
         # args.lr /= 2.0
         # args.weight_decay /= 2.0
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -431,7 +431,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
         model = Conv_Net(init_hidden, init_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        init_channels = 20 if start_wide else 2
+        init_channels = 10 if start_wide else 2
         model = FC_Net(init_channels, in_channels=1, widen_method=widen_method)
 
     # Train
@@ -461,12 +461,12 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        init_channels = 80 if start_wide else 8
+        init_channels = 32 if start_wide else 8
         init_hidden = 250 if start_wide else 50
         model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        init_channels = 20 if start_wide else 2
+        init_channels = 10 if start_wide else 2
         model = FC_Net(init_channels, in_channels=3, widen_method=widen_method)
 
     # Train
