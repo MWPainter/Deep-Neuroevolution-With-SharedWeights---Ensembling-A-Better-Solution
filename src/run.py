@@ -1064,3 +1064,32 @@ def r2r_faster_test_redo(args, shardname):
     args.shard = shardname
     train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+
+
+
+
+
+
+
+
+def r2r_faster_test_redo_18(args, shardname):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 0:
+        raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    if len(args.deepen_times) != 0:
+        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # R2R
+    model = resnet18()
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)

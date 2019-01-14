@@ -14,7 +14,7 @@ from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
 from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
 from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
-from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo
+from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
@@ -887,7 +887,7 @@ def get_defaults(script_name):
             "lr_drops": [5005*30, 5005*45],
             "lr_drop_mag": 10.0
         }
-    elif script == "r2fasterr_redo_part_2": # resnet18
+    elif script == "r2fasterr_redo_part_2": # resnet10->18 at start
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -905,6 +905,23 @@ def get_defaults(script_name):
             "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_redo_part_3": # resnet10
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*45],
+            "lr_drop_mag": 10.0
+        }
+    elif script == "r2fasterr_redo_part_4": # resnet18
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1131,6 +1148,8 @@ if __name__ == "__main__":
         r2r_faster_test_redo(args, "student_arch")
     elif script == "r2fasterr_redo_part_3":
         r2r_faster_test_redo(args, "teacher_arch")
+    elif script == "r2fasterr_redo_part_4":
+        r2r_faster_test_redo_18(args, "kind_of_student_arch")
 
 
     else:
