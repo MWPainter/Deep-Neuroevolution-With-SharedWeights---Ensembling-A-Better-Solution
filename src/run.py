@@ -938,7 +938,7 @@ def r2r_faster_test_part_1(args):
     # R2R
     model = resnet26(thin=True, thinning_ratio=2)
     args.shard = "R2R_Then_Widened"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -974,7 +974,7 @@ def r2r_faster_test_part_2(args):
     args.shard = "Full_Model"
     args.widen_times = []
     args.deepen_times = []
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -1004,7 +1004,7 @@ def r2r_faster_test_part_3(args):
     # R2R
     model = resnet26(thin=True, thinning_ratio=1.414)
     args.shard = "R2R_Teacher"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 
@@ -1032,7 +1032,7 @@ def r2r_faster_test_part_4(args):
     # R2R
     model = resnet26(thin=True, thinning_ratio=1.414)
     args.shard = "R2R_One_Widen"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 

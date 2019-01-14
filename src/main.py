@@ -796,9 +796,9 @@ def get_defaults(script_name):
     #######
     elif script == "r2fasterr_part_1":
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
-            "epochs": 25,
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -807,15 +807,15 @@ def get_defaults(script_name):
             "widen_times": [20019*5*2,20019*5*3],
             "deepen_times": [20019*5,20019*5*4],
             "flops_budget": 0, # unused
-            "momentum": 0.0, # unused
-            "lr_drops": [], # unused
-            "lr_drop_mag": 0.0 # unused
+            "momentum": 0.9,
+            "lr_drops": [20019*30, 20019*45],
+            "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_part_2":
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
-            "epochs": 25,
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -824,15 +824,15 @@ def get_defaults(script_name):
             "widen_times": [], # unused (probably widen at 30 and 60, deepen at 45 and 75)
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
-            "momentum": 0.0, # unused
-            "lr_drops": [], # unused
-            "lr_drop_mag": 0.0 # unused
+            "momentum": 0.9,
+            "lr_drops": [20019*30, 20019*45],
+            "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_part_3":
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
-            "epochs": 25,
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -841,15 +841,15 @@ def get_defaults(script_name):
             "widen_times": [], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
-            "momentum": 0.0, # unused
-            "lr_drops": [], # unused
-            "lr_drop_mag": 0.0 # unused
+            "momentum": 0.9,
+            "lr_drops": [20019*30, 20019*45],
+            "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_part_4":
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
-            "epochs": 25,
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -858,9 +858,9 @@ def get_defaults(script_name):
             "widen_times": [20019*5],
             "deepen_times": [20019*10,20019*15],
             "flops_budget": 0, # unused
-            "momentum": 0.0, # unused
-            "lr_drops": [], # unused
-            "lr_drop_mag": 0.0 # unused
+            "momentum": 0.9,
+            "lr_drops": [20019*30, 20019*45],
+            "lr_drop_mag": 10.0
         }
 
 
@@ -918,7 +918,7 @@ def get_defaults(script_name):
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [1, 5005*30, 5005*45],
+            "lr_drops": [5005*30, 5005*45],
             "lr_drop_mag": 10.0
         }
 
