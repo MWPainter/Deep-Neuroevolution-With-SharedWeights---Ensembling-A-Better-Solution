@@ -727,17 +727,17 @@ def get_defaults(script_name):
             "lr_drops": [], # unused
             "lr_drop_mag": 0.0 # unused
         }
-    elif script == "r2wr":
+    elif script == "r2wr": # @7epoch widen r2r, @___ epoch widen n2n
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "lr": 3.0e-3, # TODO: add lr drops
+            "weight_decay": 1.0e-3, # TODO: change wd
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 32,
             "workers": 6,
-            "widen_times": [1532*15], # unused
+            "widen_times": [1532*10], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -747,8 +747,8 @@ def get_defaults(script_name):
 
     elif script == "r2dr":
         return {
-            "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "lr": 3.0e-3, # TODO: add lr drops
+            "weight_decay": 1.0e-3, # TODO: change wd
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -756,7 +756,7 @@ def get_defaults(script_name):
             "batch_size": 32,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*15], # unused
+            "deepen_times": [1532*7], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
