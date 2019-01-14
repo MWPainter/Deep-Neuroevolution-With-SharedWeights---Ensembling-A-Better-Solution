@@ -378,7 +378,7 @@ def net_2_wider_net_resnet(args):
 
 
     scaling_factor = 1.414
-
+    """
     # Teacher network training loop
     args.shard = "teacher_w_residual"
     args.total_flops = 0
@@ -422,12 +422,11 @@ def net_2_wider_net_resnet(args):
     model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
     model.widen(scaling_factor)
     args.shard = "Completely_Random_Init"
-    args.lr *= 10
     args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
-
+    """
     # Net2Net teacher
     initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
@@ -441,7 +440,6 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "Net2Net_student"
     args.total_flops = 0
-    args.lr /= 10
     args.weight_decay = 2.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
@@ -473,10 +471,11 @@ def net_2_deeper_net_resnet(args):
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
+
     # Teacher network training loop
     args.shard = "teacher_w_residual"
     args.total_flops = 0
-    initial_model = resnet10(thin=True, thinning_ratio=4)
+    initial_model = resnet10(thin=True, thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
@@ -486,9 +485,12 @@ def net_2_deeper_net_resnet(args):
     model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
+    args.lr /= 10
+    args.weight_decay = 3.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
+    
     # RandomPadding
     model = copy.deepcopy(teacher_model)
     model.function_preserving = False
@@ -498,29 +500,36 @@ def net_2_deeper_net_resnet(args):
     args.total_flops = 0
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+    
 
     # Random init start
-    model_= resnet10(thin=True, thinning_ratio=4)
+    model = resnet10(thin=True, thinning_ratio=16)
     model.deepen([1,1,1,1])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
+    args.lr *= 10
+    args.weight_decay = 1.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # Net2Net teacher
-    initial_model = resnet10(thin=True, thinning_ratio=4, use_residual=False, morphism_scheme="net2net")
+    initial_model = resnet10(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
+    args.weight_decay = 1.0e-3
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
-    model.deepen([1,1,1,1], minibatch=next(iter(train_loader)))
+    model = cudafy(model)
+    model.deepen([1,1,1,1], minibatch=next(iter(train_loader))[0].to('cuda'))
     model = cudafy(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
+    args.lr /= 10
+    args.weight_decay = 1.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
