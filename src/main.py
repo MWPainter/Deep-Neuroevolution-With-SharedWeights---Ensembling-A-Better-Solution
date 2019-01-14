@@ -880,11 +880,11 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [5005*30],
-            "deepen_times": [5005*20],
+            "widen_times": [5005*15],
+            "deepen_times": [5005*7],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [5005*30, 5005*45],
+            "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_redo_part_2": # resnet10->18 at start
@@ -901,7 +901,7 @@ def get_defaults(script_name):
             "deepen_times": [0],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [5005*30, 5005*45],
+            "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_redo_part_3": # resnet10
@@ -918,7 +918,7 @@ def get_defaults(script_name):
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [5005*30, 5005*45],
+            "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": 10.0
         }
     elif script == "r2fasterr_redo_part_4": # resnet18
@@ -935,7 +935,7 @@ def get_defaults(script_name):
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [5005*30, 5005*45],
+            "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": 10.0
         }
 
