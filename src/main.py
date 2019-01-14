@@ -879,7 +879,7 @@ def get_defaults(script_name):
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 256,
-            "workers": 8,
+            "workers": 4,
             "widen_times": [5005*30],
             "deepen_times": [5005*20],
             "flops_budget": 0, # unused
