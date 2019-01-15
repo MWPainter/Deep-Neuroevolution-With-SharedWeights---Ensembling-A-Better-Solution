@@ -390,7 +390,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
@@ -407,7 +407,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -424,7 +424,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
@@ -441,7 +441,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -458,7 +458,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
@@ -475,7 +475,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -492,7 +492,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
@@ -509,7 +509,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -526,7 +526,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
@@ -543,7 +543,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -560,7 +560,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(2350*2, 2350*10, 2350*2),
             "deepen_times": [], # unused
@@ -577,7 +577,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
@@ -594,7 +594,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -611,7 +611,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -628,7 +628,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -645,7 +645,7 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 256,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
