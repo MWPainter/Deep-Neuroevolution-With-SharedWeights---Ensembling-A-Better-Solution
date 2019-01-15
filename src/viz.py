@@ -155,20 +155,20 @@ class Conv_Net(nn.Module):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
                          init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
-            r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
-                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+            # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
+            #              init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),16,16), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
-            net_2_wider_net_(self.W1, self.W2, (self.W1.weight.data.size(0),), extra_channels=num_hidden,
-                             multiplicative_widen=self.multiplicative_widen, add_noise=True)
+            # net_2_wider_net_(self.W1, self.W2, (self.W1.weight.data.size(0),), extra_channels=num_hidden,
+            #                  multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
                          init_type="match_std_exact", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=True)
-            r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
-                         init_type="match_std_exact", function_preserving=True,
-                         multiplicative_widen=self.multiplicative_widen, net_morph=True)
+            # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
+            #              init_type="match_std_exact", function_preserving=True,
+            #              multiplicative_widen=self.multiplicative_widen, net_morph=True)
 
     def save_weights(self, iter, dir, viz_width):
         weights = self.conv1.weight.data.detach().cpu().numpy()
@@ -203,8 +203,9 @@ def _make_optimizer_fn(model, lr, weight_decay, args):
         training loop functions
     """
     # return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
-    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
+    # return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
     # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
 
 
@@ -427,11 +428,11 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     if use_conv:
         args.initial_channels = 8
         init_channels = 32 if start_wide else 8
-        init_hidden = 250 if start_wide else 50
+        init_hidden = 50 #250 if start_wide else 50
         model = Conv_Net(init_hidden, init_channels, in_channels=1, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        init_channels = 10 if start_wide else 2
+        init_channels = 8 if start_wide else 2
         model = FC_Net(init_channels, in_channels=1, widen_method=widen_method)
 
     # Train
@@ -462,11 +463,11 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     if use_conv:
         args.initial_channels = 8
         init_channels = 32 if start_wide else 8
-        init_hidden = 250 if start_wide else 50
+        init_hidden = 50 #250 if start_wide else 50
         model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
-        init_channels = 10 if start_wide else 2
+        init_channels = 8 if start_wide else 2
         model = FC_Net(init_channels, in_channels=3, widen_method=widen_method)
 
     # Train

@@ -392,7 +392,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -409,7 +409,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -426,7 +426,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -443,7 +443,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -460,7 +460,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -477,7 +477,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -494,7 +494,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -511,7 +511,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -528,7 +528,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            "widen_times": range(2350*2+1175, 2350*10, 2350*2+1175),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -545,7 +545,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -579,7 +579,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(3830*2, 3830*10, 3830*2),
+            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused

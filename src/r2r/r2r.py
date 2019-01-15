@@ -154,7 +154,8 @@ Widening hidden volumes
 
 
 def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residual_connection=None, extra_channels=0,
-                 init_type="match_std", function_preserving=True, multiplicative_widen=True, mfactor=2, net_morph=False):
+                 init_type="match_std", function_preserving=True, multiplicative_widen=True, mfactor=2, net_morph=False,
+                 net_morph_add_noise=True):
     """
     Single interface for r2widerr transforms, where prev_layers and next_layers could be a single layer.
 
@@ -206,6 +207,7 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
     :param mfactor: When adding say 1.4 times the channels, we round up the number of new channels to be a multiple of
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
     :param net_morph: If we wish to provide a netmorph widening (rather than R2R widening).
+    :param net_morph_add_noise: If we are using net morph, then add noise to the filters that are set to zero.
     """
     # Handle inputting of single input/output layers
     if type(prev_layers) != list:
@@ -214,13 +216,13 @@ def r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm=None, residu
         next_layers = [next_layers]
         
     _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen, mfactor, net_morph)
+                  function_preserving, multiplicative_widen, mfactor, net_morph, net_morph_add_noise)
 
 
 
 
 def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_connection, extra_channels, init_type,
-                  function_preserving, multiplicative_widen, mfactor, net_morph):
+                  function_preserving, multiplicative_widen, mfactor, net_morph, net_morph_add_noise):
     """  
     The full internal implementation of r_2_wider_r_. See description of r_2_wider_r_.
     More helper functions are used.
