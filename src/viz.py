@@ -106,7 +106,7 @@ class FC_Net(nn.Module):
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
                          init_type="match_std_exact", function_preserving=True,
-                         multiplicative_widen=self.multiplicative_widen, net_morph=True)
+                         multiplicative_widen=self.multiplicative_widen, net_morph=True, net_morph_add_noise=True)
 
         if self.multiplicative_widen:
             self.hidden_units *= (num_channels - 1)

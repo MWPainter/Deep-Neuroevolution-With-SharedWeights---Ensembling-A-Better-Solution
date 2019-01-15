@@ -296,7 +296,7 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     # Iterate through all of the prev layers, and widen them appropraitely
     for prev_layer in prev_layers:
         _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
-                                    function_preserving, mfactor, net_morph, is_prev_layer_sparse)
+                                    function_preserving, mfactor, net_morph, is_prev_layer_sparse, net_morph_add_noise)
     
     # Widen batch norm appropriately 
     if batch_norm:
@@ -311,7 +311,7 @@ def _r_2_wider_r_(prev_layers, volume_shape, next_layers, batch_norm, residual_c
     for next_layer in next_layers:
         _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                                    new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen,
-                                   function_preserving, mfactor, net_morph, is_next_layer_sparse)
+                                   function_preserving, mfactor, net_morph, is_next_layer_sparse, net_morph_add_noise)
 
 
 
@@ -457,7 +457,7 @@ def _extend_bn_(bn, new_channels_per_slice, module_slices_indices, multiplicativ
     
     
 def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicative_widen, input_is_linear,
-                            function_preserving, mfactor, net_morph, is_prev_layer_sparse):
+                            function_preserving, mfactor, net_morph, is_prev_layer_sparse, net_morph_add_noise):
     """
     Helper function for r2widerr. Containing all of the logic for widening the output channels of the 'prev_layers'.
     
@@ -472,6 +472,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
     :param net_morph: If we actually would like to use the NetMorph widening, rather than the R2R widening.
     :param is_prev_layer_sparse: If the prev layers are sparser than next layers (only used for net morph)
+    :param net_morph_add_noise: If we are using net morph, then add noise to the filters that are set to zero.
     """
     if type(prev_layer) is nn.Conv2d:
         # If we have a bias in the conv
@@ -493,7 +494,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
             prev_kernel = _extend_filter_with_repeated_out_channels(kernel_extra_shape, prev_kernel, init_type)
         else:
             prev_kernel_init_type = init_type if not is_prev_layer_sparse else 'zero'
-            prev_kernel = _extend_filter_out_channels(kernel_extra_shape, prev_kernel, prev_kernel_init_type)
+            prev_kernel = _extend_filter_out_channels(kernel_extra_shape, prev_kernel, prev_kernel_init_type, net_morph_add_noise)
 
         # zero pad the bias
         if module_has_bias:
@@ -523,7 +524,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
             prev_matrix = _extend_matrix_with_repeated_out_weights(matrix_extra_shape, prev_matrix, init_type)
         else:
             prev_matrix_init_type = init_type if not is_prev_layer_sparse else 'zero'
-            prev_matrix = _extend_matrix_out_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type)
+            prev_matrix = _extend_matrix_out_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type, net_morph_add_noise)
 
 
         # zero pad the bias
@@ -557,7 +558,7 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
                             
 def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_indices, input_is_linear,
                            new_hidden_units_in_next_layer_per_new_channel, multiplicative_widen, function_preserving,
-                           mfactor, net_morph, is_next_layer_sparse):
+                           mfactor, net_morph, is_next_layer_sparse, net_morph_add_noise):
     """
     Helper function for r2widerr. Containing all of the logic for widening the input channels of the 'next_layers'.
     
@@ -576,6 +577,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             'mfactor'. This parameter has no effect if multiplicative_widen == False.
     :param net_morph: If we actually would like to use the NetMorph widening, rather than the R2R widening.
     :param is_next_layer_sparse: If the next layers are sparser than prev layers (only used for net morph)
+    :param net_morph_add_noise: If we are using net morph, then add noise to the filters that are set to zero.
     """
     # Check that we don't do linear -> conv, as haven't worked this out yet
     if input_is_linear and type(next_layer) is nn.Conv2d:
@@ -603,7 +605,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
                                                                        init_type, alpha)
             else:
                 kernel_part_init_type = init_type if not is_next_layer_sparse else 'zero'
-                kernel_part = _extend_filter_in_channels(kernel_extra_shape, next_kernel[:,beg:end], kernel_part_init_type)
+                kernel_part = _extend_filter_in_channels(kernel_extra_shape, next_kernel[:,beg:end], kernel_part_init_type, net_morph_add_noise)
             next_kernel_parts.append(kernel_part)
 
         # Join all of the kernel parts, and then assign new conv (don't need to change bias)
@@ -634,7 +636,7 @@ def _widen_input_channels_(next_layer, extra_channels, init_type, volume_slices_
             else:
                 matrix_part_init_type = init_type if not is_next_layer_sparse else 'zero'
                 matrix_part = _extend_matrix_in_weights(matrix_extra_shape, next_matrix[:,beg:end],
-                                                                      matrix_part_init_type)
+                                                                      matrix_part_init_type, net_morph_add_noise)
 
             # Add this matrix part to the list
             next_matrix_parts.append(matrix_part)
