@@ -74,15 +74,15 @@ def _load_fn(model, optimizer, load_file):
     :param load_file: The filename for a checkpoint dict, saved using 'checkpoint_fn' below.
     :return: The restored model, optimizer and the current epoch with the best validation loss seen so far.
     """
-    for widen in model.load_with_widens:
-        if widen:
-            model.widen(1.414)
-        else:
-            if len(model.deepen_indidces_list) == 0:
-                raise Exception("Too many deepen times for this test.")
-            deepen_indices = model.deepen_indidces_list.pop(0)
-            model.deepen(deepen_indices)
-        model = cudafy(model)
+    # for widen in model.load_with_widens:
+    #     if widen:
+    #         model.widen(1.414)
+    #     else:
+    #         if len(model.deepen_indidces_list) == 0:
+    #             raise Exception("Too many deepen times for this test.")
+    #         deepen_indices = model.deepen_indidces_list.pop(0)
+    #         model.deepen(deepen_indices)
+    #     model = cudafy(model)
 
     # Load state dict, and update the model and
     checkpoint = t.load(load_file)
