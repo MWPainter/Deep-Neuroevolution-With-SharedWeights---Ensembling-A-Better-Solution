@@ -983,12 +983,12 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": [5005*10], # 30
-            "deepen_times": [5005*5], # 20
+            "widen_times": [5005*11], # 30
+            "deepen_times": [5005*7], # 20
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [5005*10, 5005*20], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drops": [5005*7, 5005*11, 5005*20], # 30, 60
+            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0]
         }
     elif script == "r2fasterr_redo_part_6": # thin resnet10->18
         return {
