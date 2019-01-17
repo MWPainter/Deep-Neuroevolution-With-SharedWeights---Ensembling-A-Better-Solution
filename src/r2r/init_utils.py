@@ -109,7 +109,7 @@ def _conv_match_scale_initialize(filter_shape, scale=1.0):
 
 
 
-def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=False):
+def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_filter=None, init_type='He', std=0.0, alpha=1.0, add_noise=False):
     """
     We want to extend filter by adding output channels with appropriately initialized weights.
     
@@ -131,6 +131,9 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
     :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [2*C2,I,H,W]
     :param existing_filter: If not None, it must have shape [C1,I,H,W]. This is the existing filter.
     :param init_type: The type of initialization to use for new weights.
+    :param std: A std deviation to use for the init if init_type == 'scale'
+    :param alpha: explained above
+    :param add_noise: UNused
     :return: A filter of shape [C1+2*C2, I, H, W], which is the 'existing_filter' extended by 2*C2 output channels. 
             I.e. the filter [F;E;alpha*E]
     """
@@ -163,6 +166,8 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale)
+    elif init_type == 'scale':
+        new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=std)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -230,7 +235,7 @@ def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, in
 
 
 
-def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=False):
+def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_filter=None, init_type='He', std=0.0, alpha=1.0, add_noise=False):
     """
     We want to extend filter by adding input channels with appropriately initialized weights.
     
@@ -256,6 +261,9 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     :param extending_filter_shape: The shape of the new portion of the filter to return. I.e. [C,2*I2,H,W]
     :param existing_filter: If not None, it must have shape [C,I1,H,W]. This is the existing filter.
     :param init_type: The type of initialization to use for new weights.
+    :param std: A std deviation to use for the init if init_type == 'scale'
+    :param alpha: explained above
+    :param add_noise: UNused
     :return: A filter of shape [C, I1+2*I2, H, W], which is the 'existing_filter' extended by 2*I2 input channels. 
             I.e. the filter [F;E;alpha*E]
     """
@@ -288,6 +296,8 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale)
+    elif init_type == 'scale':
+        new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=std)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     

@@ -1,3 +1,4 @@
+import numpy as np
 import torch as t
 import torch.nn as nn
 from torch.nn.parameter import Parameter
@@ -130,7 +131,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None,
-                 use_residual=True, use_net2net=False, add_noise=True):
+                 use_residual=True, use_net2net=False, add_noise=True, init_scale=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -144,6 +145,13 @@ class BasicBlock(nn.Module):
         self.img_shape = img_shape
         self.use_residual = use_residual
 
+        # scaled inits for params if init_scale is not none
+        if init_scale is not None:
+            conv1_init = init_scale * np.random.randn(inplanes, planes, 3, 3).astype(np.float32)
+            _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
+            conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
+            _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
+
         # R2DeeperR
         if identity_initialize and not use_net2net:
             # When deepening, we shouldn't decrease the spatial dimension (for now at least
@@ -152,11 +160,12 @@ class BasicBlock(nn.Module):
 
             # Initialize the conv weights as appropriate, using the helpers
             conv1_filter_shape = (planes, inplanes, 3, 3)
-            conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type='He')
+            init_type = 'He' if init_scale is None else 'scale'
+            conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type=init_type, std=init_scale)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_filter_init)
 
             conv2_filter_shape = (planes * self.expansion, planes, 3, 3)
-            conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type='He', alpha=-1.0)
+            conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type=init_type, std=init_scale, alpha=-1.0)
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_filter_init)
 
             # Initialize the batch norm variables so that the scale is one and the mean is zero
@@ -187,6 +196,14 @@ class BasicBlock(nn.Module):
         """
         _identity_init_batch_norm(self.bn1, entire_resnet, batch)
         _identity_init_batch_norm(self.bn2, entire_resnet, batch)
+
+
+
+    def _get_conv_scale(self):
+        """
+        Get the std of the kernel of the last layer in this block
+        """
+        return np.std(self.conv2.weight.detach().cpu().numpy())
 
 
 
@@ -241,7 +258,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, identity_initialize=False, img_shape=None,
-                 use_residual=True, use_net2net=False, add_noise=True):
+                 use_residual=True, use_net2net=False, add_noise=True, init_scale=None):
         super(Bottleneck, self).__init__()
         self.conv1 = conv1x1(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -257,6 +274,15 @@ class Bottleneck(nn.Module):
         self.img_shape = img_shape
         self.use_residual = use_residual
 
+        # scaled inits for params if init_scale is not none
+        if init_scale is not None:
+            conv1_init = init_scale * np.random.randn(inplanes, planes, 1, 1).astype(np.float32)
+            _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
+            conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
+            _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
+            conv3_init = init_scale * np.random.randn(planes, planes * self.expansion, 1, 1).astype(np.float32)
+            _assign_kernel_and_bias_to_conv_(self.conv3, conv3_init)
+
         # R2DeeperR
         if identity_initialize and not use_net2net:
             # When deepening, we shouldn't decrease the spatial dimension (for now at least
@@ -265,11 +291,12 @@ class Bottleneck(nn.Module):
 
             # Initialize the conv weights as appropriate, using the helpers
             conv2_filter_shape = (planes, planes, 3, 3)
-            conv2_filter_init = _extend_filter_with_repeated_out_channels(conv2_filter_shape, init_type='He')
+            init_type = 'He' if init_scale is None else 'scale'
+            conv2_filter_init = _extend_filter_with_repeated_out_channels(conv2_filter_shape, init_type=init_type, std=init_scale)
             self.conv2.weight.data = Parameter(t.Tensor(conv2_filter_init))
 
             conv3_filter_shape = (planes * self.expansion, planes, 1, 1)
-            conv3_filter_init = _extend_filter_with_repeated_in_channels(conv3_filter_shape, init_type='He', alpha=-1.0)
+            conv3_filter_init = _extend_filter_with_repeated_in_channels(conv3_filter_shape, init_type=init_type, std=init_scale, alpha=-1.0)
             self.conv3.weight.data = Parameter(t.Tensor(conv3_filter_init))
 
             # Initialize the batch norm variables so that the scale is one and the mean is zero
@@ -304,6 +331,14 @@ class Bottleneck(nn.Module):
         _identity_init_batch_norm(self.bn1, entire_resnet, batch)
         _identity_init_batch_norm(self.bn2, entire_resnet, batch)
         _identity_init_batch_norm(self.bn3, entire_resnet, batch)
+
+
+
+    def _get_conv_scale(self):
+        """
+        Get the std of the kernel of the last layer in this block
+        """
+        return np.std(self.conv3.weight.detach().cpu().numpy())
 
 
     def forward(self, x):
@@ -438,7 +473,7 @@ class ResNet(nn.Module):
         return nn.ModuleList(layers), img_shape
 
 
-    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True):
+    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True, init_scale=None):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
         planes = inplanes // block.expansion
@@ -447,7 +482,8 @@ class ResNet(nn.Module):
         for _ in range(num_blocks):
             use_net2net_deepening = (self.morphism_scheme in ["net2net", "netmorph"])
             identity_block = block(inplanes, planes, identity_initialize=self.function_preserving, img_shape=(h,w),
-                                   use_residual=self.use_residual, use_net2net=use_net2net_deepening, add_noise=add_noise)
+                                   use_residual=self.use_residual, use_net2net=use_net2net_deepening,
+                                   add_noise=add_noise, init_scale=init_scale)
             if use_net2net_deepening:
                 identity_block._net2deepernet_batch_norm_correction(self, minibatch)
             layer_modules.append(identity_block)
@@ -455,10 +491,10 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise)
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise)
-        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise)
-        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale())
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale())
+        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale())
+        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale())
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)

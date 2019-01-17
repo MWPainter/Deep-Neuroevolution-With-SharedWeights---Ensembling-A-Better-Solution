@@ -663,7 +663,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -680,7 +680,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -731,7 +731,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -747,9 +747,9 @@ def get_defaults(script_name):
 
     elif script == "r2dr":
         return {
-            "lr": 3.0e-3, 
+            "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 100,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
