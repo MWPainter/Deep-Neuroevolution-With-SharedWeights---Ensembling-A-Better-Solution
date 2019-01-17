@@ -58,7 +58,7 @@ def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0, kernel_norm=False)
                 else:
                     img = Xs[next_idx]
                     low, high = np.min(img), np.max(img)
-                    grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low)
+                    grid[y0:y1, x0:x1] = ubound * (img - low) / (high - low + 1.0e-6)
                 # grid[y0:y1, x0:x1] = Xs[next_idx]
                 next_idx += 1
             x0 += W + padding
@@ -93,8 +93,9 @@ class FC_Net(nn.Module):
         return x
 
     def clip_(self):
-        for p in self.parameters():
-            p.data.clamp_(-1.0, 1.0)
+        pass
+        # for p in self.parameters():
+        #     p.data.clamp_(-1.0, 1.0)
 
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
@@ -118,7 +119,7 @@ class FC_Net(nn.Module):
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=(self.widen_method=='netmorph')))
+        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=False)) # (self.widen_method=='netmorph')))
         filename = "{iter:0>6d}.jpg".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
