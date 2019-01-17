@@ -491,10 +491,10 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * 0.1)
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * 0.1)
-        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * 0.1)
-        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * 0.1)
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * 0.01)
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * 0.01)
+        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * 0.01)
+        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * 0.01)
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
