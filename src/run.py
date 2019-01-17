@@ -193,6 +193,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     # Widen or deepen the network at the correct times
     print(iter)
+    print(args.widen_times)
+    print(args.deepen_times)
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
             print("Widening!")
