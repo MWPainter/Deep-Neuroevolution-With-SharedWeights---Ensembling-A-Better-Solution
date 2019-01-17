@@ -137,12 +137,20 @@ def _checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_be
 
 
 
-def _adjust_learning_rate(args, iter, optimizer):
+def _adjust_learning_rate(args, iter, optimizer, args):
     """
     Helper to adjust learning rate dynamically, and updates it in the optimizer
     """
     if iter in args.lr_drops:
         args.lr /= args.lr_drop_mag
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = args.lr
+    if iter in args.widen_times or iter in args.deepen_times:
+        args.lr /= 100.0
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = args.lr
+    if iter in [w+100 for w in args.widen_times] or iter in [d+100 for d in args.deepen_times]:
+        args.lr *= 100.0
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
 
@@ -166,6 +174,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     :return: An updated reference to the model and optimizer, and a dictionary from strings to PyTorch scalar Variables
             used for TensorBoard summaries.
     """
+    iter += 5005 * 7 - 1344
+    
     # If we have expended the number of flops for this test, then we should stop any updates
     if hasattr(args, "total_flops") and hasattr(args, "flops_budget") and args.total_flops >= args.flops_budget:
         return model, optimizer, {}
@@ -175,10 +185,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     xs, ys = cudafy(minibatch[0]), cudafy(minibatch[1])
 
     # Adjust the learning rate if need be
-    _adjust_learning_rate(args, iter, optimizer)
+    _adjust_learning_rate(args, iter, optimizer, args)
 
     # Widen or deepen the network at the correct times
-    iter += 5005 * 7 - 1344
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
             print("Widening!")
