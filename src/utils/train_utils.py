@@ -76,7 +76,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
 
     # Load models/make optimizers, and restore the state of training if loading from a checkpoint
     start_epoch = 0
-    best_val_loss = 0.0
+    best_val_loss = float('inf')
     optimizer = make_optimizer_fn(model, args.lr, args.weight_decay, args)
     if args.load:
         print("Loading from checkpoint...")
@@ -120,7 +120,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         # Checkpointing (depending on the model the "best" model may or may not make sense (e.g. GAN it will not))
         avg_val_loss = sum(list(avg_val_losses.values()))
         is_best_model = avg_val_loss < best_val_loss
-        best_val_loss = max(avg_val_loss, best_val_loss)
+        best_val_loss = min(avg_val_loss, best_val_loss)
         checkpoint_fn(model, optimizer, epoch, best_val_loss, checkpoint_dir, is_best_model)
 
     print("Fin.")
