@@ -51,7 +51,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_identity_init":
         return {
@@ -68,7 +69,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -87,7 +89,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_widen":
         return {
@@ -104,7 +107,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0, # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_widen_with_budget":
         return {
@@ -121,7 +125,8 @@ def get_defaults(script_name):
             "flops_budget": 1.0e12,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_widen_with_budget":
         return {
@@ -138,7 +143,8 @@ def get_defaults(script_name):
             "flops_budget": 2.0e12,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -157,7 +163,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_widen_with_budget_multi_stage":
         return {
@@ -174,7 +181,8 @@ def get_defaults(script_name):
             "flops_budget": 2.0e12,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -193,7 +201,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_deepen":
         return {
@@ -210,7 +219,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_deepen_with_budget":
         return {
@@ -227,7 +237,8 @@ def get_defaults(script_name):
             "flops_budget": 4.0e11,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_deepen_with_budget":
         return {
@@ -244,7 +255,8 @@ def get_defaults(script_name):
             "flops_budget": 8.0e11,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -263,7 +275,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_deepen_with_budget_multi_stage":
         return {
@@ -280,7 +293,8 @@ def get_defaults(script_name):
             "flops_budget": 8.0e11,
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -299,7 +313,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_net2deepernet_style":
         return {
@@ -316,7 +331,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -336,7 +352,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_net2deepernet_style":
         return {
@@ -353,7 +370,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
 
 
@@ -373,7 +391,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "r2r_wider_inception":
         return {} # TODO: actually set params
@@ -397,7 +416,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_r2r":
         return {
@@ -414,7 +434,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_r2r_conv":
         return {
@@ -431,7 +452,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_r2r_conv":
         return {
@@ -448,7 +470,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_net2net":
         return {
@@ -465,7 +488,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_net2net":
         return {
@@ -482,7 +506,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_net2net_conv":
         return {
@@ -499,7 +524,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_net2net_conv":
         return {
@@ -516,7 +542,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_netmorph":
         return {
@@ -533,7 +560,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_netmorph":
         return {
@@ -550,7 +578,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_netmorph_conv":
         return {
@@ -567,7 +596,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_netmorph_conv":
         return {
@@ -584,7 +614,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz":
         return {
@@ -601,7 +632,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz":
         return {
@@ -618,7 +650,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "mnist_weight_viz_conv":
         return {
@@ -635,7 +668,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "cifar_weight_viz_conv":
         return {
@@ -652,7 +686,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
 
 
@@ -674,7 +709,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "n2dn":
         return {
@@ -691,7 +727,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "n2wn_hps":
         return {
@@ -708,7 +745,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "n2dn_hps":
         return {
@@ -725,7 +763,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "r2wr": # @7epoch widen r2r, @___ epoch widen n2n
         return {
@@ -742,7 +781,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
 
     elif script == "r2dr":
@@ -760,7 +800,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
 
 
@@ -785,7 +826,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "double_deepen":
         return {
@@ -802,7 +844,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
     elif script == "double_widen_deepen":
         return {
@@ -819,7 +862,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0] # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 1000.0
         }
 
 
@@ -844,7 +888,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_part_2":
         return {
@@ -861,7 +906,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_part_3":
         return {
@@ -878,7 +924,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_part_4":
         return {
@@ -895,7 +942,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
 
 
@@ -920,7 +968,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_2": # resnet10->18 at start
         return {
@@ -937,7 +986,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_3": # resnet10
         return {
@@ -954,7 +1004,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_4": # resnet18
         return {
@@ -971,7 +1022,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_5": # thin resnet10->18
         return {
@@ -988,7 +1040,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*13, 5005*20], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_6": # thin resnet10->18
         return {
@@ -1005,7 +1058,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0]
+            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
+            "grad_clip": 1000.0
         }
     elif script == "r2fasterr_redo_part_7": # thin resnet10->18
         return {
@@ -1022,7 +1076,8 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [10.0],
+            "grad_clip": 1000.0
         }
 
 
@@ -1058,6 +1113,7 @@ def make_arg_parser(defaults):
                         help='A flops budget to adhere to (if used in the test).')
     parser.add_argument('--batch_size', type=int, default=defaults["batch_size"],
                         help='The batch size to use')
+    parser.add_argument('--grad_clip', type=float, default=defaults['grad_clip'], help="A value to clip gradient norms to")
 
     # When to widen/deepen in widen/deepen tests
     parser.add_argument('--widen_times', type=int, nargs='+', default=defaults['widen_times'],

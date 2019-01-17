@@ -211,9 +211,10 @@ def _update_op(model, optimizer, minibatch, iter, args):
     ys_pred = model(xs)
     loss = loss_fn(ys_pred, ys)
 
-    # Backward pass - make an update step
+    # Backward pass - make an update step, clipping parameters appropriately
     optimizer.zero_grad()
     loss.backward()
+    nn.utils.grad_clip_norm_(model.parameters(), args.grad_clip)
     optimizer.step()
 
     # Compute loss and accuracy
