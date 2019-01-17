@@ -180,8 +180,10 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
+            print("Widening!")
             model.widen(1.414)
         if iter in args.deepen_times:
+            print("Deepening!")
             if len(args.deepen_indidces_list) == 0:
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
