@@ -152,7 +152,7 @@ def _adjust_learning_rate(args, iter, optimizer):
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
     speed_up_times = []
-    for l in [250,500,750,1000,1500]:
+    for l in [250,500,750,1000,1250,1500]:
         speed_up_times.extend([w+l for w in args.widen_times])
         speed_up_times.extend([w+l for w in args.deepen_times])
     if iter in speed_up_times:
