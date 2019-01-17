@@ -1005,7 +1005,7 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [10.0]
+            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0]
         }
     elif script == "r2fasterr_redo_part_7": # thin resnet10->18
         return {
