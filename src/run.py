@@ -142,7 +142,8 @@ def _adjust_learning_rate(args, iter, optimizer):
     Helper to adjust learning rate dynamically, and updates it in the optimizer
     """
     if iter in args.lr_drops:
-        args.lr /= args.lr_drop_mag
+        idx = min(args.lr_drops.index(iter), len(args.lr_drop_mag)-1) # bounds checked access of drop magnitude
+        args.lr /= args.lr_drop_mag[idx]
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
 
