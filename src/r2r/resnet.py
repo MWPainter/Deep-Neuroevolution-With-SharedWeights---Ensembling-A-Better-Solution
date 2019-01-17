@@ -477,6 +477,7 @@ class ResNet(nn.Module):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
         planes = inplanes // block.expansion
+        print(init_scale)
 
         # Add the new block
         for _ in range(num_blocks):
@@ -491,10 +492,11 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * 0.01)
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * 0.01)
-        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * 0.01)
-        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * 0.01)
+        ratio = 1e-4
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * ratio)
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * ratio)
+        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
+        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
