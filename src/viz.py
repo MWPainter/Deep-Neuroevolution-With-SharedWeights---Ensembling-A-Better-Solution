@@ -149,8 +149,9 @@ class Conv_Net(nn.Module):
         return x
 
     def clip_(self):
-        for p in self.parameters():
-            p.data.clamp_(-1.0, 1.0)
+        pass
+        # for p in self.parameters():
+        #     p.data.clamp_(-1.0, 1.0)
 
     def widen(self, num_channels=8, num_hidden=50):
         if self.widen_method == 'r2r':

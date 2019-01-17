@@ -579,7 +579,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            "widen_times": [50] + list(range(3830*2+1915, 3830*10, 3830*2+1915)),
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused

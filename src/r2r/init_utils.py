@@ -346,7 +346,7 @@ def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, ini
 
     canvas[:,I1:I1+twoI2,:,:] = new_channels_weights
     if add_noise:
-        canvas[:,I1:I1+twoI2,:,:,:] += 1.0e-6 * np.random.randn(C, twoI2, H, W).astype(np.float32)
+        canvas[:,I1:I1+twoI2,:,:] += 1.0e-6 * np.random.randn(C, twoI2, H, W).astype(np.float32)
 
     # Done :)
     return canvas
