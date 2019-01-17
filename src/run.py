@@ -145,16 +145,17 @@ def _adjust_learning_rate(args, iter, optimizer):
         args.lr /= args.lr_drop_mag
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
+
+    # Very hackily slowly raise the learning rate from tiny after a widening
     if iter in args.widen_times or iter in args.deepen_times:
         args.lr /= 1.0e6
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
-    if iter in [w + 100 for w in args.widen_times] or iter in [d + 100 for d in args.deepen_times] or \
-        iter in [w + 250 for w in args.widen_times] or iter in [d + 250 for d in args.deepen_times] or \
-        iter in [w + 500 for w in args.widen_times] or iter in [d + 500 for d in args.deepen_times] or \
-        iter in [w + 750 for w in args.widen_times] or iter in [d + 750 for d in args.deepen_times] or \
-        iter in [w + 1000 for w in args.widen_times] or iter in [d + 1000 for d in args.deepen_times] or \
-        iter in [w + 12500 for w in args.widen_times] or iter in [d + 1250 for d in args.deepen_times]:
+    speed_up_times = []
+    for l in [250,500,750,1000,1500]:
+        speed_up_times.extend([w+l for w in args.widen_times])
+        speed_up_times.extend([w+l for w in args.deepen_times])
+    if iter in speed_up_times:
         args.lr *= 10
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
