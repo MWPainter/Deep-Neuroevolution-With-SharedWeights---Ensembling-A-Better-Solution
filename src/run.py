@@ -178,6 +178,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     _adjust_learning_rate(args, iter, optimizer)
 
     # Widen or deepen the network at the correct times
+    print(iter)
+    print(args.widen_times)
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
             print("Widening!")
@@ -190,6 +192,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
             model.deepen(deepen_indices, minibatch=xs)
         model = cudafy(model)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
+
+    raise Exception()
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
