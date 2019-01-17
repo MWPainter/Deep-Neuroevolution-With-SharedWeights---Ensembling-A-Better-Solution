@@ -180,8 +180,6 @@ def _update_op(model, optimizer, minibatch, iter, args):
     :return: An updated reference to the model and optimizer, and a dictionary from strings to PyTorch scalar Variables
             used for TensorBoard summaries.
     """
-    iter += 5005 * 7 - 1344
-
     # If we have expended the number of flops for this test, then we should stop any updates
     if hasattr(args, "total_flops") and hasattr(args, "flops_budget") and args.total_flops >= args.flops_budget:
         return model, optimizer, {}
@@ -1354,15 +1352,8 @@ def r2r_faster_test_redo(args, shardname):
     args.deepen_indidces_list = [[1,1,1,1]]
 
     # Make the data loaders for imagenet
-    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
     # R2R
     model = resnet10(thin=True, thinning_ratio=1.414)
