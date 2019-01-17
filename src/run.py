@@ -188,10 +188,12 @@ def _update_op(model, optimizer, minibatch, iter, args):
             model.widen(1.414)
         if iter in args.deepen_times:
             print("Deepening!")
+            print(parameter_magnitude(model))
             if len(args.deepen_indidces_list) == 0:
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
+            print(parameter_magnitude(model))
             print(deepen_indices)
         model = cudafy(model)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
