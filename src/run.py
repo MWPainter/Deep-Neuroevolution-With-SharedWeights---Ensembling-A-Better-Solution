@@ -192,6 +192,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
+            print(deepen_indices)
         model = cudafy(model)
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
