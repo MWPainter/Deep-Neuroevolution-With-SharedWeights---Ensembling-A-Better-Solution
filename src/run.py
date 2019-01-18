@@ -33,13 +33,15 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay, args):
+def _make_optimizer_fn(model, lr, weight_decay, args, momentum):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
     :param model: The model to make an optimizer for.
     :param lr: The learning rate to use
     :param weight_decay: THe weight decay to use
+    :param args: Unused
+    :param momentum: Unused
     :return: The optimizer for the network optimizer, which is passed into the remaining
         training loop functions
     """
@@ -49,17 +51,21 @@ def _make_optimizer_fn(model, lr, weight_decay, args):
 
 
 
-def _make_optimizer_fn_sgd(model, lr, weight_decay, args):
+def _make_optimizer_fn_sgd(model, lr, weight_decay, args, momentum=None):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
     :param model: The model to make an optimizer for.
     :param lr: The learning rate to use
     :param weight_decay: THe weight decay to use
+    :param args: Command line args
+    :param momentum: Override for momentum if we want
     :return: The optimizer for the network optimizer, which is passed into the remaining
         training loop functions
     """
-    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=args.momentum)
+    if momentum is None:
+        momentum = args.momentum
+    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=momentum)
 
 
 
@@ -147,6 +153,11 @@ def _adjust_learning_rate(args, iter, optimizer):
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
 
+    # Momentum (if any) is turned off for a while to avoid exploding gradients for the first epoch
+    momentum_switch_on_times = [w + 5005 for w in args.widen_times] + [d + 5005 for d in args.deepen_times]
+    if iter in momentum_switch_on_times:
+        optimizer.momentum = args.momentum
+
     # Very hackily slowly raise the learning rate from tiny after a widening
     if iter in args.widen_times or iter in args.deepen_times:
         args.lr /= 1.0e6
@@ -204,7 +215,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
         model = cudafy(model)
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
