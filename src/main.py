@@ -1113,7 +1113,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 100.0
+            "grad_clip": 00.0
         }
 
 
@@ -1340,7 +1340,7 @@ if __name__ == "__main__":
         r2r_faster_test_redo(args, "widened_attempt_three")
     elif script == "r2fasterr_redo_part_7":
         r2r_faster_test_redo(args, "widened_attempt_three")
-    elif script == "r2fasterr_redo_part_7":
+    elif script == "r2fasterr_redo_part_8":
         r2r_faster_test_redo(args, "widened_attempt_four")
 
 
