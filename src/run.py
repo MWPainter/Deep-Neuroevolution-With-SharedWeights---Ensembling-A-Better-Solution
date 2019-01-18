@@ -226,7 +226,6 @@ def _update_op(model, optimizer, minibatch, iter, args):
     optimizer.zero_grad()
     loss.backward()
     nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip, norm_type=1)
-
     optimizer.step()
 
     # Compute loss and accuracy
