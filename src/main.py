@@ -1113,7 +1113,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 00.0
+            "grad_clip": 10.0
         }
 
 
