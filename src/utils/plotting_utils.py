@@ -104,7 +104,7 @@ def gradient_l2_norm(model):
     for p in model.parameters():
         if p.requires_grad and p.grad is not None:
             mag += t.sum(p.grad.data.cpu()**2)
-    return t.sqrt(mag)
+    return mag ** 0.5
 
 
 
