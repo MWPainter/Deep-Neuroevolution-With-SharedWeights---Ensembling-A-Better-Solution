@@ -107,7 +107,7 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
-            "lr_drop_mag": [0.0, # unused
+            "lr_drop_mag": [0.0], # unused
             "grad_clip": 1000.0
         }
     elif script == "mnist_widen_with_budget":
