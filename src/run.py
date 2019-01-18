@@ -8,7 +8,7 @@ from dataset import get_imagenet_dataloader, CifarDataset
 
 from utils import cudafy
 from utils import train_loop
-from utils import parameter_magnitude, gradient_magnitude, update_magnitude, update_ratio
+from utils import parameter_magnitude, gradient_magnitude, gradient_l2_norm, update_magnitude, update_ratio
 from utils import model_flops
 
 from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26
@@ -160,11 +160,11 @@ def _adjust_learning_rate(args, iter, optimizer):
 
     # Very hackily slowly raise the learning rate from tiny after a widening
     if iter in args.widen_times or iter in args.deepen_times:
-        args.lr /= 1.0e6
+        args.lr /= 1.0e4
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr
     speed_up_times = []
-    for l in [250,500,750,1000,1250,1500]:
+    for l in [250,500,1250,2500]:
         speed_up_times.extend([w+l for w in args.widen_times])
         speed_up_times.extend([w+l for w in args.deepen_times])
     if iter in speed_up_times:
@@ -225,7 +225,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Backward pass - make an update step, clipping parameters appropriately
     optimizer.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip, norm_type=1)
+    if args.grad_clip > 0.0:
+        nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     optimizer.step()
 
     # Compute loss and accuracy
@@ -246,10 +247,12 @@ def _update_op(model, optimizer, minibatch, iter, args):
     if iter % args.tb_log_freq == 0:
         weight_mag = parameter_magnitude(model)
         grad_mag = gradient_magnitude(model)
+        grad_l2 = gradient_l2_norm(model)
         param_update_mag = update_magnitude(model, args.lr, grad_mag)
         param_update_ratio = update_ratio(model, args.lr, weight_mag, grad_mag)
         losses['weight_mag'] = weight_mag
         losses['grad_mag'] = grad_mag
+        losses['grad_l2'] = grad_l2
         losses['update_mag'] = param_update_mag
         losses['update_ratio'] = param_update_ratio
 

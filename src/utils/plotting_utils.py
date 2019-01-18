@@ -14,7 +14,8 @@ __all__ = ['AverageMeter',
            'count_parameters',
            'count_parameters_in_list',
            'parameter_magnitude', 
-           'gradient_magnitude', 
+           'gradient_magnitude',
+           'gradient_l2_norm',
            'update_magnitude', 
            'update_ratio']
 
@@ -92,6 +93,19 @@ def gradient_magnitude(model):
         if p.requires_grad and p.grad is not None:
             mag += t.sum(t.abs(p.grad.data.cpu()))
     return mag
+
+
+def gradient_l2_norm(model):
+    """
+    Computes the l2 norm of the current gradient
+    (Something to be plotted)
+    """
+    mag = 0
+    for p in model.parameters():
+        if p.requires_grad and p.grad is not None:
+            mag += t.sum(p.grad.data.cpu()**2)
+    return t.sqrt(mag)
+
 
 
 def update_magnitude(model, lr, grad_magnitude=None):
