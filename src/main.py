@@ -873,25 +873,43 @@ def get_defaults(script_name):
     #######
     # Fast training tests
     #######
-    elif script == "r2fasterr_part_1":
+    elif script == "r2fasterr_part_1": # fixed grad drop @ every widen and deepen
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 60,
+            "epochs": 90,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 256,
             "workers": 6,
-            "widen_times": [20019*5*2,20019*5*3],
-            "deepen_times": [20019*5,20019*5*4],
+            "widen_times": [5005*30], # 30 epochs
+            "deepen_times": [5005*15], # 15 epochs
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20019*30, 20019*45],
+            "lr_drops": [5005*15, 5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 1000.0
+            "grad_clip": 1500.0
         }
-    elif script == "r2fasterr_part_2":
+    elif script == "r2fasterr_part_2": # split grad drops during widenings
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*30], # 30 epochs
+            "deepen_times": [5005*15], # 15 epochs
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*15, 5005*30, 5005*60], # 30, 60
+            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
+            "grad_clip": 1500.0
+        }
+    elif script == "r2fasterr_part_3": # Only lr drops when there usually are in training a resnet18
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -901,15 +919,15 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [], # unused (probably widen at 30 and 60, deepen at 45 and 75)
+            "widen_times": [], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20019*30, 20019*45],
+            "lr_drops": [5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 1000.0
+            "grad_clip": 1500.0
         }
-    elif script == "r2fasterr_part_3":
+    elif script == "r2fasterr_part_4": # Training student network to completion
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -925,9 +943,9 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
             "lr_drop_mag": [10.0],
-            "grad_clip": 1000.0
+            "grad_clip": 1500.0
         }
-    elif script == "r2fasterr_part_4":
+    elif script == "r2fasterr_part_5": # Training teacher network to completion
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -937,13 +955,13 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20019*5],
-            "deepen_times": [20019*10,20019*15],
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20019*30, 20019*45],
+            "lr_drops": [5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 1000.0
+            "grad_clip": 1500.0
         }
 
 
@@ -1274,16 +1292,18 @@ if __name__ == "__main__":
         double_widen_and_deepen_run(args)
 
     #######
-    # Fast training tests
+    # Fast training tests, using resnet18
     #######
     elif script == "r2fasterr_part_1":
-        r2r_faster_test_part_1(args)
+        r2r_faster_test_redo(args, "transforms_fixed_lr_drop_each_transform")
     elif script == "r2fasterr_part_2":
-        r2r_faster_test_part_2(args)
+        r2r_faster_test_redo(args, "transforms_lr_drop_split_between_widen_and_deepen")
     elif script == "r2fasterr_part_3":
-        r2r_faster_test_part_3(args)
+        r2r_faster_test_redo(args, "transforms_lr_schedule_unchanged")
     elif script == "r2fasterr_part_4":
-        r2r_faster_test_part_4(args)
+        r2r_faster_test_redo_18(args, "student_arch")
+    elif script == "r2fasterr_part_5":
+        r2r_faster_test_redo(args, "teacher_arch")
 
     #######
     # Fast training tests, with resnet18
