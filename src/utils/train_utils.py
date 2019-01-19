@@ -88,8 +88,8 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         print("Epoch {epoch} validation:".format(epoch=start_epoch))
         model.eval()
         validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
-        avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, start_epoch*len(train_loader),
-                                           writer, "val/", args)
+        _, _, avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer,
+                                                 start_epoch*len(train_loader), writer, "val/", args)
 
         # Log the initial validation stats
         for key in avg_val_losses:
@@ -110,7 +110,8 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         model.eval()
         cur_global_iter = (epoch + 1) * len(train_loader)
         validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
-        avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer, cur_global_iter, writer, "val/", args)
+        model, optimizer, avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer,
+                                                             cur_global_iter, writer, "val/", args)
 
         # Logging per epoch
         for key in avg_val_losses:
@@ -144,8 +145,8 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
     :param writer: A tensorboardX summary writer
     :param tb_prefix: A prefix to prepend to any tensorboard logging (to differentiate between train and val plots in
         tensorboard).
-    :return: A dictionary of losses, keyed by strings, the 'name' for each loss.
     :param args: Argparser arguments, used to provide model specific parameters.
+    :return: The updated model (may have changed architecture), optimizer and a dictionary of losses, keyed by strings, the 'name' for each loss.
     """
     # Average meters for the losses and times, for the progress bar
     batch_total_time = AverageMeter()
@@ -187,5 +188,5 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
 
     bar.close()
 
-    # return the average losses (as floats)
-    return {key: avg_losses_dict[key].avg for key in avg_losses_dict}
+    # return the model, optimizer and average losses (as floats)
+    return model, optimizer, {key: avg_losses_dict[key].avg for key in avg_losses_dict}

@@ -235,9 +235,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     losses['accuracy@1'], losses['accuracy@5'] = accuracy(ys_pred, ys, topk=(1,5))
 
     # Hackily keep track of model flops using the args/options dictionary
-    if not hasattr(args, "total_flops"):
+    if iter == 0 or not hasattr(args, "total_flops"):
         args.total_flops = 0
-    if not hasattr(args, "cur_model_flops_per_update") or iter in args.widen_times or iter in args.deepen_times:
+    if iter == 0 or not hasattr(args, "cur_model_flops_per_update") or iter in args.widen_times or iter in args.deepen_times:
         args.cur_model_flops_per_update = model_flops(model, xs)
     args.total_flops += args.cur_model_flops_per_update
     losses['iter_flops'] = args.cur_model_flops_per_update
@@ -684,8 +684,8 @@ def net_2_deeper_net_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model = resnet10(thin=True, thinning_ratio=16)
-    model.deepen([1, 1, 1, 1])
+    model = resnet18(thin=True, thinning_ratio=16)
+    # model.deepen([1, 1, 1, 1])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
