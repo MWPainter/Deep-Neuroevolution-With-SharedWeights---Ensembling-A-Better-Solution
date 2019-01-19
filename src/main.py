@@ -1032,7 +1032,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 0.25
+            "grad_clip": 1.0
         }
     elif script == "r2fasterr_redo_part_1": # thin resnet10 -> resnet18
         return {
@@ -1050,7 +1050,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
+            "grad_clip": 1.0
         }
     elif script == "r2fasterr_redo_part_2": # resnet10->18 at start
         return {
@@ -1068,7 +1068,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
+            "grad_clip": 1.0
         }
     elif script == "r2fasterr_redo_part_3": # resnet10
         return {
