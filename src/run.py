@@ -393,7 +393,7 @@ def net_2_net_overfit_example(args):
     args.shard = "deepen_teacher"
     args.total_flops = 0
     args.lr = orig_lr
-    args.weight_decay = 1.0e-6 # remove weight decay mostly
+    args.weight_decay = 1.0e-5 # remove weight decay mostly
     initial_model = resnet10(thin=True, thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
@@ -405,7 +405,8 @@ def net_2_net_overfit_example(args):
     args.shard = "deepen_student"
     args.total_flops = 0
     args.lr = orig_lr / 5.0
-    args.weight_decay = 3.0e-3
+    # args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-5
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -413,7 +414,7 @@ def net_2_net_overfit_example(args):
     args.shard = "widen_teacher"
     args.total_flops = 0
     args.lr = orig_lr
-    args.weight_decay = 1.0e-6 # remove weight decay mostly
+    args.weight_decay = 1.0e-5 # less weight decay mostly
     initial_model = resnet18(thinning_ratio=16*1.414)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
@@ -425,9 +426,19 @@ def net_2_net_overfit_example(args):
     args.shard = "widen_student"
     args.total_flops = 0
     args.lr = orig_lr / 5.0
-    args.weight_decay = 3.0e-3
+    # args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-5
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+
+    # Random init comparison
+    args.shard = "random_init"
+    args.total_flops = 0
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-5 # less weight decay mostly
+    initial_model = resnet18(thinning_ratio=16)
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+                               _update_op, _validation_loss, arg
 
 
 
@@ -638,8 +649,10 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "R2R_student"
     args.total_flops = 0
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 2.0e-3
     args.lr = orig_lr / 5.0
-    args.weight_decay = 2.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -650,8 +663,10 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "NetMorph_student"
     args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 1.0e-5
+    # args.lr = orig_lr
+    # args.weight_decay = 1.0e-5
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -663,8 +678,10 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
-    args.lr = orig_lr / 10.0
-    args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 10.0
+    # args.weight_decay = 3.0e-3
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -674,8 +691,10 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
-    args.lr = orig_lr / 2.0
-    args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 2.0
+    # args.weight_decay = 1.0e-3
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -694,8 +713,10 @@ def net_2_wider_net_resnet(args):
     model.widen(scaling_factor)
     args.shard = "Net2Net_student"
     args.total_flops = 0
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -771,7 +792,7 @@ def net_2_wider_net_resnet_hyper_search(args):
     # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
     # other function preserving transforms
     for lr_drop in [1.0, 2.0, 5.0, 10.0]:
-        for weight_decay in [1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
+        for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
 
             # Set args
             args.lr = orig_lr / lr_drop
@@ -847,8 +868,10 @@ def net_2_deeper_net_resnet(args):
     model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 3.0e-3
     args.lr = orig_lr / 5.0
-    args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -859,8 +882,10 @@ def net_2_deeper_net_resnet(args):
     model = cudafy(model)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
-    args.lr = orig_lr / 10.0
-    args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 10.0
+    # args.weight_decay = 3.0e-3
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -870,8 +895,10 @@ def net_2_deeper_net_resnet(args):
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 1.0e-3
+    # args.lr = orig_lr
+    # args.weight_decay = 1.0e-3
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -892,8 +919,10 @@ def net_2_deeper_net_resnet(args):
     model = cudafy(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1108,8 +1137,10 @@ def r_2_wider_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.widen_times
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 2.0e-3
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 2.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1119,8 +1150,10 @@ def r_2_wider_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.widen_times
-    args.lr_drop_mag = [2.0]
-    args.weight_decay = 2.0e-3
+    # args.lr_drop_mag = [2.0]
+    # args.weight_decay = 2.0e-3
+    args.lr_drop_mag = [5.0]
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1130,8 +1163,10 @@ def r_2_wider_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.widen_times
-    args.lr_drop_mag = [10.0]
-    args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [10.0]
+    # args.weight_decay = 3.0e-3
+    args.lr_drop_mag = [5.0]
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1156,7 +1191,8 @@ def r_2_wider_r_resnet(args):
     args.lr = orig_lr / 2.0
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1169,7 +1205,8 @@ def r_2_wider_r_resnet(args):
     args.lr = orig_lr
     args.lr_drops = []
     args.lr_drop_mag = 0.0
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
@@ -1182,7 +1219,8 @@ def r_2_wider_r_resnet(args):
     args.lr = orig_lr
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
@@ -1215,8 +1253,10 @@ def r_2_deeper_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.deepen_times
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 3.0e-3
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1227,8 +1267,10 @@ def r_2_deeper_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.deepen_times
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 1.0e-3
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1239,8 +1281,10 @@ def r_2_deeper_r_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.lr_drops = args.deepen_times
-    args.lr_drop_mag = [10.0]
-    args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [10.0]
+    # args.weight_decay = 3.0e-3
+    args.lr_drop_mag = [5.0]
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1254,7 +1298,8 @@ def r_2_deeper_r_resnet(args):
     args.lr = orig_lr
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -1267,7 +1312,8 @@ def r_2_deeper_r_resnet(args):
     args.lr = orig_lr
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
@@ -1280,7 +1326,8 @@ def r_2_deeper_r_resnet(args):
     args.lr = orig_lr
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-3
+    # args.weight_decay = 1.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
