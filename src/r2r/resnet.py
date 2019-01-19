@@ -147,9 +147,13 @@ class BasicBlock(nn.Module):
 
         # scaled inits for params if init_scale is not none
         if init_scale is not None:
-            conv1_init = init_scale * np.random.randn(inplanes, planes, 3, 3).astype(np.float32)
+            bound = np.sqrt(3.0) * init_scale
+            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 3, 3)).astype(np.float32)
+            # conv1_init = init_scale * np.random.randn(inplanes, planes, 3, 3).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
-            conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
+            bound = np.sqrt(3.0) * init_scale
+            conv2_init = np.random.uniform(-bound, bound, size=(planes, planes, 3, 3)).astype(np.float32)
+            # conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
 
         # R2DeeperR
@@ -164,7 +168,6 @@ class BasicBlock(nn.Module):
             conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type=init_type, std=init_scale)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_filter_init)
 
-            conv2_filter_shape = (planes * self.expansion, planes, 3, 3)
             conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type=init_type, std=init_scale, alpha=-1.0)
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_filter_init)
 

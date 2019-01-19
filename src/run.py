@@ -51,6 +51,42 @@ def _make_optimizer_fn(model, lr, weight_decay, args, momentum=None):
 
 
 
+def _make_optimizer_fn_adagrad(model, lr, weight_decay, args, momentum=None):
+    """
+    The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
+
+    :param model: The model to make an optimizer for.
+    :param lr: The learning rate to use
+    :param weight_decay: THe weight decay to use
+    :param args: Unused
+    :param momentum: Unused
+    :return: The optimizer for the network optimizer, which is passed into the remaining
+        training loop functions
+    """
+    return t.optim.Adagrad(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+
+
+
+
+def _make_optimizer_fn_rms(model, lr, weight_decay, args, momentum=None):
+    """
+    The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
+
+    :param model: The model to make an optimizer for.
+    :param lr: The learning rate to use
+    :param weight_decay: THe weight decay to use
+    :param args: Unused
+    :param momentum: Unused
+    :return: The optimizer for the network optimizer, which is passed into the remaining
+        training loop functions
+    """
+    return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True, momentum=args.momentum)
+
+
+
+
+
 def _make_optimizer_fn_sgd(model, lr, weight_decay, args, momentum=None):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
@@ -1504,7 +1540,7 @@ def r2r_faster_test_part_4(args):
 
 
 
-def r2r_faster_test_redo(args, shardname):
+def r2r_faster_test_redo(args, shardname, optimizer='sgd'):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
@@ -1521,10 +1557,20 @@ def r2r_faster_test_redo(args, shardname):
     train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
     val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
+
+
     # R2R
     model = resnet10(thin=True, thinning_ratio=1.414)
     args.shard = shardname
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
 

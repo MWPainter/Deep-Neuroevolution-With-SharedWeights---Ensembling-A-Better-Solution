@@ -1328,9 +1328,9 @@ if __name__ == "__main__":
     elif script == "r2fasterr_redo_part_0":
         r2r_faster_test_redo(args, "widened_and_deepened")
     elif script == "r2fasterr_redo_part_1":
-        r2r_faster_test_redo(args, "widened")
+        r2r_faster_test_redo(args, "widened", optimizer='rms')
     elif script == "r2fasterr_redo_part_2":
-        r2r_faster_test_redo(args, "deepened")
+        r2r_faster_test_redo(args, "deepened", optimizer='adagrad')
     elif script == "r2fasterr_redo_part_3":
         r2r_faster_test_redo(args, "teacher_arch")
     elif script == "r2fasterr_redo_part_4":
