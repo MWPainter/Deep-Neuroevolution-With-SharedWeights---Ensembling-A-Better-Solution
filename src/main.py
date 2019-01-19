@@ -803,6 +803,11 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0
         }
+
+
+
+
+
     #######
     # Examples where things go wrong
     #######
@@ -835,7 +840,7 @@ def get_defaults(script_name):
             "batch_size": 32,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*10,1532*20], # unused
+            "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
