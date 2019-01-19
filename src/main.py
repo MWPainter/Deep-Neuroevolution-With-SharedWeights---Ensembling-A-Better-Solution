@@ -1016,6 +1016,24 @@ def get_defaults(script_name):
     #######
     # Fast training tests, with resnet18
     #######
+    elif script == "r2fasterr_redo_part_0": # thin resnet10->18
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 60,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*7], # 30
+            "deepen_times": [5005*15], # 20
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*15, 5005*30], # 30, 60
+            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
+            "grad_clip": 0.25
+        }
     elif script == "r2fasterr_redo_part_1": # thin resnet10 -> resnet18
         return {
             "lr": 0.1,
@@ -1027,7 +1045,7 @@ def get_defaults(script_name):
             "batch_size": 256,
             "workers": 6,
             "widen_times": [5005*15], # 30
-            "deepen_times": [5005*7], # 20
+            "deepen_times": [0], # 20
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
@@ -1045,7 +1063,7 @@ def get_defaults(script_name):
             "batch_size": 64,
             "workers": 6,
             "widen_times": [0],
-            "deepen_times": [0],
+            "deepen_times": [5005*15],
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
@@ -1068,7 +1086,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
+            "grad_clip": 10.0
         }
     elif script == "r2fasterr_redo_part_4": # resnet18
         return {
@@ -1086,79 +1104,7 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
-        }
-    elif script == "r2fasterr_redo_part_5": # thin resnet10->18
-        return {
-            "lr": 0.1,
-            "weight_decay": 1.0e-4,
-            "epochs": 60,
-            "tb_dir": tb_log_dir,
-            "checkpoint_dir": checkpoint_dir,
-            "exp": exp_id,
-            "batch_size": 256,
-            "workers": 6,
-            "widen_times": [5005*13], # 30
-            "deepen_times": [5005*7], # 20
-            "flops_budget": 0, # unused
-            "momentum": 0.9,
-            "lr_drops": [5005*7, 5005*13, 5005*20], # 30, 60
-            "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
-        }
-    elif script == "r2fasterr_redo_part_6": # thin resnet10->18
-        return {
-            "lr": 0.1,
-            "weight_decay": 1.0e-4,
-            "epochs": 60,
-            "tb_dir": tb_log_dir,
-            "checkpoint_dir": checkpoint_dir,
-            "exp": exp_id,
-            "batch_size": 256,
-            "workers": 6,
-            "widen_times": [5005*15], # 30
-            "deepen_times": [5005*7], # 20
-            "flops_budget": 0, # unused
-            "momentum": 0.9,
-            "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 0.25
-        }
-    elif script == "r2fasterr_redo_part_7": # thin resnet10->18
-        return {
-            "lr": 0.1,
-            "weight_decay": 1.0e-4,
-            "epochs": 60,
-            "tb_dir": tb_log_dir,
-            "checkpoint_dir": checkpoint_dir,
-            "exp": exp_id,
-            "batch_size": 256,
-            "workers": 6,
-            "widen_times": [5005*15], # 30
-            "deepen_times": [5005*7], # 20
-            "flops_budget": 0, # unused
-            "momentum": 0.9,
-            "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [10.0],
-            "grad_clip": 0.25
-        }
-    elif script == "r2fasterr_redo_part_8": # thin resnet10->18
-        return {
-            "lr": 0.1,
-            "weight_decay": 1.0e-4,
-            "epochs": 60,
-            "tb_dir": tb_log_dir,
-            "checkpoint_dir": checkpoint_dir,
-            "exp": exp_id,
-            "batch_size": 256,
-            "workers": 6,
-            "widen_times": [5005*15], # 30
-            "deepen_times": [5005*7], # 20
-            "flops_budget": 0, # unused
-            "momentum": 0.9,
-            "lr_drops": [5005*7, 5005*15, 5005*30], # 30, 60
-            "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 0.25
+            "grad_clip": 10.0
         }
 
 
@@ -1379,22 +1325,22 @@ if __name__ == "__main__":
     #######
     # Fast training tests, with resnet18
     #######
+    elif script == "r2fasterr_redo_part_0":
+        r2r_faster_test_redo(args, "widened_and_deepened")
     elif script == "r2fasterr_redo_part_1":
         r2r_faster_test_redo(args, "widened")
     elif script == "r2fasterr_redo_part_2":
-        r2r_faster_test_redo(args, "student_arch")
+        r2r_faster_test_redo(args, "deepened")
     elif script == "r2fasterr_redo_part_3":
         r2r_faster_test_redo(args, "teacher_arch")
     elif script == "r2fasterr_redo_part_4":
-        r2r_faster_test_redo_18(args, "kind_of_student_arch")
-    elif script == "r2fasterr_redo_part_5":
-        r2r_faster_test_redo(args, "widened_attempt_two")
-    elif script == "r2fasterr_redo_part_6":
-        r2r_faster_test_redo(args, "widened_attempt_three")
-    elif script == "r2fasterr_redo_part_7":
-        r2r_faster_test_redo(args, "widened_attempt_three")
-    elif script == "r2fasterr_redo_part_8":
-        r2r_faster_test_redo(args, "widened_attempt_four")
+        r2r_faster_test_redo_18(args, "student_arch")
+    # elif script == "r2fasterr_redo_part_6":
+    #     r2r_faster_test_redo(args, "widened_attempt_three")
+    # elif script == "r2fasterr_redo_part_7":
+    #     r2r_faster_test_redo(args, "widened_attempt_three")
+    # elif script == "r2fasterr_redo_part_8":
+    #     r2r_faster_test_redo(args, "widened_attempt_four")
 
 
     else:
