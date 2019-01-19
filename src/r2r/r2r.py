@@ -526,7 +526,6 @@ def _widen_output_channels_(prev_layer, extra_channels, init_type, multiplicativ
             prev_matrix_init_type = init_type if not is_prev_layer_sparse else 'zero'
             prev_matrix = _extend_matrix_out_weights(matrix_extra_shape, prev_matrix, prev_matrix_init_type, net_morph_add_noise)
 
-
         # zero pad the bias
         if module_has_bias:
             prev_bias = _zero_pad_1d(prev_bias, extra_channels)

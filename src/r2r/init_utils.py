@@ -154,6 +154,10 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
     if existing_filter is not None:
         canvas[:C1,:,:,:] = existing_filter
 
+    # If init with zero's, then we're done
+    if init_type == 'zero':
+        return canvas
+
     # Initialize the new weights, and copy that into the canvas (twice).
     new_channels_weights = None
     if init_type == 'He':
@@ -283,6 +287,10 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
     canvas = np.zeros((C, I1+twoI2, H, W)).astype(np.float32)
     if existing_filter is not None:
         canvas[:,:I1,:,:] = existing_filter
+
+    # If init with zero's, then we're done
+    if init_type == 'zero':
+        return canvas
 
     # Initialize the new weights, and copy that into the canvas (twice).
     new_channels_weights = None
