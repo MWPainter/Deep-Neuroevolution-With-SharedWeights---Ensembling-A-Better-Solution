@@ -56,8 +56,10 @@ def _conv_xavier_initialize(filter_shape, override_input_channels=None, override
         out_channels = override_output_channels
     filter_shape = (out_channels, in_channels, width, height)    
     
-    scale = np.sqrt(2.0 / (width*height(in_channels + out_chanels)))
-    return scale * np.random.randn(*filter_shape).astype(np.float32) 
+    scale = np.sqrt(2.0 / (width*height(in_channels + out_channels)))
+    bound = np.sqrt(3.0) * scale
+    return np.random.uniform(-bound, bound, size=filter_shape).astype(np.float32)
+    # return scale * np.random.randn(*filter_shape).astype(np.float32)
     
     
     
@@ -88,7 +90,9 @@ def _conv_he_initialize(filter_shape, override_input_channels=None):
     filter_shape = (out_channels, in_channels, width, height)    
                     
     scale = np.sqrt(2.0 / (in_channels*width*height))
-    return scale * np.random.randn(*filter_shape).astype(np.float32)
+    bound = np.sqrt(3.0) * scale
+    return np.random.uniform(-bound, bound, size=filter_shape).astype(np.float32)
+    # return scale * np.random.randn(*filter_shape).astype(np.float32)
 
 
 
@@ -104,7 +108,9 @@ def _conv_match_scale_initialize(filter_shape, scale=1.0):
     :param scale: The standard deviation of the noise to add
     :return: A numpy array, of shape 'filter_shape', randomly initialized according to He initialization.
     """
-    return scale * np.random.randn(*filter_shape).astype(np.float32)
+    bound = np.sqrt(3.0) * scale
+    return np.random.uniform(-bound, bound, size=filter_shape).astype(np.float32)
+    # return scale * np.random.randn(*filter_shape).astype(np.float32)
 
 
 
