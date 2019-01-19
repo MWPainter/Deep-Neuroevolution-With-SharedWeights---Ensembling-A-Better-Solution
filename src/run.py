@@ -366,7 +366,7 @@ def net_2_net_overfit_example(args):
     model = copy.deepcopy(teacher_model)
     model.deepen([1, 1, 1, 1])
     model = cudafy(model)
-    args.shard = "R2R_student"
+    args.shard = "deepen_student"
     args.total_flops = 0
     args.lr = orig_lr / 5.0
     args.weight_decay = 3.0e-3
@@ -425,42 +425,50 @@ def r_2_r_weight_init_example(args):
 
     orig_lr = args.lr
 
-    # Teacher network training loop
-    args.shard = "deepen_teacher"
+    # He init widen
+    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model.init_scheme = 'He'
+    args.shard = "widen_student_he"
     args.total_flops = 0
     args.lr = orig_lr
-    args.weight_decay = 1.0e-6 # remove weight decay mostly
-    initial_model = resnet10(thin=True, thinning_ratio=16)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op, _validation_loss, args)
+    args.lr_drops = args.widen_times
+    args.lr_drop_mag = [5.0]
+    args.weight_decay = 2.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.deepen([1, 1, 1, 1])
-    model = cudafy(model)
-    args.shard = "R2R_student"
+    # He init deepen
+    model = resnet10(thin=True, thinning_ratio=16)
+    model.init_scheme = 'He'
+    args.deepen_indidces_list = [[1,1,1,1]]
+    args.shard = "deepen_student_he"
     args.total_flops = 0
-    args.lr = orig_lr / 5.0
+    args.lr = orig_lr
+    args.lr_drops = args.deepen_times
+    args.lr_drop_mag = [5.0]
     args.weight_decay = 3.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
-    # Teacher network training loop
-    args.shard = "widen_teacher"
+    # Scaled init widen
+    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    args.shard = "widen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
-    args.weight_decay = 1.0e-6 # remove weight decay mostly
-    initial_model = resnet18(thinning_ratio=16*1.414)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op, _validation_loss, args)
+    args.lr_drops = args.widen_times
+    args.lr_drop_mag = [5.0]
+    args.weight_decay = 2.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.widen(1.414)
-    model = cudafy(model)
-    args.shard = "widen_student"
+    # He init deepen
+    model = resnet10(thin=True, thinning_ratio=16)
+    args.deepen_indidces_list = [[1,1,1,1]]
+    args.shard = "deepen_student_std_match"
     args.total_flops = 0
-    args.lr = orig_lr / 5.0
+    args.lr = orig_lr
+    args.lr_drops = args.deepen_times
+    args.lr_drop_mag = [5.0]
     args.weight_decay = 3.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)

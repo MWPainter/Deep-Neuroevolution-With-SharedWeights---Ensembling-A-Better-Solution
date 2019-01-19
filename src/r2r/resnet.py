@@ -405,7 +405,7 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x),
-                 function_preserving=True, use_residual=True, morphism_scheme="r2r"):
+                 function_preserving=True, use_residual=True, morphism_scheme="r2r", init_scheme='match_std'):
         super(ResNet, self).__init__()
 
         self.block = block
@@ -417,6 +417,7 @@ class ResNet(nn.Module):
         self.r = r
         self.use_residual = use_residual
         self.morphism_scheme = morphism_scheme.lower()
+        self.init_scheme = init_scheme
 
         self.inplanes = r(64)
         self.conv1 = nn.Conv2d(3, r(64), kernel_size=7, stride=2, padding=3,
@@ -491,7 +492,7 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        ratio = 1e-4
+        ratio = 1e-4 if self.init_scheme == 'match_std' else 1.0
         self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * ratio)
         self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * ratio)
         self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
@@ -506,7 +507,7 @@ class ResNet(nn.Module):
     def widen(self, ratio):
         if not self.morphism_scheme == "net2net":
             use_network_morphism_scheme = self.morphism_scheme == "netmorph"
-            widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type='match_std',
+            widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type=self.init_scheme,
                            function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8,
                            net_morph=use_network_morphism_scheme)
         else:

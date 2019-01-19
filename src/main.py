@@ -16,6 +16,7 @@ from run import net_2_wider_net_resnet_hyper_search, net_2_deeper_net_resnet_hyp
 from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
 from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
+from run import r_2_r_weight_init_example, net_2_net_overfit_example
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
@@ -814,8 +815,8 @@ def get_defaults(script_name):
     elif script == "n2n_overfit_problem":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "weight_decay": 1.0e-6,
+            "epochs": 30,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -832,7 +833,7 @@ def get_defaults(script_name):
     elif script == "r2r_weight_init_problem":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-6,
+            "weight_decay": 1.0e-3,
             "epochs": 40,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1342,6 +1343,14 @@ if __name__ == "__main__":
         r_2_wider_r_resnet(args)
     elif script == "r2dr":
         r_2_deeper_r_resnet(args)
+
+    ######
+    # Anomolies in training examples
+    ######
+    elif script == "n2n_overfit_problem":
+        net_2_net_overfit_example(args)
+    elif script == "r2r_weight_init_problem":
+        r_2_r_weight_init_example(args)
 
     #######
     # Learning rate adaption tests
