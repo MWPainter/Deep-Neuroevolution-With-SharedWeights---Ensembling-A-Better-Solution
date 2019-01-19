@@ -33,7 +33,7 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay, args, momentum):
+def _make_optimizer_fn(model, lr, weight_decay, args, momentum=None):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
