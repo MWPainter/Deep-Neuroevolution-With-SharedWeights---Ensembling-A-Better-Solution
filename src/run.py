@@ -155,22 +155,8 @@ def _adjust_learning_rate(args, iter, optimizer):
 
     # Momentum (if any) is turned off for a while to avoid exploding gradients for the first epoch
     momentum_switch_on_times = [w + 5005 for w in args.widen_times] + [d + 5005 for d in args.deepen_times]
-    if iter in momentum_switch_on_times:
+    if hasattr(optimizer, 'momentum') and iter in momentum_switch_on_times:
         optimizer.momentum = args.momentum
-
-    # Very hackily slowly raise the learning rate from tiny after a widening
-    # if iter in args.widen_times or iter in args.deepen_times:
-    #     args.lr /= 1.0e4
-    #     for param_group in optimizer.param_groups:
-    #         param_group['lr'] = args.lr
-    # speed_up_times = []
-    # for l in [250,500,1250,2500]:
-    #     speed_up_times.extend([w+l for w in args.widen_times])
-    #     speed_up_times.extend([w+l for w in args.deepen_times])
-    # if iter in speed_up_times:
-    #     args.lr *= 10
-    #     for param_group in optimizer.param_groups:
-    #         param_group['lr'] = args.lr
 
 
 

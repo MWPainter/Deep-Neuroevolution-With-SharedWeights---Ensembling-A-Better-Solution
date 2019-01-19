@@ -803,6 +803,45 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0
         }
+    #######
+    # Examples where things go wrong
+    #######
+    elif script == "n2n_overfit_problem":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "r2r_weight_init_problem":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-6,
+            "epochs": 40,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 32,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*10,1532*20], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
 
 
 
