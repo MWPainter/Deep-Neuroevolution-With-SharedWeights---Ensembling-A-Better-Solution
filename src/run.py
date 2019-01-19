@@ -11,7 +11,7 @@ from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, gradient_l2_norm, update_magnitude, update_ratio
 from utils import model_flops
 
-from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26
+from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26, resnet10_cifar, resnet18_cifar
 
 
 
@@ -394,7 +394,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 1.0e-5 # remove weight decay mostly
-    initial_model = resnet10(thin=True, thinning_ratio=16)
+    initial_model = resnet10_cifar(thin=True, thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -415,7 +415,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 1.0e-5 # less weight decay mostly
-    initial_model = resnet18(thinning_ratio=16*1.414)
+    initial_model = resnet18_cifar(thinning_ratio=16*1.414)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -436,7 +436,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 1.0e-5 # less weight decay mostly
-    initial_model = resnet18(thinning_ratio=16)
+    initial_model = resnet18_cifar(thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -473,7 +473,7 @@ def r_2_r_weight_init_example(args):
     orig_lr = args.lr
 
     # He init widen
-    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
     model.init_scheme = 'He'
     args.shard = "widen_student_he"
     args.total_flops = 0
@@ -485,9 +485,9 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # He init deepen
-    model = resnet10(thin=True, thinning_ratio=16)
+    model = resnet10_cifar(thin=True, thinning_ratio=16)
     model.init_scheme = 'He'
-    args.deepen_indidces_list = [[1,1,1,1]]
+    args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_he"
     args.total_flops = 0
     args.lr = orig_lr
@@ -498,7 +498,7 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # Scaled init widen
-    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
     args.shard = "widen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
@@ -509,8 +509,8 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # He init deepen
-    model = resnet10(thin=True, thinning_ratio=16)
-    args.deepen_indidces_list = [[1,1,1,1]]
+    model = resnet10_cifar(thin=True, thinning_ratio=16)
+    args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
@@ -640,7 +640,7 @@ def net_2_wider_net_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = orig_wd
-    initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
@@ -687,7 +687,7 @@ def net_2_wider_net_resnet(args):
 
 
     # Random init start
-    model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor)
     model.widen(scaling_factor)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
@@ -700,7 +700,7 @@ def net_2_wider_net_resnet(args):
 
 
     # Net2Net teacher
-    initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.lr = orig_lr
@@ -754,13 +754,13 @@ def net_2_wider_net_resnet_hyper_search(args):
     args.shard = "teacher_w_residual"
     args.total_flops = 0
     args.weight_decay = 1.0e-3
-    initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor)
     r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
 
     # Net2Net teacher
-    initial_model = resnet18(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.weight_decay = 1.0e-3
@@ -809,7 +809,7 @@ def net_2_wider_net_resnet_hyper_search(args):
 
 
             # Random init start
-            model = resnet18(thin=True, thinning_ratio=16*scaling_factor)
+            model = resnet18_cifar(thin=True, thinning_ratio=16*scaling_factor)
             model.widen(scaling_factor)
             args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
             args.total_flops = 0
@@ -857,7 +857,7 @@ def net_2_deeper_net_resnet(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 1.0e-3
-    initial_model = resnet10(thin=True, thinning_ratio=16)
+    initial_model = resnet10_cifar(thin=True, thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op,
                                _validation_loss, args)
@@ -890,7 +890,7 @@ def net_2_deeper_net_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model = resnet18(thin=True, thinning_ratio=16)
+    model = resnet18_cifar(thin=True, thinning_ratio=16)
     # model.deepen([1, 1, 1, 1])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
@@ -903,7 +903,7 @@ def net_2_deeper_net_resnet(args):
                _validation_loss, args)
 
     # Net2Net teacher
-    initial_model = resnet10(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
+    initial_model = resnet10_cifar(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.lr = orig_lr
@@ -963,12 +963,12 @@ def net_2_deeper_net_resnet_hyper_search(args):
     # Teacher network training loop
     args.shard = "teacher_w_residual"
     args.total_flops = 0
-    initial_model = resnet10(thin=True, thinning_ratio=16)
+    initial_model = resnet10_cifar(thin=True, thinning_ratio=16)
     r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                                _validation_loss, args)
 
     # Net2Net teacher
-    initial_model = resnet10(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
+    initial_model = resnet10_cifar(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.weight_decay = 1.0e-3
@@ -977,7 +977,7 @@ def net_2_deeper_net_resnet_hyper_search(args):
 
     # R2R
     model = copy.deepcopy(r2r_teacher_model)
-    model.deepen([1,1,1,1])
+    model.deepen([2,2,0,0])
     model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
@@ -997,7 +997,7 @@ def net_2_deeper_net_resnet_hyper_search(args):
             # RandomPadding
             model = copy.deepcopy(r2r_teacher_model)
             model.function_preserving = False
-            model.deepen([1,1,1,1])
+            model.deepen([2,2,0,0])
             model = cudafy(model)
             args.shard = "RandomPadding_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
             args.total_flops = 0
@@ -1006,8 +1006,8 @@ def net_2_deeper_net_resnet_hyper_search(args):
 
 
             # Random init start
-            model = resnet10(thin=True, thinning_ratio=16)
-            model.deepen([1,1,1,1])
+            model = resnet10_cifar(thin=True, thinning_ratio=16)
+            model.deepen([2,2,0,0])
             model = cudafy(model)
             args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
             args.total_flops = 0
@@ -1017,7 +1017,7 @@ def net_2_deeper_net_resnet_hyper_search(args):
             # Net2Net
             model = copy.deepcopy(n2n_teacher_model)
             model = cudafy(model)
-            model.deepen([1,1,1,1], minibatch=cudafy(next(iter(train_loader))[0]))
+            model.deepen([2,2,0,0], minibatch=cudafy(next(iter(train_loader))[0]))
             model = cudafy(model)
             args.shard = "Net2Net_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
             args.total_flops = 0
@@ -1132,7 +1132,7 @@ def r_2_wider_r_resnet(args):
     orig_lr = args.lr
 
     # R2R
-    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
     args.shard = "R2R_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1145,7 +1145,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # Net2Net
-    model = resnet18(thin=True, thinning_ratio=16*1.414, morphism_scheme="net2net")
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414, morphism_scheme="net2net")
     args.shard = "Net2Net_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1158,7 +1158,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # RandomPadding
-    model = resnet18(thin=True, thinning_ratio=16*1.414, function_preserving=False)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414, function_preserving=False)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1171,7 +1171,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # # NetMorph
-    model = resnet18(thin=True, thinning_ratio=16*1.414, morphism_scheme="netmorph")
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414, morphism_scheme="netmorph")
     args.shard = "NetMorph_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1182,7 +1182,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
     model.widen(1.414)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
@@ -1197,7 +1197,7 @@ def r_2_wider_r_resnet(args):
                _validation_loss, args)
 
     # Teacher network training loop
-    model = resnet18(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
     args.shard = "teacher_w_residual"
     args.total_flops = 0
     args.widen_times = []
@@ -1211,7 +1211,7 @@ def r_2_wider_r_resnet(args):
                                _validation_loss, args)
 
     # Net2Net teacher
-    model = resnet18(thin=True, thinning_ratio=16*1.414, use_residual=False)
+    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414, use_residual=False)
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.widen_times = []
@@ -1247,8 +1247,8 @@ def r_2_deeper_r_resnet(args):
     orig_lr = args.lr
 
     # R2R
-    model = resnet10(thin=True, thinning_ratio=16)
-    args.deepen_indidces_list = [[1,1,1,1]]
+    model = resnet10_cifar(thin=True, thinning_ratio=16)
+    args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "R2R_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1261,8 +1261,8 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # Net2Net
-    model = resnet10(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
-    args.deepen_indidces_list = [[1,1,1,1]]
+    model = resnet10_cifar(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
+    args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "Net2Net_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1275,8 +1275,8 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # RandomPadding
-    model = resnet10(thin=True, thinning_ratio=16, function_preserving=False)
-    args.deepen_indidces_list = [[1,1,1,1]]
+    model = resnet10_cifar(thin=True, thinning_ratio=16, function_preserving=False)
+    args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1289,8 +1289,8 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # Random init start
-    model = resnet10(thin=True, thinning_ratio=16)
-    model.deepen([1,1,1,1])
+    model = resnet10_cifar(thin=True, thinning_ratio=16)
+    model.deepen([2,2,0,0])
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
     args.widen_times = []
@@ -1304,7 +1304,7 @@ def r_2_deeper_r_resnet(args):
                _validation_loss, args)
 
     # Teacher network training loop
-    model = resnet10(thin=True, thinning_ratio=16)
+    model = resnet10_cifar(thin=True, thinning_ratio=16)
     args.shard = "teacher_w_residual"
     args.total_flops = 0
     args.widen_times = []
@@ -1318,7 +1318,7 @@ def r_2_deeper_r_resnet(args):
                                _validation_loss, args)
 
     # Net2Net teacher
-    model = resnet10(thin=True, thinning_ratio=16, use_residual=False)
+    model = resnet10_cifar(thin=True, thinning_ratio=16, use_residual=False)
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.widen_times = []
@@ -1387,7 +1387,7 @@ def double_deepen_run(args):
     args.widen_times = []
     if len(args.deepen_times) != 2:
         raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1], [1,1,1,1]]
+    args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
 
     # Make the data loader objects
     train_dataset = CifarDataset(mode="train", labels_as_logits=False)
@@ -1424,7 +1424,7 @@ def double_widen_and_deepen_run(args):
         raise Exception("Widening times needs to be a list of length 2 for this test")
     if len(args.deepen_times) != 2:
         raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1], [1,1,1,1]]
+    args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
 
     # Make the data loader objects
     train_dataset = CifarDataset(mode="train", labels_as_logits=False)

@@ -19,7 +19,7 @@ Code adapted from: https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 
 
-__all__ = ['ResNet', 'resnet10', 'resnet18', 'resnet34', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
+__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet34', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
            'resnet152']
 
 
@@ -168,6 +168,7 @@ class BasicBlock(nn.Module):
             conv1_filter_init = _extend_filter_with_repeated_out_channels(conv1_filter_shape, init_type=init_type, std=init_scale)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_filter_init)
 
+            conv2_filter_shape = (planes * self.expansion, planes, 3, 3)
             conv2_filter_init = _extend_filter_with_repeated_in_channels(conv2_filter_shape, init_type=init_type, std=init_scale, alpha=-1.0)
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_filter_init)
 
@@ -279,11 +280,17 @@ class Bottleneck(nn.Module):
 
         # scaled inits for params if init_scale is not none
         if init_scale is not None:
-            conv1_init = init_scale * np.random.randn(inplanes, planes, 1, 1).astype(np.float32)
+            # conv1_init = init_scale * np.random.randn(inplanes, planes, 1, 1).astype(np.float32)
+            bound = np.sqrt(3.0) * init_scale
+            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
-            conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
+            # conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
+            bound = np.sqrt(3.0) * init_scale
+            conv2_init = np.random.uniform(-bound, bound, size=(planes, planes, 3, 3)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
-            conv3_init = init_scale * np.random.randn(planes, planes * self.expansion, 1, 1).astype(np.float32)
+            # conv3_init = init_scale * np.random.randn(planes, planes * self.expansion, 1, 1).astype(np.float32)
+            bound = np.sqrt(3.0) * init_scale
+            conv3_init = np.random.uniform(-bound, bound, size=(planes, planes * self.expansion, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv3, conv3_init)
 
         # R2DeeperR
@@ -444,7 +451,8 @@ class ResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_uniform_(m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -495,11 +503,14 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        ratio = 1e-4 if self.init_scheme == 'match_std' else 1.0
+        ratio = 1e-1 if self.init_scheme == 'match_std' else 1.0
         self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * ratio)
         self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * ratio)
-        self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
-        self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
+        if len(self.layer3_modules) > 0 and len(self.layer4_modules) > 0:
+            self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
+            self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
+        elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
+            raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
@@ -574,7 +585,7 @@ class ResNet(nn.Module):
 
 
 def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
-    """Constructs a ResNet-18 model.
+    """Constructs a ResNet-10 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -582,6 +593,34 @@ def resnet10(thin=False, thinning_ratio=2, function_preserving=True, use_residua
     if thin:
         r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [1, 1, 1, 1], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    return model
+
+
+
+def resnet10_cifar(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-10 model for cifar.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = lambda x: x
+    if thin:
+        r = reduce_size_function(thinning_ratio)
+    model = ResNet(BasicBlock, [2, 2, 0, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    return model
+
+
+
+def resnet18_cifar(pretrained=False, thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-18 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = lambda x: x
+    if thin:
+        r = reduce_size_function(thinning_ratio)
+    model = ResNet(BasicBlock, [4, 4, 0, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 

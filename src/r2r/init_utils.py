@@ -172,7 +172,7 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
         new_channels_weights = _conv_xavier_initialize((C2,I,H,W), override_output_channels=C1+twoC2)
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([C2,I,H,W])
-        new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale) * 0.01
+        new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale) * 0.1
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale)
@@ -190,7 +190,7 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
 
 
 
-def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=True):
+def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=False):
     """
     We want to extend filter by adding output channels.
 
@@ -227,7 +227,7 @@ def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, in
         new_channels_weights = _conv_xavier_initialize((twoC2,I,H,W), override_output_channels=C1+twoC2)
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([twoC2,I,H,W])
-        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
+        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale) * 0.1
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
@@ -306,7 +306,7 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
         new_channels_weights = _conv_xavier_initialize((C,I2,H,W), override_input_channels=I1+twoI2)
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([C,I2,H,W])
-        new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale)
+        new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale) * 0.1
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale)
@@ -325,7 +325,7 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
 
 
 
-def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=True):
+def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, init_type='He', alpha=1.0, add_noise=False):
     """
     We want to extend filter by adding input channels
 
@@ -361,7 +361,7 @@ def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, ini
         new_channels_weights = _conv_xavier_initialize((C,twoI2,H,W), override_input_channels=I1+twoI2)
     elif init_type == 'match_std':
         scale = np.std(existing_filter) / np.prod([C,twoI2,H,W])
-        new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
+        new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale) * 0.1
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
@@ -379,7 +379,7 @@ def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, ini
     
     
     
-def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_matrix=None, init_type='He', alpha=1.0):
+def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_matrix=None, init_type='He', alpha=1.0, add_noise=False):
     """
     Re-implement _extend_filter_with_repeated_out_channels, but for fully connected layers.
     We can reshape our inputs to just re-use _extend_filter_with_repeated_out_channels.
@@ -391,8 +391,9 @@ def _extend_matrix_with_repeated_out_weights(extending_matrix_shape, existing_ma
     :param alpha: The coefficient of the repeated weights
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_with_repeated_out_channels, extending_matrix_shape, existing_matrix,
-                                 init_type, alpha)
+    return _extend_matrix_helper(extend_fn=_extend_filter_with_repeated_out_channels,
+                                 extending_matrix_shape=extending_matrix_shape, existing_matrix=existing_matrix,
+                                 init_type=init_type, alpha=alpha, add_noise=add_noise)
 
 
 
@@ -409,7 +410,8 @@ def _extend_matrix_out_weights(extending_matrix_shape, existing_matrix=None, ini
     :param init_type: The type of initialization to use for the new weights.
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_out_channels, extending_matrix_shape, existing_matrix, init_type, 1.0, add_noise)
+    return _extend_matrix_helper(extend_fn=_extend_filter_out_channels, extending_matrix_shape=extending_matrix_shape,
+                                 existing_matrix=existing_matrix, init_type=init_type, alpha=1.0, add_noise=add_noise)
     
     
     
@@ -427,14 +429,15 @@ def _extend_matrix_with_repeated_in_weights(extending_matrix_shape, existing_mat
     :param alpha: The coefficient of the repeated weights
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_with_repeated_in_channels, extending_matrix_shape, existing_matrix,
-                                 init_type, alpha)
+    return _extend_matrix_helper(extend_fn=_extend_filter_with_repeated_in_channels,
+                                 extending_matrix_shape=extending_matrix_shape, existing_matrix=existing_matrix,
+                                 init_type=init_type, alpha=alpha)
 
 
 
 
 
-def _extend_matrix_in_weights(extending_matrix_shape, existing_matrix=None, init_type='He',  add_noise=True):
+def _extend_matrix_in_weights(extending_matrix_shape, existing_matrix=None, init_type='He', add_noise=True):
     """
     Re-implement _extend_filter_in_channels, but for fully connected layers.
     We can reshape our inputs to just re-use _extend_filter_in_channels.
@@ -445,7 +448,8 @@ def _extend_matrix_in_weights(extending_matrix_shape, existing_matrix=None, init
     :param init_type: The type of initialization to use for the new weights.
     :return: The new, widened matrix for the fully connected layer
     """
-    return _extend_matrix_helper(_extend_filter_in_channels, extending_matrix_shape, existing_matrix, init_type, 1.0, add_noise)
+    return _extend_matrix_helper(extend_fn=_extend_filter_in_channels, extending_matrix_shape=extending_matrix_shape,
+                                 existing_matrix=existing_matrix, init_type=init_type, alpha=1.0, add_noise=add_noise)
 
 
 
@@ -466,8 +470,10 @@ def _extend_matrix_helper(extend_fn, extending_matrix_shape, existing_matrix=Non
     psuedo_existing_filter = existing_matrix
     if psuedo_existing_filter is not None:
         psuedo_existing_filter = np.expand_dims(np.expand_dims(psuedo_existing_filter, axis=2), axis=3)
-    
-    widened_psuedo_filter = extend_fn(psuedo_extending_filter_shape, psuedo_existing_filter, init_type, alpha, add_noise)
+
+    widened_psuedo_filter = extend_fn(extending_filter_shape=psuedo_extending_filter_shape,
+                                      existing_filter=psuedo_existing_filter, init_type=init_type, alpha=alpha,
+                                      add_noise=add_noise)
     
     return np.squeeze(widened_psuedo_filter)
 
@@ -475,7 +481,7 @@ def _extend_matrix_helper(extend_fn, extending_matrix_shape, existing_matrix=Non
 
 
 
-def _zero_pad_1d(old_val, new_params):
+def _zero_pad_1d(old_val, num_new_params):
     """
     Zero pads an old (1d) tensor to match the new number of outputs
     
@@ -484,7 +490,7 @@ def _zero_pad_1d(old_val, new_params):
     :return: a new, padded tensor
     """
     old_len = old_val.shape[0]
-    canvas = np.zeros((old_len+new_params,), dtype=np.float32)
+    canvas = np.zeros((old_len+num_new_params,), dtype=np.float32)
     canvas[:old_len] = old_val
     return canvas
 
@@ -492,7 +498,7 @@ def _zero_pad_1d(old_val, new_params):
 
 
 
-def _one_pad_1d(old_val, new_params):
+def _one_pad_1d(old_val, num_new_params):
     """
     One pads an old (1d) tensor to match the new number of outputs
     
@@ -501,7 +507,7 @@ def _one_pad_1d(old_val, new_params):
     :return: a new, padded tensor
     """
     old_len = old_val.shape[0]
-    canvas = np.ones((old_len+new_params,), dtype=np.float32)
+    canvas = np.ones((old_len+num_new_params,), dtype=np.float32)
     canvas[:old_len] = old_val
     return canvas
 
@@ -509,7 +515,7 @@ def _one_pad_1d(old_val, new_params):
 
 
 
-def _mean_pad_1d(old_val, new_params, ratio=1.0):
+def _mean_pad_1d(old_val, num_new_params, ratio=1.0):
     """
     Pads an old (1d) tensor to match the new number of outputs. Pads with the mean value of 'old_val'
 
@@ -519,7 +525,7 @@ def _mean_pad_1d(old_val, new_params, ratio=1.0):
     :return: a new, padded tensor
     """
     old_len = old_val.shape[0]
-    canvas = np.ones((old_len+new_params,), dtype=np.float32) * np.mean(old_val) * ratio
+    canvas = np.ones((old_len+num_new_params,), dtype=np.float32) * np.mean(old_val) * ratio
     canvas[:old_len] = old_val
     return canvas
 

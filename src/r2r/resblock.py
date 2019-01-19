@@ -83,10 +83,10 @@ class _R2R_Block(nn.Module):
         :return: The output from the module
         """
         x = self.conv1(x)
-        x = self.opt_bn1(x)
+        # x = self.opt_bn1(x)
         x = self.relu(x)
         x = self.conv2(x)
-        x = self.opt_bn2(x)
+        # x = self.opt_bn2(x)
         x = self.relu(x)
         return x
     

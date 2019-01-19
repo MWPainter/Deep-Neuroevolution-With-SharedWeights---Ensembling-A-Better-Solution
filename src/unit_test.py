@@ -3,7 +3,7 @@ import torch as t
 import torch.nn as nn
 
 from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50, resnet18
-from utils import flatten
+from utils import flatten, parameter_magnitude
 
 
 
@@ -26,6 +26,7 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
                                        resnet=False, spatial_dim=32):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
+    l1_norm_before = parameter_magnitude(model)
 
     # store 10 random inputs, and their outputs
     rand_ins = []
@@ -52,9 +53,14 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
     
     # Count params after widening
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
+    l1_norm_after = parameter_magnitude(model)
     if verbose:
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
+        print("Params ratio before and after the transform is: {param}".format(param=params_after/params_before))
+        print("Param L1 before the transform is: {param}".format(param=l1_norm_before))
+        print("Param L1 after the transform is: {param}".format(param=l1_norm_after))
+        print("Param L1 ratio before and after the transform is: {param}".format(param=l1_norm_after/l1_norm_before))
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
     if not resnet:
@@ -75,6 +81,7 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
 def test_function_preserving_r2widerr(model, thresh, function_preserving=True, data_channels=1, verbose=False, deep=False, spatial_dim=32, net_morph=False):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
+    l1_norm_before = parameter_magnitude(model)
 
     # store 10 random inputs, and their outputs
     rand_ins = []
@@ -90,9 +97,8 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
                                function_preserving=function_preserving, multiplicative_widen=True, net_morph=net_morph)
     else:
-        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std',
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std_exact',
                                function_preserving=function_preserving, multiplicative_widen=True, net_morph=net_morph)
-
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -104,12 +110,17 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
     
     # Count params after widening
     params_after = sum([np.prod(p.size()) for p in model.parameters()])
+    l1_norm_after = parameter_magnitude(model)
     if verbose:
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
+        print("Params ratio before and after the transform is: {param}".format(param=params_after/params_before))
+        print("Param L1 before the transform is: {param}".format(param=l1_norm_before))
+        print("Param L1 after the transform is: {param}".format(param=l1_norm_after))
+        print("Param L1 ratio before and after the transform is: {param}".format(param=l1_norm_after/l1_norm_before))
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = widen_network_(model, new_channels=16, new_hidden_nodes=16, init_type='match_std',
+    model = widen_network_(model, new_channels=16, new_hidden_nodes=16, init_type='match_std_exact',
                            function_preserving=function_preserving, multiplicative_widen=False, net_morph=net_morph)
 
 
@@ -608,6 +619,38 @@ if __name__ == "__main__":
         print("\n"*4)
         print("Testing random padding on deepening for ResNet18 network:")
     test_function_preserving_r2deeperr(resnet18(function_preserving=False), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(thin=True, thinning_ratio=16*1.414), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for ResNet50 network:")
+    test_function_preserving_r2widerr(resnet50(thin=True, thinning_ratio=16*1.414), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(thin=True, thinning_ratio=16), 1e-5, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding for ResNet18 network:")
+    test_function_preserving_r2widerr(resnet18(thin=True, thinning_ratio=16*1.414), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for ResNet18 network:")
+    test_function_preserving_r2deeperr(resnet18(thin=True, thinning_ratio=16*1.414), 1e-5, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing random padding on deepening for ResNet18 network:")
+    test_function_preserving_r2deeperr(resnet18(function_preserving=False, thin=True, thinning_ratio=16*1.414), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
 
 
