@@ -770,6 +770,105 @@ def net_2_wider_net_resnet_hyper_search(args):
 
 
 
+def net_2_deeper_net_resnet(args):
+    """
+    Duplicates of the Net2WiderNet tests, on cifar.
+    :param args:
+    :return:
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
+
+    # Make the data loader objects
+    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, pin_memory=True)
+
+    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+                            num_workers=args.workers, pin_memory=True)
+
+    orig_lr = args.lr
+    orig_wd = args.weight_decay
+
+    # Teacher network training loop
+    args.shard = "teacher_w_residual"
+    args.total_flops = 0
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-3
+    initial_model = resnet10(thin=True, thinning_ratio=16)
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+                               _update_op,
+                               _validation_loss, args)
+
+    # R2R
+    model = copy.deepcopy(teacher_model)
+    model.deepen([1, 1, 1, 1])
+    model = cudafy(model)
+    args.shard = "R2R_student"
+    args.total_flops = 0
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 3.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # RandomPadding
+    model = copy.deepcopy(teacher_model)
+    model.function_preserving = False
+    model.deepen([1, 1, 1, 1])
+    model = cudafy(model)
+    args.shard = "RandomPadding_student"
+    args.total_flops = 0
+    args.lr = orig_lr / 10.0
+    args.weight_decay = 3.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Random init start
+    model = resnet18(thin=True, thinning_ratio=16)
+    # model.deepen([1, 1, 1, 1])
+    model = cudafy(model)
+    args.shard = "Completely_Random_Init"
+    args.total_flops = 0
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+    # Net2Net teacher
+    initial_model = resnet10(thin=True, thinning_ratio=16, use_residual=False, morphism_scheme="net2net")
+    args.shard = "teacher_w_out_residual"
+    args.total_flops = 0
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-3
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+                               _update_op,
+                               _validation_loss, args)
+
+    # Net2Net
+    model = copy.deepcopy(teacher_model)
+    model = cudafy(model)
+    model.deepen([1, 1, 1, 1], minibatch=next(iter(train_loader))[0].to('cuda'))
+    model = cudafy(model)
+    args.shard = "Net2Net_student"
+    args.total_flops = 0
+    args.lr = orig_lr / 5.0
+    args.weight_decay = 1.0e-3
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+
+
+
+
+
+
+
 
 def net_2_deeper_net_resnet_hyper_search(args):
     """
