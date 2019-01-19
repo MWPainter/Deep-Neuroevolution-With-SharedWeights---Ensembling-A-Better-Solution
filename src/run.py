@@ -438,7 +438,7 @@ def net_2_net_overfit_example(args):
     args.weight_decay = 1.0e-5 # less weight decay mostly
     initial_model = resnet18(thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op, _validation_loss, arg
+                               _update_op, _validation_loss, args)
 
 
 
