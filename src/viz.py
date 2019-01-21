@@ -132,14 +132,16 @@ class Conv_Net(nn.Module):
         super(Conv_Net, self).__init__()
         self.widen_method = widen_method.lower()
         self.multiplicative_widen = multiplicative_widen
-        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=9, padding=4, stride=2)
-        self.conv2 = nn.Conv2d(conv_channels, conv_channels * 2, kernel_size=3, padding=1, stride=2)
-        self.W1 = nn.Linear(conv_channels * 2 * 8 * 8, hidden_units)
+        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=9, padding=4, stride=1)
+        self.pool1 = nn.MaxPool2d(2)
+        self.conv2 = nn.Conv2d(conv_channels, conv_channels * 2, kernel_size=3, padding=1, stride=1)
+        self.W1 = nn.Linear(conv_channels * 2 * 16 * 16, hidden_units)
         self.bn = nn.BatchNorm1d(num_features=hidden_units)
         self.W2 = nn.Linear(hidden_units, 10)
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.pool1(x)
         x = self.conv2(x)
         x = flatten(x)
         x = self.W1(x)

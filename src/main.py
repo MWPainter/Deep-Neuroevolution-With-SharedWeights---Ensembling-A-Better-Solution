@@ -467,7 +467,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
-            "widen_times": [3830 * 5],
+            "widen_times": [383 * 150],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -533,13 +533,14 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 128,
             "workers": 6,
-            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            "widen_times": [383 * 150],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -593,7 +594,8 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            "widen_times": [383 * 150],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -604,12 +606,12 @@ def get_defaults(script_name):
     elif script == "cifar_weight_viz_netmorph_conv":
         return {
             "lr": 1.0e-3,
-            "weight_decay": 1.0e-3,
-            "epochs": 200,
+            "weight_decay": 1.0e-4,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 128,
             "workers": 6,
             #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "widen_times": [3830 * 5],
@@ -678,11 +680,11 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -799,7 +801,7 @@ def get_defaults(script_name):
             "batch_size": 32,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*7], # unused
+            "deepen_times": [1532*10], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
