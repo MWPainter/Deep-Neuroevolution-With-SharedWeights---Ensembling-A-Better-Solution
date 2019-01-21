@@ -100,13 +100,13 @@ class FC_Net(nn.Module):
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.W1, self.W2, (self.hidden_units,), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="match_std_exact", function_preserving=True,
+                         init_type="match_std", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=True, net_morph_add_noise=True)
 
         if self.multiplicative_widen:
@@ -120,7 +120,7 @@ class FC_Net(nn.Module):
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
         weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=False)) # (self.widen_method=='netmorph')))
-        filename = "{iter:0>6d}.jpg".format(iter=iter)
+        filename = "{iter:0>6d}.png".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
 
@@ -153,10 +153,10 @@ class Conv_Net(nn.Module):
         # for p in self.parameters():
         #     p.data.clamp_(-1.0, 1.0)
 
-    def widen(self, num_channels=8, num_hidden=50):
+    def widen(self, num_channels=16, num_hidden=50):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
-                         init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
@@ -166,7 +166,7 @@ class Conv_Net(nn.Module):
             #                  multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
             r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.W1, extra_channels=num_channels,
-                         init_type="match_std_exact", function_preserving=True,
+                         init_type="match_std", function_preserving=True,
                          multiplicative_widen=self.multiplicative_widen, net_morph=True)
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True,
@@ -177,7 +177,7 @@ class Conv_Net(nn.Module):
         weights_scipy = np.transpose(weights, (0,2,3,1))
         weights_normalized = (weights_scipy + 1.0) / 2.0
         weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=(self.widen_method=='netmorph')))
-        filename = "{iter:0>6d}.jpg".format(iter=iter)
+        filename = "{iter:0>6d}.png".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
 
@@ -194,7 +194,7 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay, args):
+def _make_optimizer_fn(model, lr, weight_decay, args=None):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
@@ -300,8 +300,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     if iter in args.widen_times:
         model.widen()
-        # args.lr /= 2.0
-        # args.weight_decay /= 2.0
+        #args.lr /= 2.0
+        #args.weight_decay /= 2.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
@@ -335,7 +335,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
 
     widen_pm = [w-1 for w in args.widen_times] + [w for w in args.widen_times] + [w+1 for w in args.widen_times]
-    if iter % 10 == 0 or iter in widen_pm:
+    if iter % 100 == 0 or iter in widen_pm:
         img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), "weight_visuals")
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
@@ -464,8 +464,8 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        init_channels = 32 if start_wide else 8
-        init_hidden = 50 #250 if start_wide else 50
+        init_channels = 32 if start_wide else 16
+        init_hidden = 150 #250 if start_wide else 50
         model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method)
     else:
         args.initial_channels = 2
