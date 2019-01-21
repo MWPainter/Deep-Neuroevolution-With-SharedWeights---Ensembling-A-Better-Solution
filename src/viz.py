@@ -135,7 +135,7 @@ class Conv_Net(nn.Module):
         self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=9, padding=4, stride=1)
         self.pool1 = nn.MaxPool2d(2)
         # self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
-        self.W1 = nn.Linear(conv_channels * 4 * 16 * 16, hidden_units)
+        self.W1 = nn.Linear(conv_channels * 16 * 16, hidden_units)
         self.bn = nn.BatchNorm1d(num_features=hidden_units)
         self.W2 = nn.Linear(hidden_units, 10)
 
@@ -305,8 +305,8 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     if iter in args.widen_times:
         model.widen()
-        args.lr /= 2.0
-        #args.weight_decay /= 2.0
+        # args.lr /= 2.0
+        args.weight_decay /= 4.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
