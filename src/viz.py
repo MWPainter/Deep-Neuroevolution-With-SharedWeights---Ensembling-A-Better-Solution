@@ -134,7 +134,7 @@ class Conv_Net(nn.Module):
         self.multiplicative_widen = multiplicative_widen
         self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=9, padding=4, stride=1)
         self.pool1 = nn.MaxPool2d(2)
-        self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
+        # self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
         self.W1 = nn.Linear(conv_channels * 4 * 16 * 16, hidden_units)
         self.bn = nn.BatchNorm1d(num_features=hidden_units)
         self.W2 = nn.Linear(hidden_units, 10)
@@ -143,8 +143,8 @@ class Conv_Net(nn.Module):
         x = self.conv1(x)
         x = F.relu(x)
         x = self.pool1(x)
-        x = self.conv2(x)
-        x = F.relu(x)
+        # x = self.conv2(x)
+        # x = F.relu(x)
         x = flatten(x)
         x = self.W1(x)
         x = F.relu(x)
@@ -159,19 +159,20 @@ class Conv_Net(nn.Module):
 
     def widen(self, num_channels=16, num_hidden=50):
         if self.widen_method == 'r2r':
-            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.conv2, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+            r_2_wider_r_(prev_layers=self.conv1, volume_shape=(self.conv1.weight.data.size(0),16,16),
+                         next_layers=self.W1, extra_channels=num_channels, init_type="match_std",
+                         function_preserving=True, multiplicative_widen=self.multiplicative_widen)
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
-            net_2_wider_net_(self.conv1, self.conv2, (self.conv1.weight.data.size(0),16,16), extra_channels=num_channels,
+            net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),16,16), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
             # net_2_wider_net_(self.W1, self.W2, (self.W1.weight.data.size(0),), extra_channels=num_hidden,
             #                  multiplicative_widen=self.multiplicative_widen, add_noise=True)
         elif self.widen_method == 'netmorph':
-            r_2_wider_r_(self.conv1, (self.conv1.weight.data.size(0),16,16), self.conv2, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True,
-                         multiplicative_widen=self.multiplicative_widen, net_morph=True)
+            r_2_wider_r_(prev_layers=self.conv1, volume_shape=(self.conv1.weight.data.size(0),16,16),
+                         next_layers=self.W1, extra_channels=num_channels, init_type="match_std",
+                         function_preserving=True, multiplicative_widen=self.multiplicative_widen, net_morph=True)
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True,
             #              multiplicative_widen=self.multiplicative_widen, net_morph=True)
@@ -433,7 +434,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     # Make the model
     if use_conv:
         args.initial_channels = 8
-        init_channels = 32 if start_wide else 8
+        init_channels = 32 if start_wide else 16
         init_hidden = 50 #250 if start_wide else 50
         model = Conv_Net(init_hidden, init_channels, in_channels=1, widen_method=widen_method)
     else:
