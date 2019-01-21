@@ -469,6 +469,9 @@ class ResNet(nn.Module):
 
 
     def _make_layer(self, block, planes, img_shape, num_blocks, stride=1):
+        if num_blocks == 0:
+            return [], img_shape
+
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -511,6 +514,14 @@ class ResNet(nn.Module):
             self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
         elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
+        print()
+        print(len(self.layer1_modules))
+        print(len(self.layer2_modules))
+        print(len(self.layer3_modules))
+        print(len(self.layer4_modules))
+        print(len(num_blocks))
+        print(num_blocks[2])
+        print(num_blocks[3])
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
@@ -619,8 +630,6 @@ def resnet18_cifar(pretrained=False, thin=False, thinning_ratio=2, function_pres
     if thin:
         r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [4, 4, 0, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
