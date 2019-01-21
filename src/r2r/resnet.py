@@ -446,8 +446,11 @@ class ResNet(nn.Module):
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
         self.layer4 = nn.Sequential(*self.layer4_modules)
+        fc_layers_in = r(512) * block.expansion
+        if len(layers[2]) == 0 and len(layers[3] == 0):
+            fc_layers_in = r(128) * block.expansion
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(r(512) * block.expansion, num_classes)
+        self.fc = nn.Linear(fc_layers_in, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
