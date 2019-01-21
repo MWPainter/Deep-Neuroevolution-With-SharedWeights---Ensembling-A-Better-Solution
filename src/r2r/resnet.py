@@ -488,10 +488,13 @@ class ResNet(nn.Module):
         return nn.ModuleList(layers), img_shape
 
 
-    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True, init_scale=None):
+    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
         planes = inplanes // block.expansion
+
+        # Set an init scale. If it's a number, then initialize the blocks with noise with that stddev. None => use He init
+        init_scale = layer_modules[-1]._get_conv_scale() * 1.0e-1 if self.function_preserving else None
 
         # Add the new block
         for _ in range(num_blocks):
@@ -506,12 +509,11 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        ratio = 1e-1 if self.init_scheme == 'match_std' else 1.0
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * ratio)
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * ratio)
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise)
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise)
         if len(self.layer3_modules) > 0 and len(self.layer4_modules) > 0:
-            self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
-            self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
+            self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise)
+            self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
         elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
         print()

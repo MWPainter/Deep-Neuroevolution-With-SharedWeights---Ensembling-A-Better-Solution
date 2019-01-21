@@ -675,6 +675,7 @@ def net_2_wider_net_resnet(args):
     # RandomPadding
     model = copy.deepcopy(teacher_model)
     model.function_preserving = False
+    model.init_scheme = 'He'
     model.widen(scaling_factor)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
@@ -794,6 +795,7 @@ def net_2_wider_net_resnet_hyper_search(args):
 
     # RandomPadding
     model = copy.deepcopy(r2r_teacher_model)
+    model.init_scheme = 'He'
     model.function_preserving = False
     model.widen(scaling_factor)
     args.shard = "RandomPadding_student"
@@ -890,6 +892,7 @@ def net_2_deeper_net_resnet(args):
 
     # RandomPadding
     model = copy.deepcopy(teacher_model)
+    model.init_scheme = 'He'
     model.function_preserving = False
     model.deepen([2,2,0,0])
     model = cudafy(model)
@@ -1022,6 +1025,7 @@ def net_2_deeper_net_resnet_hyper_search(args):
 
             # RandomPadding
             model = copy.deepcopy(r2r_teacher_model)
+            model.init_scheme = 'He'
             model.function_preserving = False
             model.deepen([2,2,0,0])
             model = cudafy(model)
@@ -1185,6 +1189,7 @@ def r_2_wider_r_resnet(args):
 
     # RandomPadding
     model = resnet18_cifar(thin=True, thinning_ratio=16*1.414, function_preserving=False)
+    model.init_scheme = 'He'
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -1317,6 +1322,7 @@ def r_2_deeper_r_resnet(args):
 
     # RandomPadding
     model = resnet10_cifar(thin=True, thinning_ratio=16, function_preserving=False)
+    model.init_scheme = 'He'
     args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "RandomPadding_student"
     args.total_flops = 0
