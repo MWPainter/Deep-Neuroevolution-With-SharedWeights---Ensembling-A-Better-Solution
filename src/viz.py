@@ -306,7 +306,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     if iter in args.widen_times:
         model.widen()
         # args.lr /= 2.0
-        args.weight_decay /= 4.0
+        args.weight_decay *= 4.0
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
