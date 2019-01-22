@@ -703,11 +703,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -721,11 +721,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -775,11 +775,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [1532*7], # unused
             "deepen_times": [], # unused
@@ -794,11 +794,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [1532*10], # unused
@@ -820,11 +820,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 30,
+            "epochs": 120,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -838,11 +838,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 160,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused

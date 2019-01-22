@@ -132,7 +132,7 @@ class Conv_Net(nn.Module):
         super(Conv_Net, self).__init__()
         self.widen_method = widen_method.lower()
         self.multiplicative_widen = multiplicative_widen
-        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=9, padding=4, stride=1)
+        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=7, padding=3, stride=1)
         self.pool1 = nn.MaxPool2d(2)
         # self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
         self.W1 = nn.Linear(conv_channels * 16 * 16, hidden_units)
