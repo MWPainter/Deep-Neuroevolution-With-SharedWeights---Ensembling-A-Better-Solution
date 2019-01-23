@@ -104,7 +104,7 @@ def _identity_init_batch_norm(batch_norm, entire_resnet, batch):
 
 def reduce_size_function(ratio):
     """Reduces by ratio r, to give an interger, and force it to be a multiple of eight"""
-    return lambda x: int((((x // ratio) + 7) // 8) * 8)
+    return lambda x: int((((x // ratio) + 3) // 4) * 4)
 
 
 
@@ -538,11 +538,11 @@ class ResNet(nn.Module):
         if not self.morphism_scheme == "net2net":
             use_network_morphism_scheme = self.morphism_scheme == "netmorph"
             widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type=self.init_scheme,
-                           function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8,
+                           function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=4,
                            net_morph=use_network_morphism_scheme)
         else:
             net2net_widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, multiplicative_widen=True,
-                                   add_noise=True, mfactor=8)
+                                   add_noise=True, mfactor=4)
 
 
 

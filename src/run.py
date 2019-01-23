@@ -415,7 +415,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 0.0 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=4)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -436,7 +436,8 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 3.0e-3 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=3)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
+    initial_model.widen(1.5)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
