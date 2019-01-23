@@ -229,7 +229,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     if iter in args.widen_times or iter in args.deepen_times:
         if iter in args.widen_times:
             print("Widening!")
-            model.widen(1.414)
+            model.widen(1.5)
         if iter in args.deepen_times:
             print("Deepening!")
             if len(args.deepen_indidces_list) == 0:
@@ -415,7 +415,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 0.0 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=4)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -436,7 +436,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 3.0e-3 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=16)
+    initial_model = resnet18_cifar(thin=True, thinning_ratio=3)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -473,7 +473,7 @@ def r_2_r_weight_init_example(args):
     orig_lr = args.lr
 
     # He init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=4)
     model.init_scheme = 'He'
     args.shard = "widen_student_he"
     args.total_flops = 0
@@ -487,7 +487,7 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # He init deepen
-    model = resnet10_cifar(thin=True, thinning_ratio=16)
+    model = resnet10_cifar(thin=True, thinning_ratio=3)
     model.init_scheme = 'He'
     args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_he"
@@ -502,7 +502,7 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # Scaled init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=16*1.414)
+    model = resnet18_cifar(thin=True, thinning_ratio=4)
     args.shard = "widen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
@@ -515,7 +515,7 @@ def r_2_r_weight_init_example(args):
                _validation_loss, args)
 
     # Scaled init deepen
-    model = resnet10_cifar(thin=True, thinning_ratio=16)
+    model = resnet10_cifar(thin=True, thinning_ratio=3)
     args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_std_match"
     args.total_flops = 0
