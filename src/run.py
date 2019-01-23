@@ -435,7 +435,7 @@ def net_2_net_overfit_example(args):
     args.shard = "random_init"
     args.total_flops = 0
     args.lr = orig_lr
-    args.weight_decay = 3.0e-3 # less weight decay mostly
+    args.weight_decay = 1.0e-4 # less weight decay mostly
     initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
     initial_model.widen(1.5)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
@@ -474,58 +474,58 @@ def r_2_r_weight_init_example(args):
     orig_lr = args.lr
 
     # He init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=4)
+    model = resnet18_cifar(thin=True, thinning_ratio=8)
     model.init_scheme = 'He'
     args.shard = "widen_student_he"
     args.total_flops = 0
     args.lr = orig_lr
-    args.widen_times = [1532*10]
+    args.widen_times = [1532*5]
     args.deepen_times = []
     args.lr_drops = args.widen_times
     args.lr_drop_mag = [1.0]
-    args.weight_decay = 3.0e-5
+    args.weight_decay = 3.0e-4
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # He init deepen
-    model = resnet10_cifar(thin=True, thinning_ratio=3)
+    model = resnet10_cifar(thin=True, thinning_ratio=8)
     model.init_scheme = 'He'
     args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_he"
     args.total_flops = 0
     args.lr = orig_lr
     args.widen_times = []
-    args.deepen_times = [1532*10]
+    args.deepen_times = [1532*5]
     args.lr_drops = args.deepen_times
     args.lr_drop_mag = [1.0]
-    args.weight_decay = 1.0e-5
+    args.weight_decay = 1.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # Scaled init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=4)
+    model = resnet18_cifar(thin=True, thinning_ratio=8)
     args.shard = "widen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
-    args.widen_times = [1532*10]
+    args.widen_times = [1532*5]
     args.deepen_times = []
     args.lr_drops = args.widen_times
     args.lr_drop_mag = [1.0]
-    args.weight_decay = 3.0e-5
+    args.weight_decay = 3.0e-3
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
     # Scaled init deepen
-    model = resnet10_cifar(thin=True, thinning_ratio=3)
+    model = resnet10_cifar(thin=True, thinning_ratio=8)
     args.deepen_indidces_list = [[2,2,0,0]]
     args.shard = "deepen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
     args.widen_times = []
-    args.deepen_times = [1532*10]
+    args.deepen_times = [1532*5]
     args.lr_drops = args.deepen_times
     args.lr_drop_mag = [1.0]
-    args.weight_decay = 1.0e-5
+    args.weight_decay = 1.0e-2
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
