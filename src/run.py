@@ -482,7 +482,7 @@ def r_2_r_weight_init_example(args):
     args.deepen_times = []
     args.lr_drops = args.widen_times
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 2.0e-3
+    args.weight_decay = 3.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -497,7 +497,7 @@ def r_2_r_weight_init_example(args):
     args.deepen_times = [1532*10]
     args.lr_drops = args.deepen_times
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -510,7 +510,7 @@ def r_2_r_weight_init_example(args):
     args.deepen_times = []
     args.lr_drops = args.widen_times
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 2.0e-3
+    args.weight_decay = 3.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
@@ -524,7 +524,7 @@ def r_2_r_weight_init_example(args):
     args.deepen_times = [1532*10]
     args.lr_drops = args.deepen_times
     args.lr_drop_mag = [5.0]
-    args.weight_decay = 3.0e-3
+    args.weight_decay = 1.0e-6
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
 
