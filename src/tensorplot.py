@@ -4,6 +4,7 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 import tensorflow as tf
+import matplotlib
 from matplotlib import pyplot as plt
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
@@ -105,6 +106,7 @@ def _read_sequence(logdir, scalar_name):
     steps = [[e.step] for e in summary_iterators[0].Scalars(scalar_name)]
 
     for events in zip(*[acc.Scalars(scalar_name) for acc in summary_iterators]):
+
         assert len(set(e.step for e in events)) == 1
         out.append([e.value for e in events])
 
@@ -114,7 +116,20 @@ def _read_sequence(logdir, scalar_name):
 
 
 
-def _plot_sequence(sequence, xaxis_name, yaxis_name):
+def _read_sequence_csv(csv_file):
+    points = []
+    with open(csv_file,"r") as f:
+        for line in f:
+            try:
+                _, xstr, ystr = line.split(",")
+                points.append([float(xstr),float(ystr)])
+            except:
+                pass # first line in the file... try and ask forgiveness...
+    result = np.array(points)
+    return result
+
+
+def _plot_sequence(sequence, linestyle, label):
     """
     Adds the plot 'sequence' with color 'color' to the current Seaboarn figure.
 
@@ -122,7 +137,8 @@ def _plot_sequence(sequence, xaxis_name, yaxis_name):
     :param color: The color that we wish to plot with.
     """
     df = pd.DataFrame(data=sequence, columns=["x","y"])
-    sns.lineplot(x=xaxis_name, y=yaxis_name, data=df)
+    # sns.lineplot(x=xaxis_name, y=yaxis_name, data=df, linestyle=line style)
+    plt.plot(sequence[:,0], sequence[:,1], linestyle=linestyle, label=label)
 
 
 
@@ -144,7 +160,7 @@ Section: TensorPlot processing.
 
 
 
-def _compute_parametric_curve(seq1, seq2, missing_value_completion):
+def _compute_parametric_curve(seq1, seq2):
     """
     Produces a paramteric sequence. If seq1 is [(x1,y1), ..., ] and seq2 is [(x'1, y'1), ..., ], then we compute a
     sequence [(a1, b1), ..., ]. Each pair (ai, bi) is equal to some (yi,y'j) where xi=x'j.
@@ -163,40 +179,53 @@ def _compute_parametric_curve(seq1, seq2, missing_value_completion):
     :param missing_value_completion: How we should complete any missing values for the latent parameters
     :return: The parametric curve, an np.array with shape (N',2)
     """
-
     N = seq1.shape[0]
     M = seq2.shape[0]
     i = j = 0
     parametric_points = []
 
-    while i < M and j < N:
-        if _si(seq1,i,0) == _si(seq2,j,0):
-            new_point = (_si(seq1,i,1), _si(seq2,j,1))
-            parametric_points.append(new_point)
+    # rescale
+    tx = seq1[-1,0]
+    ty = seq2[-1,0]
+    seq2[:,0] = seq2[:,0] * tx / ty
+
+    j = 0
+    for j in range(M):
+        while i < N and _si(seq1,i+1,0) < _si(seq2,j,0):
             i += 1
-            j += 1
-
-        elif _si(seq1, i, 0) < _si(seq2, j, 0):
-            new_point = None
-            if missing_value_completion == "use_last":
-                new_point = (_si(seq1,i,1), _si(seq2,j-1,1))
-            elif missing_value_completion != "linear_interpolate":
-                new_point = (_si(seq1,i,1), _interpolate_value(_si(seq2,j-1), _si(seq2,j), _si(seq1,i,0)))
-            if new_point is not None:
-                parametric_points.append(new_point)
-            i += 1
-
-        else: # seq1[i,0] > seq2[j,0]:
-            new_point = None
-            if missing_value_completion == "use_last":
-                new_point = (_si(seq1,i-1,1), _si(seq2,j,1))
-            elif missing_value_completion != "linear_interpolate":
-                new_point = (_interpolate_value(_si(seq1,i-1), _si(seq1,i), _si(seq2,j,0)), _si(seq2,j,1))
-            if new_point is not None:
-                parametric_points.append(new_point)
-            j += 1
-
+        new_point = [_si(seq1,i,1), _si(seq2,j,1)]
+        parametric_points.append(new_point)
     return np.array(parametric_points)
+
+    # while i < M and j < N:
+    #     if _si(seq1,i,0) == _si(seq2,j,0):
+    #         new_point = (_si(seq1,i,1), _si(seq2,j,1))
+    #         parametric_points.append(new_point)
+    #         i += 1
+    #         j += 1
+    #
+    #     elif _si(seq1, i, 0) < _si(seq2, j, 0):
+    #         new_point = None
+    #         if missing_value_completion == "use_last":
+    #             new_point = (_si(seq1,i,1), _si(seq2,j-1,1))
+    #         elif missing_value_completion != "linear_interpolate":
+    #             new_point = (_si(seq1,i,1), _interpolate_value(_si(seq2,j-1), _si(seq2,j), _si(seq1,i,0)))
+    #         if new_point is not None:
+    #             parametric_points.append(new_point)
+    #         i += 1
+    #
+    #     else: # seq1[i,0] > seq2[j,0]:
+    #         new_point = None
+    #         if missing_value_completion == "use_last":
+    #             new_point = (_si(seq1,i-1,1), _si(seq2,j,1))
+    #         elif missing_value_completion != "linear_interpolate":
+    #             new_point = (_interpolate_value(_si(seq1,i-1), _si(seq1,i), _si(seq2,j,0)), _si(seq2,j,1))
+    #         if new_point is not None:
+    #             parametric_points.append(new_point)
+    #         j += 1
+    #
+    # print(np.array(parametric_points)[0,0])
+    # return np.array(parametric_points)
 
 
 
@@ -223,7 +252,7 @@ Section: TensorPlot interface
 
 
 
-def normal_plots(logdirs, out_filename, scalar_names):
+def normal_plots(out_filename, scalar_filenames, xaxis_name, yaxis_name, linestyles, labels):
     """
     Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
 
@@ -234,23 +263,28 @@ def normal_plots(logdirs, out_filename, scalar_names):
     plt.figure()
     sns.set(style="darkgrid")
 
-    scalar_names = _listify(scalar_names)
-    logdirs = _listify(logdirs)
-    if len(logdirs) == 1:
-        logdirs = logdirs * len(scalar_names)
-    assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
+    scalar_filenames = _listify(scalar_filenames)
+    linestyles = _listify(linestyles)
+    labels = _listify(labels)
+    # logdirs = _listify(logdirs)
+    # if len(logdirs) == 1:
+    #     logdirs = logdirs * len(scalar_names)
+    # assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
 
-    for i in range(len(scalar_names)):
-        logdir = logdirs[i]
-        scalar_name = scalar_names[i]
-        scalar_sequence = _read_sequence(logdir, scalar_name)
-        _plot_sequence(scalar_sequence)
+    for i in range(len(scalar_filenames)):
+        # logdir = logdirs[i]
+        scalar_filename = scalar_filenames[i]
+        scalar_sequence = _read_sequence_csv(scalar_filename)
+        _plot_sequence(scalar_sequence, linestyles[i], labels[i])
+    plt.xlabel(xaxis_name)
+    plt.ylabel(yaxis_name)
+    plt.gca().legend(loc='lower right')
     _save_current_fig(out_filename)
 
 
 
 
-def parametric_plots(logdirs, out_filename, scalar_names_one, scalar_names_two, missing_value_completion="use_last"):
+def parametric_plots(out_filename, scalar_filenames_one, scalar_filenames_two, xaxis_name, yaxis_name, linestyles, labels, num_points):
     """
     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
     [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
@@ -275,22 +309,29 @@ def parametric_plots(logdirs, out_filename, scalar_names_one, scalar_names_two, 
     plt.figure()
     sns.set(style="darkgrid")
 
-    scalar_names_one = _listify(scalar_names_one)
-    scalar_names_two = _listify(scalar_names_two)
-    logdirs = _listify(logdirs)
-    if len(logdirs) == 1:
-        logdirs = logdirs * len(scalar_names_one)
-    assert len(scalar_names_one) == len(scalar_names_two), "Invalid input to plot multiple parametric curves on a single axis."
-    assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
+    scalar_filenames_one = _listify(scalar_filenames_one)
+    scalar_filenames_two = _listify(scalar_filenames_two)
+    linestyles = _listify(linestyles)
+    labels = _listify(labels)
+    # logdirs = _listify(logdirs)
+    # if len(logdirs) == 1:
+    #     logdirs = logdirs * len(scalar_names_one)
+    assert len(scalar_filenames_one) == len(scalar_filenames_two), "Invalid input to plot multiple parametric curves on a single axis."
+    # assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
 
-    for i in range(len(scalar_names_one)):
-        logdir = logdirs[i]
-        scalar_name_one = scalar_names_one[i]
-        scalar_name_two = scalar_names_two[i]
-        scalar_sequence_one = _read_sequence(logdir, scalar_name_one)
-        scalar_sequence_two = _read_sequence(logdir, scalar_name_two)
-        parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two, missing_value_completion)
-        _plot_sequence(parametric_sequence, 'x', 'y')
+    for i in range(len(scalar_filenames_one)):
+        # logdir = logdirs[i]
+        scalar_filename_one = scalar_filenames_one[i]
+        scalar_filename_two = scalar_filenames_two[i]
+        scalar_sequence_one = _read_sequence_csv(scalar_filename_one)
+        scalar_sequence_two = _read_sequence_csv(scalar_filename_two)
+        parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
+        if num_points is not None:
+            parametric_sequence = parametric_sequence[:num_points]
+        _plot_sequence(parametric_sequence, linestyles[i], labels[i])
+    plt.xlabel(xaxis_name)
+    plt.ylabel(yaxis_name)
+    plt.gca().legend(loc='lower right')
     _save_current_fig(out_filename)
 
 
@@ -325,8 +366,128 @@ def clean_scalar(logdir, scalar_name):
 
 if __name__ == "__main__":
     base_dir = sys.argv[1]
-    out_dir = sys.argv[2]
 
-    r2wr_test_dir = os.path.join(base_dir, "mnist_widen_0_tb_log", "Net2Widernet")
-    outfile = os.path.join(out_dir, "r2wr_test_plot")
-    parametric_plots(r2wr_test_dir, outfile, "iter/train/total_flops", "iter/train/accuracy")
+    # matplotlib.rcParams['ps.useafm'] = True
+    # matplotlib.rcParams['pdf.use14corefonts'] = True
+    # matplotlib.rcParams['text.usetex'] = True
+
+    # Net2WiderNet results
+    imgfile = os.path.join(base_dir, "n2wn.png")
+    nw_n2n  = os.path.join(base_dir, "nw_n2n.csv")
+    nw_r2r  = os.path.join(base_dir, "nw_r2r.csv")
+    nw_rp   = os.path.join(base_dir, "nw_rp.csv")
+    nw_init = os.path.join(base_dir, "nw_init.csv")
+    nw_r2rt = os.path.join(base_dir, "nw_r2rt.csv")
+    nw_n2nt = os.path.join(base_dir, "nw_n2nt.csv")
+    nw_nm   = os.path.join(base_dir, "nw_nm.csv")
+    yfiles = [nw_n2n,
+              nw_r2r,
+              nw_rp,
+              nw_init,
+              nw_r2rt,
+              nw_n2nt,
+              nw_nm]
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-','-','-','-','-','-','-']
+    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
+    normal_plots(imgfile, yfiles, xaxis, yaxis, linestyles, labels, 100)
+
+    # Net2DeeperNet results
+    imgfile = os.path.join(base_dir, "n2dn.png")
+    nd_n2n  = os.path.join(base_dir, "nd_n2n.csv")
+    nd_r2r  = os.path.join(base_dir, "nd_r2r.csv")
+    nd_rp   = os.path.join(base_dir, "nd_rp.csv")
+    nd_init = os.path.join(base_dir, "nd_init.csv")
+    nd_r2rt = os.path.join(base_dir, "nd_r2rt.csv")
+    nd_n2nt = os.path.join(base_dir, "nd_n2nt.csv")
+    yfiles = [nd_n2n,
+              nd_r2r,
+              nd_rp,
+              nd_init,
+              nd_r2rt,
+              nd_n2nt]
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-','-','-','-','-','-','-']
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual']
+    normal_plots(imgfile, yfiles, xaxis, yaxis, linestyles, labels, 100)
+
+    # R2WiderR results
+    imgfile = os.path.join(base_dir, "r2wr.png")
+    imgfile_f = os.path.join(base_dir, "r2wr_f.png")
+    rw_n2n  = os.path.join(base_dir, "rw_n2n.csv")
+    rw_r2r  = os.path.join(base_dir, "rw_r2r.csv")
+    rw_rp   = os.path.join(base_dir, "rw_rp.csv")
+    rw_init = os.path.join(base_dir, "rw_init.csv")
+    rw_r2rt = os.path.join(base_dir, "rw_r2rt.csv")
+    rw_n2nt = os.path.join(base_dir, "rw_n2nt.csv")
+    rw_nm   = os.path.join(base_dir, "rw_nm.csv")
+    yfiles = [nw_n2n,
+              nw_r2r,
+              nw_rp,
+              nw_init,
+              nw_r2rt,
+              nw_n2nt,
+              nw_nm]
+    rw_n2n_f  = os.path.join(base_dir, "rw_n2n_f.csv")
+    rw_r2r_f  = os.path.join(base_dir, "rw_r2r_f.csv")
+    rw_rp_f   = os.path.join(base_dir, "rw_rp_f.csv")
+    rw_init_f = os.path.join(base_dir, "rw_init_f.csv")
+    rw_r2rt_f = os.path.join(base_dir, "rw_r2rt_f.csv")
+    rw_n2nt_f = os.path.join(base_dir, "rw_n2nt_f.csv")
+    rw_nm_f   = os.path.join(base_dir, "rw_nm_f.csv")
+    xfiles = [rw_n2n_f,
+              rw_r2r_f,
+              rw_rp_f,
+              rw_init_f,
+              rw_r2rt_f,
+              rw_n2nt_f,
+              rw_nm_f]
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-','-','-','-','-','-','-']
+    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar16(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
+    normal_plots(imgfile, yfiles, xaxis, yaxis, linestyles, labels, 100)
+    xaxis = "FLOPs"
+    parametric_plots(imgfile_f, xfiles, yfiles, xaxis, yaxis, linestyles, labels, 100)
+
+
+    # R2DeeperR results
+    imgfile = os.path.join(base_dir, "r2dr.png")
+    imgfile_f = os.path.join(base_dir, "r2dr_f.png")
+    rd_n2n  = os.path.join(base_dir, "rd_n2n.csv")
+    rd_r2r  = os.path.join(base_dir, "rd_r2r.csv")
+    rd_rp   = os.path.join(base_dir, "rd_rp.csv")
+    rd_init = os.path.join(base_dir, "rd_init.csv")
+    rd_r2rt = os.path.join(base_dir, "rd_r2rt.csv")
+    rd_n2nt = os.path.join(base_dir, "rd_n2nt.csv")
+    rd_nm   = os.path.join(base_dir, "rd_nm.csv")
+    yfiles = [nw_n2n,
+              nw_r2r,
+              nw_rp,
+              nw_init,
+              nw_r2rt,
+              nw_n2nt,
+              nw_nm]
+    rd_n2n_f  = os.path.join(base_dir, "rd_n2n_f.csv")
+    rd_r2r_f  = os.path.join(base_dir, "rd_r2r_f.csv")
+    rd_rp_f   = os.path.join(base_dir, "rd_rp_f.csv")
+    rd_init_f = os.path.join(base_dir, "rd_init_f.csv")
+    rd_r2rt_f = os.path.join(base_dir, "rd_r2rt_f.csv")
+    rd_n2nt_f = os.path.join(base_dir, "rd_n2nt_f.csv")
+    rd_nm_f   = os.path.join(base_dir, "rd_nm_f.csv")
+    xfiles = [rw_n2n_f,
+              rw_r2r_f,
+              rw_rp_f,
+              rw_init_f,
+              rw_r2rt_f,
+              rw_n2nt_f,
+              rw_nm_f]
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-','-','-','-','-','-','-']
+    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
+    normal_plots(imgfile, yfiles, xaxis, yaxis, linestyles, labels, 100)
+    xaxis = "FLOPs"
+    parametric_plots(imgfile_f, xfiles, yfiles, xaxis, yaxis, linestyles, labels, 100)
