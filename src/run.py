@@ -389,26 +389,26 @@ def net_2_net_overfit_example(args):
 
     orig_lr = args.lr
 
-    # Teacher network training loop
-    args.shard = "deepen_teacher"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 1.0e-6 # remove weight decay mostly
-    initial_model = resnet10_cifar(thin=True, thinning_ratio=16)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op, _validation_loss, args)
-
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.deepen([2, 2, 0, 0])
-    model = cudafy(model)
-    args.shard = "deepen_student"
-    args.total_flops = 0
-    args.lr = orig_lr / 5.0
-    # args.weight_decay = 3.0e-3
-    args.weight_decay = 1.0e-6
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Teacher network training loop
+    # args.shard = "deepen_teacher"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = 1.0e-6 # remove weight decay mostly
+    # initial_model = resnet10_cifar(thin=True, thinning_ratio=16)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    #                            _update_op, _validation_loss, args)
+    #
+    # # R2R
+    # model = copy.deepcopy(teacher_model)
+    # model.deepen([2, 2, 0, 0])
+    # model = cudafy(model)
+    # args.shard = "deepen_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 3.0e-3
+    # args.weight_decay = 1.0e-6
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
     # Teacher network training loop
     args.shard = "widen_teacher"
@@ -434,8 +434,8 @@ def net_2_net_overfit_example(args):
     # Random init comparison
     args.shard = "random_init"
     args.total_flops = 0
-    args.lr = orig_lr / 2.0
-    args.weight_decay = 1.0e-6 # less weight decay mostly
+    args.lr = orig_lr
+    args.weight_decay = 1.0e-4 # less weight decay mostly
     initial_model = resnet18_cifar(thin=True, thinning_ratio=16)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
