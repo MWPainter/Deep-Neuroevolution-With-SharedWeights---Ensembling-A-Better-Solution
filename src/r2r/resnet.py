@@ -19,7 +19,7 @@ Code adapted from: https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 
 
-__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet34', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
+__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet35', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
            'resnet152']
 
 
@@ -684,6 +684,14 @@ def resnet26_r2r(thin=False, thinning_ratio=4, morphism_scheme="r2r"):
         model.widen(thinning_ratio)
     return model
 
+
+
+def resnet35(thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    r = lambda x: x
+    if thin:
+        r = reduce_size_function(thinning_ratio)
+    model = ResNet(Bottleneck, [2, 3, 4, 2], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    return model
 
 
 

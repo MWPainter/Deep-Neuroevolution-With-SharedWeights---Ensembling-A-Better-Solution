@@ -1701,3 +1701,42 @@ def r2r_faster_test_redo_18(args, shardname):
     args.shard = shardname
     train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
+
+
+
+
+
+
+
+def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=True, deepen_indices=[1,1,2,1]):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) > 1:
+        raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    if len(args.deepen_times) > 1:
+        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    args.deepen_indidces_list = [deepen_indices]
+
+    # Make the data loaders for imagenet
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
+
+
+    # R2R
+    model = resnet_class(thin=use_thin, thinning_ratio=1.414)
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)

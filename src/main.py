@@ -1112,6 +1112,138 @@ def get_defaults(script_name):
         }
 
 
+
+    ######
+    # Final R2FasterR tests
+    ######
+	elif script == "f1aster_teacher":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f2aster_student": 
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [0],
+            "deepen_times": [0],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f3aster_resnet50":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f4aster_r2r":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*60],
+            "deepen_times": [5005*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f5aster_r2r_adagrad":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*60],
+            "deepen_times": [5005*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f6aster_r2r_rms":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*60],
+            "deepen_times": [5005*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+	elif script == "f7aster_r2r_adam":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [5005*60],
+            "deepen_times": [5005*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*30, 5005*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+
+
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
 
@@ -1345,6 +1477,25 @@ if __name__ == "__main__":
     #     r2r_faster_test_redo(args, "widened_attempt_three")
     # elif script == "r2fasterr_redo_part_8":
     #     r2r_faster_test_redo(args, "widened_attempt_four")
+
+
+    ######
+    # Final R2FasterR tests
+    ######
+	elif script == "f1aster_teacher":
+		r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
+	elif script == "f2aster_student":
+		r2r_faster(args, shardname="student", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen at epoch 0
+	elif script == "f3aster_resnet50":
+		r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
+	elif script == "f4aster_r2r":
+		r2r_faster(args, shardname="r2r", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen
+	elif script == "f5aster_r2r_adagrad":
+		r2r_faster(args, shardname="r2r_adagrad", optimizer='rms', resnet_class=resnet35, use_thin=True) # widen
+	elif script == "f6aster_r2r_rms":
+		r2r_faster(args, shardname="r2r_rms", optimizer='adagrad', resnet_class=resnet35, use_thin=True) # widen
+	elif script == "f7aster_r2r_adam":
+		r2r_faster(args, shardname="r2r_adam", optimizer='adam', resnet_class=resnet35, use_thin=True) # widen
 
 
     else:
