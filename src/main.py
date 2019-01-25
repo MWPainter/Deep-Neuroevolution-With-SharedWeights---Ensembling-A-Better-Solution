@@ -1116,7 +1116,7 @@ def get_defaults(script_name):
     ######
     # Final R2FasterR tests
     ######
-	elif script == "f1aster_teacher":
+    elif script == "f1aster_teacher":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1134,7 +1134,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f2aster_student": 
+    elif script == "f2aster_student": 
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1152,7 +1152,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f3aster_resnet50":
+    elif script == "f3aster_resnet50":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1170,7 +1170,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f4aster_r2r":
+    elif script == "f4aster_r2r":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1188,7 +1188,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f5aster_r2r_adagrad":
+    elif script == "f5aster_r2r_adagrad":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1206,7 +1206,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f6aster_r2r_rms":
+    elif script == "f6aster_r2r_rms":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1224,7 +1224,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
-	elif script == "f7aster_r2r_adam":
+    elif script == "f7aster_r2r_adam":
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
@@ -1482,20 +1482,20 @@ if __name__ == "__main__":
     ######
     # Final R2FasterR tests
     ######
-	elif script == "f1aster_teacher":
-		r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
-	elif script == "f2aster_student":
-		r2r_faster(args, shardname="student", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen at epoch 0
-	elif script == "f3aster_resnet50":
-		r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
-	elif script == "f4aster_r2r":
-		r2r_faster(args, shardname="r2r", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen
-	elif script == "f5aster_r2r_adagrad":
-		r2r_faster(args, shardname="r2r_adagrad", optimizer='rms', resnet_class=resnet35, use_thin=True) # widen
-	elif script == "f6aster_r2r_rms":
-		r2r_faster(args, shardname="r2r_rms", optimizer='adagrad', resnet_class=resnet35, use_thin=True) # widen
-	elif script == "f7aster_r2r_adam":
-		r2r_faster(args, shardname="r2r_adam", optimizer='adam', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f1aster_teacher":
+        r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
+    elif script == "f2aster_student":
+        r2r_faster(args, shardname="student", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen at epoch 0
+    elif script == "f3aster_resnet50":
+        r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
+    elif script == "f4aster_r2r":
+        r2r_faster(args, shardname="r2r", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f5aster_r2r_adagrad":
+        r2r_faster(args, shardname="r2r_adagrad", optimizer='rms', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f6aster_r2r_rms":
+        r2r_faster(args, shardname="r2r_rms", optimizer='adagrad', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f7aster_r2r_adam":
+        r2r_faster(args, shardname="r2r_adam", optimizer='adam', resnet_class=resnet35, use_thin=True) # widen
 
 
     else:
