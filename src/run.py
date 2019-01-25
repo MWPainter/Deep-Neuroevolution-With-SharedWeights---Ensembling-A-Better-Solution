@@ -81,7 +81,7 @@ def _make_optimizer_fn_rms(model, lr, weight_decay, args, momentum=None):
     :return: The optimizer for the network optimizer, which is passed into the remaining
         training loop functions
     """
-    return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True, momentum=args.momentum)
+    return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=args.momentum)
 
 
 
