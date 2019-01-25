@@ -11,7 +11,7 @@ from utils import train_loop
 from utils import parameter_magnitude, gradient_magnitude, gradient_l2_norm, update_magnitude, update_ratio
 from utils import model_flops
 
-from r2r import widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26, resnet10_cifar, resnet18_cifar
+from r2r import * # widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26, resnet10_cifar, resnet18_cifar
 
 
 

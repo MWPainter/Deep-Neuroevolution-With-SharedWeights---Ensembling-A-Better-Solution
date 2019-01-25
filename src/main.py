@@ -20,7 +20,7 @@ from run import r_2_r_weight_init_example, net_2_net_overfit_example
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
-from r2r import resnet35, resnet50
+from r2r import *
 
 
 
