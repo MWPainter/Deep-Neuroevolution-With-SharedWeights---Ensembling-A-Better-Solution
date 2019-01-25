@@ -17,6 +17,7 @@ from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
 from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
 from run import r_2_r_weight_init_example, net_2_net_overfit_example
+from run import r2r_faster
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
