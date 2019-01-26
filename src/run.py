@@ -1736,7 +1736,7 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
 
 
     # R2R
-    model = resnet_class(thin=use_thin, thinning_ratio=1.414)
+    model = resnet_class(thin=use_thin, thinning_ratio=1.5)
     args.shard = shardname
     train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)

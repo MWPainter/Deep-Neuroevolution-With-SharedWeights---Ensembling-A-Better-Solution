@@ -41,7 +41,7 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
     if not resnet:
         model = make_deeper_network_(model, layer1)
     else:
-        model.deepen([1,1,1,1])
+        model.deepen([2,2,0,0])
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -135,7 +135,7 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         
         
 def test_function_preserving_deepen_then_widen(model, thresh, function_preserving=True, data_channels=1, layer=None,
-                                               verbose=False):
+                                               verbose=False, spatial_dim=32, resnet=False):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -143,15 +143,20 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,32,32)))
+        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = make_deeper_network_(model, layer)
-    model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
-                           function_preserving=function_preserving, multiplicative_widen=True)
+    if not resnet:
+        model = make_deeper_network_(model, layer1)
+        model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
+                               function_preserving=function_preserving, multiplicative_widen=True)
+    else:
+        model.deepen([2,2,0,0])
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std_exact',
+                               function_preserving=function_preserving, multiplicative_widen=True)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -169,7 +174,7 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
         
         
 def test_function_preserving_widen_then_deepen(model, thresh, function_preserving=True, data_channels=1, layer=None,
-                                               verbose=False):
+                                               verbose=False, spatial_dim=32, resnet=False):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -177,15 +182,20 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,32,32)))
+        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
-    model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='He',
-                           function_preserving=function_preserving, multiplicative_widen=True)
-    model = make_deeper_network_(model, layer)
+    if not resnet:
+        model = widen_network_(model, new_channels=4, new_hidden_nodes=2, init_type='He',
+                               function_preserving=function_preserving, multiplicative_widen=True)
+        model = make_deeper_network_(model, layer1)
+    else:
+        model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std_exact',
+                               function_preserving=function_preserving, multiplicative_widen=True)
+        model.deepen([2,2,0,0])
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -651,7 +661,18 @@ if __name__ == "__main__":
         print("\n"*4)
         print("Testing random padding on deepening for ResNet18 network:")
     test_function_preserving_r2deeperr(resnet18(function_preserving=False, thin=True, thinning_ratio=16*1.414), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    
+    if verbose:
+        print("\n"*4)
+        print("Testing deeoeb then widen on deepening for ResNet18 network:")
+        test_function_preserving_widen_then_deepen(resnet50(), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
+    if verbose:
+        print("\n"*4)
+        print("Testing widen then deepen on deepening for ResNet50 network:")
+    test_function_preserving_deepen_then_widen(resnet50(), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    
+    
 
 
 

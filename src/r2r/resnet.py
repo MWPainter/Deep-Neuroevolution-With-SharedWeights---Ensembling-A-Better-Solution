@@ -148,7 +148,7 @@ class BasicBlock(nn.Module):
         # scaled inits for params if init_scale is not none
         if init_scale is not None:
             bound = np.sqrt(3.0) * init_scale
-            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 3, 3)).astype(np.float32)
+            conv1_init = np.random.uniform(-bound, bound, size=(planes, inplanes, 3, 3)).astype(np.float32)
             # conv1_init = init_scale * np.random.randn(inplanes, planes, 3, 3).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
             bound = np.sqrt(3.0) * init_scale
@@ -282,7 +282,7 @@ class Bottleneck(nn.Module):
         if init_scale is not None:
             # conv1_init = init_scale * np.random.randn(inplanes, planes, 1, 1).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
-            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 1, 1)).astype(np.float32)
+            conv1_init = np.random.uniform(-bound, bound, size=(planes, inplanes, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
             # conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
@@ -290,7 +290,7 @@ class Bottleneck(nn.Module):
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
             # conv3_init = init_scale * np.random.randn(planes, planes * self.expansion, 1, 1).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
-            conv3_init = np.random.uniform(-bound, bound, size=(planes, planes * self.expansion, 1, 1)).astype(np.float32)
+            conv3_init = np.random.uniform(-bound, bound, size=(planes * self.expansion, planes, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv3, conv3_init)
 
         # R2DeeperR
@@ -519,14 +519,6 @@ class ResNet(nn.Module):
             self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
         elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
-        print()
-        print(len(self.layer1_modules))
-        print(len(self.layer2_modules))
-        print(len(self.layer3_modules))
-        print(len(self.layer4_modules))
-        print(len(num_blocks))
-        print(num_blocks[2])
-        print(num_blocks[3])
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
