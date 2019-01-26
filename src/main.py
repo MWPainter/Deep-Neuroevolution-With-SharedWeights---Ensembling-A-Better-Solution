@@ -1127,13 +1127,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1145,13 +1145,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [0],
             "deepen_times": [0],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1163,13 +1163,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1181,13 +1181,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
-            "widen_times": [10010*60],
-            "deepen_times": [10010*30],
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1199,13 +1199,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
-            "widen_times": [10010*60],
-            "deepen_times": [10010*30],
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1217,13 +1217,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
-            "widen_times": [10010*60],
-            "deepen_times": [10010*30],
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1235,13 +1235,13 @@ def get_defaults(script_name):
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 64,
             "workers": 6,
-            "widen_times": [10010*60],
-            "deepen_times": [10010*30],
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [10010*30, 10010*60],
+            "lr_drops": [20020*30, 20020*60],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
