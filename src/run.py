@@ -190,9 +190,9 @@ def _adjust_learning_rate(args, iter, optimizer):
             param_group['lr'] = args.lr
 
     # Momentum (if any) is turned off for a while to avoid exploding gradients for the first epoch
-    momentum_switch_on_times = [w + 5005 for w in args.widen_times] + [d + 5005 for d in args.deepen_times]
-    if hasattr(optimizer, 'momentum') and iter in momentum_switch_on_times:
-        optimizer.momentum = args.momentum
+    # momentum_switch_on_times = [w + 5005 for w in args.widen_times] + [d + 5005 for d in args.deepen_times]
+    # if hasattr(optimizer, 'momentum') and iter in momentum_switch_on_times:
+    #     optimizer.momentum = args.momentum
 
 
 
@@ -237,7 +237,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
         model = cudafy(model)
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args, momentum=0.0)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
