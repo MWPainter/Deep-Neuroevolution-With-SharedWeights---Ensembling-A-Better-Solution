@@ -1708,7 +1708,7 @@ def r2r_faster_test_redo_18(args, shardname):
 
 
 
-def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=True, deepen_indices=[1,1,2,1]):
+def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=True, deepen_indices=[1,1,2,1], function_preserving=True):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
@@ -1737,6 +1737,7 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
 
     # R2R
     model = resnet_class(thin=use_thin, thinning_ratio=1.5)
+    model.function_preserving = function_preserving
     args.shard = shardname
     train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                _validation_loss, args)
