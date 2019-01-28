@@ -17,8 +17,11 @@ from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
 from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
 from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
 from run import r_2_r_weight_init_example, net_2_net_overfit_example
+from run import r2r_faster
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
+
+from r2r import *
 
 
 
@@ -467,7 +470,7 @@ def get_defaults(script_name):
             "batch_size": 256,
             "workers": 6,
             #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
-            "widen_times": [3830 * 5],
+            "widen_times": [383 * 150],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -594,7 +597,8 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256,
             "workers": 6,
-            "widen_times": range(2350*2, 2350*10, 2350*2),
+            #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            "widen_times": [383 * 150],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -679,11 +683,11 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 100,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -702,11 +706,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -720,11 +724,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -738,7 +742,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -756,7 +760,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -774,11 +778,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [1532*7], # unused
             "deepen_times": [], # unused
@@ -793,14 +797,14 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 100,
+            "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*7], # unused
+            "deepen_times": [1532*10], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -819,11 +823,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
-            "epochs": 30,
+            "epochs": 120,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -837,11 +841,11 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 40,
+            "epochs": 160,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 32,
+            "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
             "deepen_times": [], # unused
@@ -1111,6 +1115,138 @@ def get_defaults(script_name):
         }
 
 
+
+    ######
+    # Final R2FasterR tests
+    ######
+    elif script == "f1aster_teacher":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f2aster_student": 
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [0],
+            "deepen_times": [0],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f3aster_resnet50":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f4aster_r2r":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f5aster_r2r_adagrad":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f6aster_r2r_rms":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+    elif script == "f7aster_r2r_adam":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 90,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*60],
+            "deepen_times": [20020*30],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*30, 20020*60],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0
+        }
+
+
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
 
@@ -1344,6 +1480,25 @@ if __name__ == "__main__":
     #     r2r_faster_test_redo(args, "widened_attempt_three")
     # elif script == "r2fasterr_redo_part_8":
     #     r2r_faster_test_redo(args, "widened_attempt_four")
+
+
+    ######
+    # Final R2FasterR tests
+    ######
+    elif script == "f1aster_teacher":
+        r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
+    elif script == "f2aster_student":
+        r2r_faster(args, shardname="student", optimizer='rms', resnet_class=resnet35, use_thin=True, function_preserving=False) # widen at epoch 0
+    elif script == "f3aster_resnet50":
+        r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
+    elif script == "f4aster_r2r":
+        r2r_faster(args, shardname="r2r", optimizer='sgd', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f5aster_r2r_adagrad":
+        r2r_faster(args, shardname="r2r_adagrad", optimizer='rms', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f6aster_r2r_rms":
+        r2r_faster(args, shardname="r2r_rms", optimizer='adagrad', resnet_class=resnet35, use_thin=True) # widen
+    elif script == "f7aster_r2r_adam":
+        r2r_faster(args, shardname="r2r_adam", optimizer='adam', resnet_class=resnet35, use_thin=True) # widen
 
 
     else:

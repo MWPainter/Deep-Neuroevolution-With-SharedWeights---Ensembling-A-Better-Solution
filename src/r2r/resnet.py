@@ -19,7 +19,7 @@ Code adapted from: https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 
 
-__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet34', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
+__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet35', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
            'resnet152']
 
 
@@ -104,7 +104,7 @@ def _identity_init_batch_norm(batch_norm, entire_resnet, batch):
 
 def reduce_size_function(ratio):
     """Reduces by ratio r, to give an interger, and force it to be a multiple of eight"""
-    return lambda x: int((((x // ratio) + 7) // 8) * 8)
+    return lambda x: int((((x // ratio) + 3) // 4) * 4)
 
 
 
@@ -148,7 +148,7 @@ class BasicBlock(nn.Module):
         # scaled inits for params if init_scale is not none
         if init_scale is not None:
             bound = np.sqrt(3.0) * init_scale
-            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 3, 3)).astype(np.float32)
+            conv1_init = np.random.uniform(-bound, bound, size=(planes, inplanes, 3, 3)).astype(np.float32)
             # conv1_init = init_scale * np.random.randn(inplanes, planes, 3, 3).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
             bound = np.sqrt(3.0) * init_scale
@@ -282,7 +282,7 @@ class Bottleneck(nn.Module):
         if init_scale is not None:
             # conv1_init = init_scale * np.random.randn(inplanes, planes, 1, 1).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
-            conv1_init = np.random.uniform(-bound, bound, size=(inplanes, planes, 1, 1)).astype(np.float32)
+            conv1_init = np.random.uniform(-bound, bound, size=(planes, inplanes, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv1, conv1_init)
             # conv2_init = init_scale * np.random.randn(planes, planes, 3, 3).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
@@ -290,7 +290,7 @@ class Bottleneck(nn.Module):
             _assign_kernel_and_bias_to_conv_(self.conv2, conv2_init)
             # conv3_init = init_scale * np.random.randn(planes, planes * self.expansion, 1, 1).astype(np.float32)
             bound = np.sqrt(3.0) * init_scale
-            conv3_init = np.random.uniform(-bound, bound, size=(planes, planes * self.expansion, 1, 1)).astype(np.float32)
+            conv3_init = np.random.uniform(-bound, bound, size=(planes * self.expansion, planes, 1, 1)).astype(np.float32)
             _assign_kernel_and_bias_to_conv_(self.conv3, conv3_init)
 
         # R2DeeperR
@@ -446,8 +446,11 @@ class ResNet(nn.Module):
         self.layer2 = nn.Sequential(*self.layer2_modules)
         self.layer3 = nn.Sequential(*self.layer3_modules)
         self.layer4 = nn.Sequential(*self.layer4_modules)
+        fc_layers_in = r(512) * block.expansion
+        if layers[2] == 0 and layers[3] == 0:
+            fc_layers_in = r(128) * block.expansion
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(r(512) * block.expansion, num_classes)
+        self.fc = nn.Linear(fc_layers_in, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -469,6 +472,9 @@ class ResNet(nn.Module):
 
 
     def _make_layer(self, block, planes, img_shape, num_blocks, stride=1):
+        if num_blocks == 0:
+            return [], img_shape
+
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -485,10 +491,13 @@ class ResNet(nn.Module):
         return nn.ModuleList(layers), img_shape
 
 
-    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True, init_scale=None):
+    def _deepen_layer(self, layer_modules, block, num_blocks, minibatch=None, add_noise=True):
         # From the last block in this 'layer' of the resnet, work out the correct planes/inplanes and img shape for a new block
         inplanes, h, w = layer_modules[-1]._out_shape()
         planes = inplanes // block.expansion
+
+        # Set an init scale. If it's a number, then initialize the blocks with noise with that stddev. None => use He init
+        init_scale = layer_modules[-1]._get_conv_scale() * 1.0e-1 if self.function_preserving else None
 
         # Add the new block
         for _ in range(num_blocks):
@@ -503,12 +512,11 @@ class ResNet(nn.Module):
 
 
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
-        ratio = 1e-1 if self.init_scheme == 'match_std' else 1.0
-        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise, self.layer1_modules[-1]._get_conv_scale() * ratio)
-        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise, self.layer2_modules[-1]._get_conv_scale() * ratio)
+        self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise)
+        self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise)
         if len(self.layer3_modules) > 0 and len(self.layer4_modules) > 0:
-            self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise, self.layer3_modules[-1]._get_conv_scale() * ratio)
-            self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise, self.layer4_modules[-1]._get_conv_scale() * ratio)
+            self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise)
+            self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
         elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
         self.layer1 = nn.Sequential(*self.layer1_modules)
@@ -522,11 +530,11 @@ class ResNet(nn.Module):
         if not self.morphism_scheme == "net2net":
             use_network_morphism_scheme = self.morphism_scheme == "netmorph"
             widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, init_type=self.init_scheme,
-                           function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=8,
+                           function_preserving=self.function_preserving, multiplicative_widen=True, mfactor=4,
                            net_morph=use_network_morphism_scheme)
         else:
             net2net_widen_network_(self, new_channels=ratio, new_hidden_nodes=ratio, multiplicative_widen=True,
-                                   add_noise=True, mfactor=8)
+                                   add_noise=True, mfactor=4)
 
 
 
@@ -619,8 +627,6 @@ def resnet18_cifar(pretrained=False, thin=False, thinning_ratio=2, function_pres
     if thin:
         r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [4, 4, 0, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
@@ -670,6 +676,14 @@ def resnet26_r2r(thin=False, thinning_ratio=4, morphism_scheme="r2r"):
         model.widen(thinning_ratio)
     return model
 
+
+
+def resnet35(thin=False, thinning_ratio=4, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    r = lambda x: x
+    if thin:
+        r = reduce_size_function(thinning_ratio)
+    model = ResNet(Bottleneck, [2, 3, 4, 2], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    return model
 
 
 
