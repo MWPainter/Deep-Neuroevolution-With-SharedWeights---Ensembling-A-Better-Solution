@@ -1488,7 +1488,7 @@ if __name__ == "__main__":
     elif script == "f1aster_teacher":
         r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
     elif script == "f2aster_student":
-        r2r_faster(args, shardname="student", optimizer='sgd', resnet_class=resnet35, use_thin=True, function_preserving=False) # widen at epoch 0
+        r2r_faster(args, shardname="student", optimizer='rms', resnet_class=resnet35, use_thin=True, function_preserving=False) # widen at epoch 0
     elif script == "f3aster_resnet50":
         r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
     elif script == "f4aster_r2r":
