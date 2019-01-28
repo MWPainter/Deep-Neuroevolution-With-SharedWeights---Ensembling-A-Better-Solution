@@ -460,11 +460,11 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 400,
+            "epochs": 800,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 256,
             "workers": 6,
             #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "widen_times": [3830 * 5],
@@ -532,14 +532,15 @@ def get_defaults(script_name):
     elif script == "cifar_weight_viz_net2net_conv":
         return {
             "lr": 1.0e-3,
-            "weight_decay": 1.0e-4,
-            "epochs": 100,
+            "weight_decay": 1.0e-3,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 256,
             "workers": 6,
-            "widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
+            "widen_times": [3830 * 5],
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -605,11 +606,11 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 200,
+            "epochs": 400,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 256,
             "workers": 6,
             #"widen_times": range(3830*2+1915, 3830*10, 3830*2+1915),
             "widen_times": [3830 * 5],
