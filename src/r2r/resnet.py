@@ -497,7 +497,12 @@ class ResNet(nn.Module):
         planes = inplanes // block.expansion
 
         # Set an init scale. If it's a number, then initialize the blocks with noise with that stddev. None => use He init
-        init_scale = layer_modules[-1]._get_conv_scale() * 1.0e-1 if self.function_preserving else None
+        init_scale = None
+        if self.function_preserving:
+            if self.init_scheme == "match_std":
+                init_scale = layer_modules[-1]._get_conv_scale() * 0.1
+            elif self.init_scheme == "match_std_exact":
+                init_scale = layer_modules[-1]._get_conv_scale() 
 
         # Add the new block
         for _ in range(num_blocks):
