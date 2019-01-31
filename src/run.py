@@ -1029,7 +1029,7 @@ def net_2_deeper_net_resnet_hyper_search(args):
     # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
     # other function preserving transforms
     for lr_drop in [1.0, 2.0, 5.0, 10.0]:
-        for weight_decay in [1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
+        for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
 
             args.lr = orig_lr / lr_drop
             args.weight_decay = weight_decay
