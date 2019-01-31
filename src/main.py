@@ -784,7 +784,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*7], # unused
+            "widen_times": [1532*15]#7], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -804,7 +804,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*10], # unused
+            "deepen_times": [1532*15]#10], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
