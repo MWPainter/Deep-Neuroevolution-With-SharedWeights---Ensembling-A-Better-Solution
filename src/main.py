@@ -1123,7 +1123,7 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1133,7 +1133,7 @@ def get_defaults(script_name):
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1141,7 +1141,7 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1151,7 +1151,7 @@ def get_defaults(script_name):
             "deepen_times": [0],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1159,7 +1159,7 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1169,7 +1169,7 @@ def get_defaults(script_name):
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1177,17 +1177,17 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20020*60],
-            "deepen_times": [20020*30],
+            "widen_times": [20020*30],
+            "deepen_times": [20020*15],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1195,17 +1195,17 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20020*60],
-            "deepen_times": [20020*30],
+            "widen_times": [20020*30],
+            "deepen_times": [20020*15],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1213,17 +1213,17 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20020*60],
-            "deepen_times": [20020*30],
+            "widen_times": [20020*30],
+            "deepen_times": [20020*15],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1231,17 +1231,17 @@ def get_defaults(script_name):
         return {
             "lr": 0.1,
             "weight_decay": 1.0e-4,
-            "epochs": 90,
+            "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 64,
             "workers": 6,
-            "widen_times": [20020*60],
-            "deepen_times": [20020*30],
+            "widen_times": [20020*30],
+            "deepen_times": [20020*15],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*30, 20020*60],
+            "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
             "grad_clip": 10.0
         }
@@ -1488,7 +1488,7 @@ if __name__ == "__main__":
     elif script == "f1aster_teacher":
         r2r_faster(args, shardname="teacher", optimizer='sgd', resnet_class=resnet35, use_thin=True)
     elif script == "f2aster_student":
-        r2r_faster(args, shardname="student", optimizer='adam', resnet_class=resnet35, use_thin=True, function_preserving=False) # widen at epoch 0
+        r2r_faster(args, shardname="student", optimizer='sgd', resnet_class=resnet35, use_thin=True, function_preserving=False) # widen at epoch 0
     elif script == "f3aster_resnet50":
         r2r_faster(args, shardname="resnet50", optimizer='sgd', resnet_class=resnet50, use_thin=False)
     elif script == "f4aster_r2r":
