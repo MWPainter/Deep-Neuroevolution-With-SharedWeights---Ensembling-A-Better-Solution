@@ -1263,7 +1263,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*15],#7], # unused
+            "widen_times": [1532*50],#7], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1275,13 +1275,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 250,
+            "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [573*15], ### TOCHANCE
+            "widen_times": [573*150], ### TOCHANCE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1293,13 +1293,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 250,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [4722*15], ### TOCHANGE
+            "widen_times": [4722*7], ### TOCHANGE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1319,7 +1319,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*15], ### TOCHANGE
+            "deepen_times": [1532*50], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1330,14 +1330,14 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 250,
+            "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [573*15], ### TOCHANGE
+            "deepen_times": [573*150], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1348,14 +1348,14 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 250,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [4722*15], ### TOCHANGE
+            "deepen_times": [4722*7], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1363,7 +1363,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0
         }
         
-    elif script in ["last_cwnt","last_cwnw","last_swnt","last_swnw","last_ewnt","last_ewnw"]:
+    elif script in ["last_cwnt","last_cwnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
@@ -1382,11 +1382,87 @@ def get_defaults(script_name):
             "grad_clip": 0.0
         }
         
-    elif script in ["last_cdnt", "last_cdnw", "last_sdnt", "last_sdnw", "last_ednt", "last_ednw"]:
+    elif script in ["last_swnt","last_swnw"]:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 750,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in ["last_ewnt","last_ewnw"]:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 20,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in ["last_cdnt", "last_cdnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
             "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in ["last_sdnt", "last_sdnw"]:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 750,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in ["last_ednt", "last_ednw"]:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 20,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
