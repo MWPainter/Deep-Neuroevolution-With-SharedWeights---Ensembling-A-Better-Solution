@@ -32,7 +32,7 @@ class CifarDataset(Dataset):
         val_dir = os.path.join(cifar_dir, "test")
 
         # Apply torchvision transforms appropriately to be able to normalize and/or subtract means
-        transs = []
+        transs = [transforms.ToTensor()]
         if normalize:
             mean = 0.0 if subtract_mean else 0.5
             transs.append(transforms.Normalize((mean,), (1.0,)))

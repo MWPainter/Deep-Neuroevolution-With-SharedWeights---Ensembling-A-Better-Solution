@@ -1281,7 +1281,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*15], ### TOCHANCE
+            "widen_times": [4577*15], ### TOCHANCE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1299,7 +1299,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*15], ### TOCHANGE
+            "widen_times": [4577*15], ### TOCHANGE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1337,7 +1337,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*15], ### TOCHANGE
+            "deepen_times": [4577*15], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1355,7 +1355,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*15], ### TOCHANGE
+            "deepen_times": [4577*15], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused

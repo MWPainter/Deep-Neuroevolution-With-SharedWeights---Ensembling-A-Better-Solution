@@ -37,7 +37,7 @@ class SvhnDataset(Dataset):
             os.makedirs(svhn_dir)
 
         # Apply torchvision transforms appropriately to be able to normalize and/or subtract means
-        transs = []
+        transs = [transforms.ToTensor()]
         if normalize:
             mean = 0.0 if subtract_mean else 0.5
             transs.append(transforms.Normalize((mean,), (1.0,)))
@@ -48,7 +48,7 @@ class SvhnDataset(Dataset):
         split = 'train' if train else 'test'
         self.dataset = dset.SVHN(root=self.data_file, split=split, transform=trans, download=True)
         if train and use_extra_train:
-            self.extra_data_file = extra_file
+            self.extra_file = extra_file
             self.extra_dataset = dset.SVHN(root=self.extra_file, split='extra', transform=trans, download=True)
 
         # Stats needed for indexing into training set (split across the 'train' and 'extra' datasets)
@@ -60,8 +60,8 @@ class SvhnDataset(Dataset):
         """ 
         Helper to index into the training set with extra training set. 
         """
-        if self.train and self.use_extra_train and index >= self.main_train_set_size:
-            index -= self.main_train_set_size
+        if self.train and self.use_extra_train and index >= self.main_dataset_size:
+            index -= self.main_dataset_size
             return self.extra_dataset[index]
         return self.dataset[index]
 

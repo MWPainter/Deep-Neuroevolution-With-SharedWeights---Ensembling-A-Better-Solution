@@ -1845,7 +1845,7 @@ def _make_cifar_data_loaders(args):
                               num_workers=args.workers, pin_memory=True)
 
     joint_dataset = ProductDataset(train_dataset, val_dataset)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    train_loader = DataLoader(dataset=joint_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
     return train_loader, val_loader
@@ -1859,7 +1859,7 @@ def _make_svhn_data_loaders(args, extended=False):
                               num_workers=args.workers, pin_memory=True)
 
     joint_dataset = ProductDataset(train_dataset, val_dataset)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    train_loader = DataLoader(dataset=joint_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
     return train_loader, val_loader
