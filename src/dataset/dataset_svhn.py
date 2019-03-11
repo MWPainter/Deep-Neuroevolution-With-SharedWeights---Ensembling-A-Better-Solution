@@ -45,13 +45,11 @@ class SvhnDataset(Dataset):
 
         # Finally make the SVHN instances needed
         self.data_file = train_file if train else val_file
-        download = not os.path.isdir(train_file) or not os.path.isdir(val_file)
         split = 'train' if train else 'test'
-        self.dataset = dset.SVHN(root=self.data_file, split=split, transform=trans, download=download)
+        self.dataset = dset.SVHN(root=self.data_file, split=split, transform=trans, download=True)
         if train and use_extra_train:
             self.extra_data_file = extra_file
-            downlaod = not os.path.isdir(extra_file)
-            self.extra_dataset = dset.SVHN(root=self.extra_file, split='extra', transform=trans, download=download)
+            self.extra_dataset = dset.SVHN(root=self.extra_file, split='extra', transform=trans, download=True)
 
         # Stats needed for indexing into training set (split across the 'train' and 'extra' datasets)
         self.main_dataset_size = len(self.dataset)
