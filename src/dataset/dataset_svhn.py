@@ -29,9 +29,9 @@ class SvhnDataset(Dataset):
         # Files for the data, and make sure that the path exists
         this_files_dir = os.path.dirname(__file__)
         svhn_dir = os.path.join(this_files_dir, "data", "svhn")
-        train_file = os.path.join(svhn_dir, "training.pt")
-        val_file = os.path.join(svhn_dir, "test.pt")
-        extra_file = os.path.join(svhn_dir, "extra.pt")
+        train_file = os.path.join(svhn_dir, "training")
+        val_file = os.path.join(svhn_dir, "test")
+        extra_file = os.path.join(svhn_dir, "extra")
 
         if not os.path.exists(svhn_dir):
             os.makedirs(svhn_dir)

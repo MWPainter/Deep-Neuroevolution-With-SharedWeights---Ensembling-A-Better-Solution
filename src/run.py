@@ -1953,6 +1953,7 @@ def last_svhn_extended_r2deeper_resnet_wide(args):
 
 def last_cifar_net2wider_resnet_thin(args):
     # Make the data loader objects
+    print("actually running")
     train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=4)
 

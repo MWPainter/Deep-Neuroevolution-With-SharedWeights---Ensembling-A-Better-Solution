@@ -1363,7 +1363,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0
         }
         
-    elif script in {"last_cwnt","last_cwnw","last_swnt","last_swnw","last_ewnt","last_ewnw"}:
+    elif script in ["last_cwnt","last_cwnw","last_swnt","last_swnw","last_ewnt","last_ewnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
@@ -1382,7 +1382,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0
         }
         
-    elif script in {"last_cdnt", "last_cdnw", "last_sdnt", "last_sdnw", "last_ednt", "last_ednw"}:
+    elif script in ["last_cdnt", "last_cdnw", "last_sdnt", "last_sdnw", "last_ednt", "last_ednw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
