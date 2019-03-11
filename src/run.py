@@ -2170,7 +2170,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 3.0e-3
     args.lr_drop_mag = [5.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # Net2Net
@@ -2184,7 +2184,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr_drop_mag = [5.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # RandomPadding
@@ -2199,7 +2199,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 3.0e-3
     args.lr_drop_mag = [5.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # Random init start
@@ -2213,7 +2213,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # Teacher network training loop
@@ -2226,7 +2226,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                                _validation_loss, args)
 
     # Net2Net teacher
@@ -2241,7 +2241,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr):
     args.lr_drops = []
     args.lr_drop_mag = [0.0]
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                                _validation_loss, args)
 
 
@@ -2266,7 +2266,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     args.lr = orig_lr
     args.weight_decay = 5.0e-3
     initial_model = orig_resnet24_cifar(thin=True, thinning_ratio=tr)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                                _validation_loss, args)
 
     # R2R
@@ -2278,7 +2278,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 2.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2292,7 +2292,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-5
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2307,7 +2307,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 3.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2320,7 +2320,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 2.0
     args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2330,8 +2330,8 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 5.0e-3
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
+                               _update_op_cts_eval, _validation_loss, args)
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
@@ -2342,7 +2342,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2355,7 +2355,7 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr
     args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2379,8 +2379,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     args.weight_decay = 5.0e-3
     initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op,
-                               _validation_loss, args)
+                               _update_op_cts_eval, _validation_loss, args)
 
     # R2R
     model = copy.deepcopy(teacher_model)
@@ -2392,7 +2391,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 3.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # RandomPadding
@@ -2407,7 +2406,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 3.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # Random init start
@@ -2420,7 +2419,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 2.0
     args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
     # Net2Net teacher
@@ -2430,8 +2429,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     args.lr = orig_lr
     args.weight_decay = 5.0e-3
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op,
-                               _validation_loss, args)
+                               _update_op_cts_eval, _validation_loss, args)
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
@@ -2444,7 +2442,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr / 5.0
     args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
 
@@ -2457,5 +2455,5 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr):
     # args.weight_decay = 1.0e-3
     args.lr = orig_lr
     args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
