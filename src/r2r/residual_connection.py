@@ -232,6 +232,8 @@ class Residual_Connection(object):
         channel_capacity = x.size(1)
         for _, end in self.residual_slice_map:
             if end > channel_capacity:
+                print(x.size())
+                print(self.residual_slice_map)
                 raise Exception("Residual connection being applied to a volume without a large enough channel " +
                                 "capacity for the residual connection.")
 

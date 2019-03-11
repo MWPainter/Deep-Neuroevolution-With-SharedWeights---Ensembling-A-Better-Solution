@@ -19,8 +19,11 @@ Code adapted from: https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 
 
-__all__ = ['ResNet', 'resnet10', 'resnet10_cifar', 'resnet18', 'resnet18_cifar', 'resnet35', 'resnet26', 'resnet26_r2r', 'resnet50', 'resnet101',
-           'resnet152']
+__all__ = ['resnet10', 'resnet10_cifar', 'orig_resnet12_cifar', 
+           'resnet18', 'resnet18_cifar', 'orig_resnet18_cifar', 
+           'orig_resnet24_cifar', 'orig_resnet32_cifar', 'resnet35', 
+           'resnet26', 'resnet26_r2r', 'resnet50', 
+           'resnet101', 'resnet152', 'ResNet']
 
 
 
@@ -103,7 +106,7 @@ def _identity_init_batch_norm(batch_norm, entire_resnet, batch):
 
 
 def reduce_size_function(ratio):
-    """Reduces by ratio r, to give an interger, and force it to be a multiple of eight"""
+    """Reduces by ratio r, to give an interger, and force it to be a multiple of four"""
     return lambda x: int((((x // ratio) + 3) // 4) * 4)
 
 
@@ -415,7 +418,8 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, r=(lambda x: x),
-                 function_preserving=True, use_residual=True, morphism_scheme="r2r", init_scheme='match_std'):
+                 function_preserving=True, use_residual=True, morphism_scheme="r2r", init_scheme='match_std', 
+                 skip_stem=False):
         super(ResNet, self).__init__()
 
         self.block = block
@@ -428,16 +432,23 @@ class ResNet(nn.Module):
         self.use_residual = use_residual
         self.morphism_scheme = morphism_scheme.lower()
         self.init_scheme = init_scheme
+        self.skip_stem = skip_stem
 
         self.inplanes = r(64)
-        self.conv1 = nn.Conv2d(3, r(64), kernel_size=7, stride=2, padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, r(64), kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(r(64))
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        conv1_out_shape = conv_out_shape(self.in_shape[1:], self.conv1.weight.data.size(0), kernel_size=7, stride=2, padding=3)
-        pool_out_shape = conv_out_shape(conv1_out_shape[1:], self.conv1.weight.data.size(0), kernel_size=3, stride=2, padding=1)
+        if self.skip_stem:
+            self.replacement_stem = nn.Conv2d(3, r(64), kernel_size=3, padding=1, bias=False)
+
+        if skip_stem:
+            pool_out_shape = self.in_shape
+        else:
+            conv1_out_shape = conv_out_shape(self.in_shape[1:], self.conv1.weight.data.size(0), kernel_size=7, stride=2, padding=3)
+            pool_out_shape = conv_out_shape(conv1_out_shape[1:], self.conv1.weight.data.size(0), kernel_size=3, stride=2, padding=1)
+
         self.layer1_modules, out_img_shape = self._make_layer(block, r(64), pool_out_shape[1:], layers[0])
         self.layer2_modules, out_img_shape = self._make_layer(block, r(128), out_img_shape, layers[1], stride=2)
         self.layer3_modules, out_img_shape = self._make_layer(block, r(256), out_img_shape, layers[2], stride=2)
@@ -447,6 +458,8 @@ class ResNet(nn.Module):
         self.layer3 = nn.Sequential(*self.layer3_modules)
         self.layer4 = nn.Sequential(*self.layer4_modules)
         fc_layers_in = r(512) * block.expansion
+        if layers[3] == 0:
+            fc_layers_in = r(256) * block.expansion
         if layers[2] == 0 and layers[3] == 0:
             fc_layers_in = r(128) * block.expansion
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
@@ -519,10 +532,12 @@ class ResNet(nn.Module):
     def deepen(self, num_blocks, minibatch=None, add_noise=True):
         self._deepen_layer(self.layer1_modules, self.block, num_blocks[0], minibatch, add_noise)
         self._deepen_layer(self.layer2_modules, self.block, num_blocks[1], minibatch, add_noise)
-        if len(self.layer3_modules) > 0 and len(self.layer4_modules) > 0:
+        if len(self.layer3_modules) > 0:
             self._deepen_layer(self.layer3_modules, self.block, num_blocks[2], minibatch, add_noise)
+        if len(self.layer4_modules) > 0:
             self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
-        elif len(num_blocks) > 2 and (num_blocks[2] > 0 or num_blocks[3] > 0):
+        if len(num_blocks) > 2 and ((num_blocks[2] > 0 and len(self.layer3_modules) == 0) or 
+                                    (num_blocks[3] > 0 and len(self.layer4_modules == 0))):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)
@@ -544,10 +559,13 @@ class ResNet(nn.Module):
 
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        if self.skip_stem:
+            x = self.replacement_stem(x) # 3 channels -> 16, w/ 3x3 conv
+        else:
+            x = self.conv1(x)
+            x = self.bn1(x)
+            x = self.relu(x)
+            x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)
@@ -570,10 +588,15 @@ class ResNet(nn.Module):
         return hvg
 
     def conv_hvg(self, cur_hvg):
-        conv1_out_shape = conv_out_shape(self.in_shape[1:], self.conv1.weight.data.size(0), kernel_size=7, stride=2, padding=3)
-        conv1_hvn = cur_hvg.add_hvn(conv1_out_shape, input_modules=[self.conv1], batch_norm=self.bn1)
-        pool_out_shape = conv_out_shape(conv1_out_shape[1:], self.conv1.weight.data.size(0), kernel_size=3, stride=2, padding=1)
-        cur_hvn = cur_hvg.add_hvn(pool_out_shape, input_modules=[self.maxpool], input_hvns=[conv1_hvn])
+        if self.skip_stem:
+            replacement_stem_out_shape = conv_out_shape(self.in_shape[1:], self.replacement_stem.weight.data.size(0), kernel_size=3, stride=1, padding=1)
+            cur_hvn = cur_hvg.add_hvn(replacement_stem_out_shape, input_modules=[self.replacement_stem])
+            
+        else:
+            conv1_out_shape = conv_out_shape(self.in_shape[1:], self.conv1.weight.data.size(0), kernel_size=7, stride=2, padding=3)
+            conv1_hvn = cur_hvg.add_hvn(conv1_out_shape, input_modules=[self.conv1], batch_norm=self.bn1)
+            pool_out_shape = conv_out_shape(conv1_out_shape[1:], self.conv1.weight.data.size(0), kernel_size=3, stride=2, padding=1)
+            cur_hvn = cur_hvg.add_hvn(pool_out_shape, input_modules=[self.maxpool], input_hvns=[conv1_hvn])
 
         for block in self.layer1_modules:
             cur_hvg, cur_hvn = block.extend_hvg(cur_hvg, cur_hvn)
@@ -632,6 +655,58 @@ def resnet18_cifar(pretrained=False, thin=False, thinning_ratio=2, function_pres
     if thin:
         r = reduce_size_function(thinning_ratio)
     model = ResNet(BasicBlock, [4, 4, 0, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, **kwargs)
+    return model
+
+
+
+def orig_resnet12_cifar(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-12 model for cifar. FROM THE ORIGINAL PAPER.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = reduce_size_function(4)
+    if thin:
+        r = reduce_size_function(4*thinning_ratio)
+    model = ResNet(BasicBlock, [2, 2, 2, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, skip_stem=True, **kwargs)
+    return model
+
+
+
+def orig_resnet18_cifar(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-18 model for cifar. FROM THE ORIGINAL PAPER.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = reduce_size_function(4)
+    if thin:
+        r = reduce_size_function(4*thinning_ratio)
+    model = ResNet(BasicBlock, [3, 3, 3, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, skip_stem=True, **kwargs)
+    return model
+
+
+
+def orig_resnet24_cifar(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-18 model for cifar. FROM THE ORIGINAL PAPER.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = reduce_size_function(4)
+    if thin:
+        r = reduce_size_function(4*thinning_ratio)
+    model = ResNet(BasicBlock, [4, 4, 4, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, skip_stem=True, **kwargs)
+    return model
+
+
+
+def orig_resnet32_cifar(thin=False, thinning_ratio=2, function_preserving=True, use_residual=True, morphism_scheme="r2r", **kwargs):
+    """Constructs a ResNet-32 model for cifar. FROM THE ORIGINAL PAPER.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    r = reduce_size_function(4)
+    if thin:
+        r = reduce_size_function(4*thinning_ratio)
+    model = ResNet(BasicBlock, [5, 5, 5, 0], function_preserving=function_preserving, r=r, use_residual=use_residual, morphism_scheme=morphism_scheme, skip_stem=True, **kwargs)
     return model
 
 

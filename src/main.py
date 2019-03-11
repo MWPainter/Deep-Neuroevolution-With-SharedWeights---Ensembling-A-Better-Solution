@@ -10,14 +10,15 @@ from batch_tests import mnist_identity_init_test, cifar_identity_init_test, mnis
 from batch_tests import mnist_widen_with_budget_test, cifar_widen_with_budget_test, mnist_deepen_with_budget_test, cifar_deepen_with_budget_test
 from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 
-from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
-from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
-from run import net_2_wider_net_resnet_hyper_search, net_2_deeper_net_resnet_hyper_search
-from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
-from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
-from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
-from run import r_2_r_weight_init_example, net_2_net_overfit_example
-from run import r2r_faster
+# from run import _net_2_wider_net_inception_test, _r_2_wider_r_inception_test
+# from run import net_2_wider_net_resnet, net_2_deeper_net_resnet
+# from run import net_2_wider_net_resnet_hyper_search, net_2_deeper_net_resnet_hyper_search
+# from run import r_2_wider_r_resnet, r_2_deeper_r_resnet
+# from run import quadruple_widen_run, double_deepen_run, double_widen_and_deepen_run
+# from run import r2r_faster_test_part_1, r2r_faster_test_part_2, r2r_faster_test_part_3, r2r_faster_test_part_4, r2r_faster_test_redo, r2r_faster_test_redo_18
+# from run import r_2_r_weight_init_example, net_2_net_overfit_example
+# from run import r2r_faster
+from run import *
 
 from viz import _mnist_weight_visuals, _cifar_weight_visuals
 
@@ -1247,6 +1248,160 @@ def get_defaults(script_name):
         }
 
 
+
+
+    ######
+    # Last set of tests, using SVHN and proper resnet architectures
+    ######
+    elif script == "last_cwrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [1532*15],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_swrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [1532*15], ### TOCHANCE
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_ewrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [1532*15], ### TOCHANGE
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+
+    elif script == "last_cdrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*15], ### TOCHANGE
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_sdrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*15], ### TOCHANGE
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_edrt":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*15], ### TOCHANGE
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in {"last_cwnt","last_cwnw","last_swnt","last_swnw","last_ewnt","last_ewnw"}:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+        
+    elif script in {"last_cdnt", "last_cdnw", "last_sdnt", "last_sdnw", "last_ednt", "last_ednw"}:
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+
+
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
 
@@ -1499,6 +1654,62 @@ if __name__ == "__main__":
         r2r_faster(args, shardname="r2r_rms", optimizer='adagrad', resnet_class=resnet35, use_thin=True) # widen
     elif script == "f7aster_r2r_adam":
         r2r_faster(args, shardname="r2r_adam", optimizer='adam', resnet_class=resnet35, use_thin=True) # widen
+
+
+    ######
+    # Last set of tests, using SVHN and proper resnet architectures
+    ######
+    elif script == "last_cwrt":
+        last_cifar_r2wider_resnet_thin(args)
+    # elif script == "last_cwrw":
+    #     last_cifar_r2wider_resnet_wide(args)
+    elif script == "last_swrt":
+        last_svhn_r2wider_resnet_thin(args)
+    # elif script == "last_swrw":
+    #     last_svhn_r2wider_resnet_wide(args)
+    elif script == "last_ewrt":
+        last_svhn_extended_r2wider_resnet_thin(args)
+    # elif script == "last_ewrw":
+    #     last_svhn_extended_r2wider_resnet_wide(args)
+
+    elif script == "last_cdrt":
+        last_cifar_r2deeper_resnet_thin(args)
+    # elif script == "last_cdrw":
+    #     last_cifar_r2deeper_resnet_wide(args)
+    elif script == "last_sdrt":
+        last_svhn_r2deeper_resnet_thin(args)
+    # elif script == "last_sdrw":
+    #     last_svhn_r2deeper_resnet_wide(args)
+    elif script == "last_edrt":
+        last_svhn_extended_r2deeper_resnet_thin(args)
+    # elif script == "last_edrw":
+    #     last_svhn_extended_r2deeper_resnet_wide(args)
+        
+    elif script == "last_cwnt":
+        last_cifar_net2wider_resnet_thin(args)
+    elif script == "last_cwnw":
+        last_cifar_net2wider_resnet_wide(args)
+    elif script == "last_swnt":
+        last_svhn_net2wider_resnet_thin(args)
+    elif script == "last_swnw":
+        last_svhn_net2wider_resnet_wide(args)
+    elif script == "last_ewnt":
+        last_svhn_extended_net2wider_resnet_thin(args)
+    elif script == "last_ewnw":
+        last_svhn_extended_net2wider_resnet_wide(args)
+        
+    elif script == "last_cdnt":
+        last_cifar_net2deeper_resnet_thin(args)
+    elif script == "last_cdnw":
+        last_cifar_net2deeper_resnet_wide(args)
+    elif script == "last_sdnt":
+        last_svhn_net2deeper_resnet_thin(args)
+    elif script == "last_sdnw":
+        last_svhn_net2deeper_resnet_wide(args)
+    elif script == "last_ednt":
+        last_svhn_extended_net2deeper_resnet_thin(args)
+    elif script == "last_ednw":
+        last_svhn_extended_net2deeper_resnet_wide(args)
 
 
     else:

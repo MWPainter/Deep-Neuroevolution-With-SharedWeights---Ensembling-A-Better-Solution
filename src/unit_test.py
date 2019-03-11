@@ -2,7 +2,7 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 
-from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50, resnet18
+from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50, resnet18, orig_resnet12_cifar, orig_resnet24_cifar
 from utils import flatten, parameter_magnitude
 
 
@@ -677,8 +677,6 @@ if __name__ == "__main__":
         print("\n"*4)
         print("Testing widen then deepen on deepening for ResNet50 network:")
     test_function_preserving_deepen_then_widen(resnet50(), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
-    
-    
 
 
 
@@ -689,6 +687,55 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for orig Cifar Resnet:")
+    test_function_preserving_r2widerr(orig_resnet12_cifar(), 1e-5, deep=True, data_channels=3, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for orig Cifar Resnet:")
+    test_function_preserving_r2widerr(orig_resnet12_cifar(thin=True), 1e-5, deep=True, data_channels=3, verbose=verbose)
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for orig Cifar Resnet:")
+    test_function_preserving_r2deeperr(orig_resnet12_cifar(), 1e-5, resnet=True, data_channels=3, verbose=verbose)
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for orig Cifar Resnet:")
+    test_function_preserving_r2deeperr(orig_resnet12_cifar(thin=True), 1e-5, resnet=True, data_channels=3, verbose=verbose)
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for orig Cifar Resnet:")
+    test_function_preserving_r2widerr(orig_resnet24_cifar(), 1e-5, deep=True, data_channels=3, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2WiderR for orig Cifar Resnet:")
+    test_function_preserving_r2widerr(orig_resnet24_cifar(thin=True), 1e-5, deep=True, data_channels=3, verbose=verbose)
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for orig Cifar Resnet:")
+    test_function_preserving_r2deeperr(orig_resnet24_cifar(), 1e-5, resnet=True, data_channels=3, verbose=verbose)
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing R2DeeperR for orig Cifar Resnet:")
+    test_function_preserving_r2deeperr(orig_resnet24_cifar(thin=True), 1e-5, resnet=True, data_channels=3, verbose=verbose)
 
 
 

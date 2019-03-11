@@ -102,7 +102,8 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         print("Epoch {epoch} training:".format(epoch=epoch+1))
         model.train()
         cur_global_iter = epoch * len(train_loader)
-        model, optimizer, avg_losses = _train_loop_epoch(model, train_loader, update_op, optimizer, cur_global_iter, writer, "train/", args)
+        model, optimizer, avg_losses = _train_loop_epoch(model, train_loader, update_op, optimizer, cur_global_iter, 
+                                                         writer, "train/", args)
 
         # Validation epoch (same as train, but replace 'update_op' and 'train_loader' appropriately and run network in eval 
         # mode)
@@ -111,7 +112,7 @@ def train_loop(model, train_loader, val_loader, make_optimizer_fn, load_fn, chec
         cur_global_iter = (epoch + 1) * len(train_loader)
         validation_op = lambda model, optimizer, mbatch, _b, args: (model, optimizer, validation_loss(model, mbatch, args))
         _, _, avg_val_losses = _train_loop_epoch(model, val_loader, validation_op, optimizer,
-                                                             cur_global_iter, writer, "val/", args)
+                                                 cur_global_iter, writer, "val/", args)
 
         # Logging per epoch
         for key in avg_val_losses:
