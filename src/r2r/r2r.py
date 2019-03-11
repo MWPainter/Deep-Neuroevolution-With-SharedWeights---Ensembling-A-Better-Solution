@@ -1022,7 +1022,7 @@ class HVN(object):
             edge = queue.pop(0)
             if type(edge.pytorch_module) == nn.Conv2d:
                 return True
-            queue.extend(edge.child_node.child_edges)
+            queue.extend(copy.copy(edge.child_node.child_edges))
         return False
 
 
