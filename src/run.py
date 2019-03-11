@@ -4,7 +4,7 @@ import torch as t
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-from dataset import get_imagenet_dataloader, CifarDataset
+from dataset import get_imagenet_dataloader, CifarDataset, ProductDataset, SvhnDataset
 
 from utils import cudafy
 from utils import train_loop
@@ -1837,10 +1837,10 @@ last set of tests
 
 
 
-def _make_cifar_data_loaders():
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+def _make_cifar_data_loaders(args):
+    train_dataset = CifarDataset(train=True, labels_as_logits=False)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    val_dataset = CifarDataset(train=False, labels_as_logits=False)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
@@ -1851,10 +1851,10 @@ def _make_cifar_data_loaders():
     return train_loader, val_loader
 
 
-def _make_svhn_data_loaders(extended=False):
-    train_dataset = SvhnDataset(mode="train", labels_as_logits=False, use_extra_train=extended)
+def _make_svhn_data_loaders(args, extended=False):
+    train_dataset = SvhnDataset(train=True, labels_as_logits=False, use_extra_train=extended)
 
-    val_dataset = SvhnDataset(mode="val", labels_as_logits=False, use_extra_train=extended)
+    val_dataset = SvhnDataset(train=False, labels_as_logits=False, use_extra_train=extended)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
@@ -1871,37 +1871,37 @@ def _make_svhn_data_loaders(extended=False):
 
 def last_cifar_r2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_cifar_r2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
 def last_svhn_r2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_svhn_r2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
 def last_svhn_extended_r2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_svhn_extended_r2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_r2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
@@ -1912,37 +1912,37 @@ def last_svhn_extended_r2wider_resnet_wide(args):
 
 def last_cifar_r2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_cifar_r2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
 def last_svhn_r2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_svhn_r2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
 def last_svhn_extended_r2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_svhn_extended_r2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_r2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
@@ -1953,37 +1953,37 @@ def last_svhn_extended_r2deeper_resnet_wide(args):
 
 def last_cifar_net2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_cifar_net2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
 def last_svhn_net2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_svhn_net2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
 def last_svhn_extended_net2wider_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=4)
 
 
 def last_svhn_extended_net2wider_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(extended=True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_net2wider_resnet(args, train_loader, val_loader, tr=1.5)
 
 
@@ -1994,37 +1994,37 @@ def last_svhn_extended_net2wider_resnet_wide(args):
 
 def last_cifar_net2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_cifar_net2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_cifar_data_loaders()
+    train_loader, val_loader = _make_cifar_data_loaders(args)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
 def last_svhn_net2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_svhn_net2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders()
+    train_loader, val_loader = _make_svhn_data_loaders(args)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
 def last_svhn_extended_net2deeper_resnet_thin(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
 
 
 def last_svhn_extended_net2deeper_resnet_wide(args):
     # Make the data loader objects
-    train_loader, val_loader = _make_svhn_data_loaders(True)
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     _last_net2deeper_resnet(args, train_loader, val_loader, tr=1)
 
 
