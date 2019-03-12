@@ -1289,7 +1289,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0
         }
-    elif script == "last_ewrt":
+    elif script in ["last_ewrt", "last_ewrw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
@@ -1344,7 +1344,7 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0
         }
-    elif script == "last_edrt":
+    elif script in ["last_edrt", "last_edrw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
@@ -1818,8 +1818,8 @@ if __name__ == "__main__":
     #     last_svhn_r2wider_resnet_wide(args)
     elif script == "last_ewrt":
         last_svhn_extended_r2wider_resnet_thin(args)
-    # elif script == "last_ewrw":
-    #     last_svhn_extended_r2wider_resnet_wide(args)
+    elif script == "last_ewrw":
+        last_svhn_extended_r2wider_resnet_wide(args)
 
     elif script == "last_cdrt":
         last_cifar_r2deeper_resnet_thin(args)
@@ -1831,8 +1831,8 @@ if __name__ == "__main__":
     #     last_svhn_r2deeper_resnet_wide(args)
     elif script == "last_edrt":
         last_svhn_extended_r2deeper_resnet_thin(args)
-    # elif script == "last_edrw":
-    #     last_svhn_extended_r2deeper_resnet_wide(args)
+    elif script == "last_edrw":
+        last_svhn_extended_r2deeper_resnet_wide(args)
         
     elif script == "last_cwnt":
         last_cifar_net2wider_resnet_thin(args)
