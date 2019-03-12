@@ -11,7 +11,7 @@ class SvhnDataset(Dataset):
     """
     A wrapper around PyTorch's SVHN dataset implementation, making it useful for us
     """
-    def __init__(self, train=True, normalize=True, subtract_mean=True, labels_as_logits=True, use_extra_train=False):
+    def __init__(self, train=True, normalize=True, subtract_mean=True, labels_as_logits=True, use_extra_train=False, augment_training=True):
         """
         Make the PyTorch MNIST dataset instance and
 
@@ -37,10 +37,14 @@ class SvhnDataset(Dataset):
             os.makedirs(svhn_dir)
 
         # Apply torchvision transforms appropriately to be able to normalize and/or subtract means
-        transs = [transforms.ToTensor()]
+        transs = []
+        if train and augment_training:
+            transs.append(transforms.RandomCrop(32, padding=4))
+            transs.append(transforms.RandomHorizontalFlip())
+        transs.append(transforms.ToTensor())
         if normalize:
-            mean = 0.0 if subtract_mean else 0.5
-            transs.append(transforms.Normalize((mean,), (1.0,)))
+            mean = [0.507, 0.487, 0.441] if subtract_mean else [0.0, 0.0, 0.0]
+            transs.append(transforms.Normalize(mean=mean, std=[0.267, 0.256, 0.276]))
         trans = transforms.Compose(transs)
 
         # Finally make the SVHN instances needed
