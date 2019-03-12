@@ -1476,6 +1476,79 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0
         }
+    
+    elif script == "last_cwr100":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [1532*50],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_cdr100":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [1532*50], ### TOCHANGE
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_cwn100":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+    elif script == "last_cdn100":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-3,
+            "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
 
 
     else:
@@ -1786,6 +1859,15 @@ if __name__ == "__main__":
         last_svhn_extended_net2deeper_resnet_thin(args)
     elif script == "last_ednw":
         last_svhn_extended_net2deeper_resnet_wide(args)
+
+    elif script == "last_cwr100":
+        last_cifar100_r2wider_resnet_wide(args)
+    elif script == "last_cdr100":
+        last_cifar100_r2deeper_resnet_wide(args)
+    elif script == "last_cwn100":
+        last_cifar100_net2wider_resnet_wide(args)
+    elif script == "last_cdn100":
+        last_cifar100_net2deeper_resnet_wide(args)
 
 
     else:
