@@ -1462,7 +1462,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 20,
+            "epochs": 12,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1536,6 +1536,25 @@ def get_defaults(script_name):
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
             "epochs": 250,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0
+        }
+
+    elif script == "last_svhn_wdtune":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 0.0,
+            "epochs": 6,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1868,6 +1887,9 @@ if __name__ == "__main__":
         last_cifar100_net2wider_resnet_wide(args)
     elif script == "last_cdn100":
         last_cifar100_net2deeper_resnet_wide(args)
+
+    elif script == "last_svhn_wdtune":
+        last_svhn_weight_decay_tune(args)
 
 
     else:

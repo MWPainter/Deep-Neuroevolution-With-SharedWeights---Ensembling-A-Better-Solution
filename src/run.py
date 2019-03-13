@@ -2077,6 +2077,17 @@ def last_cifar100_net2deeper_resnet_wide(args):
 
 
 
+def last_svhn_weight_decay_tune(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    _last_weight_decay_tune(args, train_loader, val_loader)
+
+
+
+
+
+
+
 def _last_r2wider_resnet(args, train_loader, val_loader, tr, nc=10):
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
@@ -2501,3 +2512,28 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     args.weight_decay = 1.0e-4
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
+
+
+
+
+
+def _last_weight_decay_tune(args, train_loader, val_loader):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
+
+    orig_lr = args.lr
+    orig_wd = args.weight_decay
+    scaling_factor = 1.5
+
+    # Teacher network training loop
+    for wd in [0, 1e-6, 1e-5, 1e-4, 3e-3, 1e-3, 1e-2, 1e-1]:
+        args.shard = str(wd)
+        args.total_flops = 0
+        args.lr = orig_lr
+        args.weight_decay = wd
+        train_loop(orig_resnet24_cifar(), train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
+                   _update_op_cts_eval, _validation_loss, args)
