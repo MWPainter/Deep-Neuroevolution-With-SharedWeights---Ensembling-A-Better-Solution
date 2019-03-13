@@ -1263,7 +1263,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*50],#7], # unused
+            "widen_times": [391*50],#7], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1293,13 +1293,13 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 20,
+            "epochs": 6,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [4722*7], ### TOCHANGE
+            "widen_times": [int(4722*1.5)], ### TOCHANGE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1319,7 +1319,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*50], ### TOCHANGE
+            "deepen_times": [391*50], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1348,14 +1348,14 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 20,
+            "epochs": 6,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [4722*7], ### TOCHANGE
+            "deepen_times": [int(4722*1.5)], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1405,7 +1405,7 @@ def get_defaults(script_name):
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
-            "epochs": 20,
+            "epochs": 12,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1487,7 +1487,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [1532*50],#7], # unused
+            "widen_times": [391*50],#7], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1506,7 +1506,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [1532*50], ### TOCHANGE
+            "deepen_times": [391*50], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
