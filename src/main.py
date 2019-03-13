@@ -1256,7 +1256,7 @@ def get_defaults(script_name):
     elif script == "last_cwrt":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 150,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1274,7 +1274,7 @@ def get_defaults(script_name):
     elif script == "last_swrt":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1292,7 +1292,7 @@ def get_defaults(script_name):
     elif script in ["last_ewrt", "last_ewrw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-5,
             "epochs": 6,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1311,7 +1311,7 @@ def get_defaults(script_name):
     elif script == "last_cdrt":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 150,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1329,7 +1329,7 @@ def get_defaults(script_name):
     elif script == "last_sdrt":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1347,7 +1347,7 @@ def get_defaults(script_name):
     elif script in ["last_edrt", "last_edrw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-5,
             "epochs": 6,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1366,7 +1366,7 @@ def get_defaults(script_name):
     elif script in ["last_cwnt","last_cwnw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 150,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1385,7 +1385,7 @@ def get_defaults(script_name):
     elif script in ["last_swnt","last_swnw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1404,7 +1404,7 @@ def get_defaults(script_name):
     elif script in ["last_ewnt","last_ewnw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-5,
             "epochs": 12,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1423,7 +1423,7 @@ def get_defaults(script_name):
     elif script in ["last_cdnt", "last_cdnw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 150,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1442,7 +1442,7 @@ def get_defaults(script_name):
     elif script in ["last_sdnt", "last_sdnw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 750,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1461,7 +1461,7 @@ def get_defaults(script_name):
     elif script in ["last_ednt", "last_ednw"]:
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-5,
             "epochs": 12,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1480,7 +1480,7 @@ def get_defaults(script_name):
     elif script == "last_cwr100":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1498,7 +1498,7 @@ def get_defaults(script_name):
     elif script == "last_cdr100":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1516,7 +1516,7 @@ def get_defaults(script_name):
     elif script == "last_cwn100":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
@@ -1534,7 +1534,7 @@ def get_defaults(script_name):
     elif script == "last_cdn100":
         return {
             "lr": 3.0e-3,
-            "weight_decay": 1.0e-3,
+            "weight_decay": 1.0e-4,
             "epochs": 250,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
