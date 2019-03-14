@@ -2216,7 +2216,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # R2R
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    args.deepen_indidces_list = [[2,2,2,0]]
+    args.deepen_indidces_list = [[1,1,1,0]]
     args.shard = "R2R_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -2230,7 +2230,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # Net2Net
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
-    args.deepen_indidces_list = [[2,2,2,0]]
+    args.deepen_indidces_list = [[1,1,1,0]]
     args.shard = "Net2Net_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -2245,7 +2245,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     # RandomPadding
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
     model.init_scheme = 'He'
-    args.deepen_indidces_list = [[2,2,2,0]]
+    args.deepen_indidces_list = [[1,1,1,0]]
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     args.lr = orig_lr
@@ -2259,7 +2259,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # Random init start
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.deepen([2,2,2,0])
+    model.deepen([1,1,1,0])
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
     args.widen_times = []
@@ -2287,7 +2287,7 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     # Net2Net teacher
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
     model = cudafy(model)
-    model.deepen([2,2,2,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.widen_times = []
@@ -2438,7 +2438,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # R2R
     model = copy.deepcopy(teacher_model)
-    model.deepen([2,2,2,0])
+    model.deepen([1,1,1,0])
     model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
@@ -2453,7 +2453,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     model = copy.deepcopy(teacher_model)
     model.init_scheme = 'He'
     model.function_preserving = False
-    model.deepen([2,2,2,0])
+    model.deepen([1,1,1,0])
     model = cudafy(model)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
@@ -2466,7 +2466,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # Random init start
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.deepen([2,2,2,0])
+    model.deepen([1,1,1,0])
     model = cudafy(model)
     args.shard = "Completely_Random_Init"
     args.total_flops = 0
@@ -2489,7 +2489,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     # Net2Net
     model = copy.deepcopy(teacher_model)
     model = cudafy(model)
-    model.deepen([2,2,2,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
     model = cudafy(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
@@ -2503,7 +2503,7 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     # Random init start v2
     model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    model.deepen([2,2,2,0])
+    model.deepen([1,1,1,0])
     args.shard = "Completely_Random_Init_Net2Net"
     args.total_flops = 0
     # args.lr = orig_lr / 2.0
