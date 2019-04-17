@@ -537,7 +537,7 @@ class ResNet(nn.Module):
         if len(self.layer4_modules) > 0:
             self._deepen_layer(self.layer4_modules, self.block, num_blocks[3], minibatch, add_noise)
         if len(num_blocks) > 2 and ((num_blocks[2] > 0 and len(self.layer3_modules) == 0) or 
-                                    (num_blocks[3] > 0 and len(self.layer4_modules == 0))):
+                                    (num_blocks[3] > 0 and len(self.layer4_modules) == 0)):
             raise Exception("Cannot deepen on spatial stacks that don't existing in the resnet.")
         self.layer1 = nn.Sequential(*self.layer1_modules)
         self.layer2 = nn.Sequential(*self.layer2_modules)

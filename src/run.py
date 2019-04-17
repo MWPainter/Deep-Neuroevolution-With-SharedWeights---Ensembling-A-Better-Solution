@@ -8,7 +8,7 @@ from dataset import get_imagenet_dataloader, CifarDataset, Cifar100Dataset, Prod
 
 from utils import cudafy
 from utils import train_loop
-from utils import parameter_magnitude, gradient_magnitude, gradient_l2_norm, update_magnitude, update_ratio
+from utils import count_parameters, parameter_magnitude, gradient_magnitude, gradient_l2_norm, update_magnitude, update_ratio
 from utils import model_flops
 
 from r2r import * # widen_network_, make_deeper_network_, inceptionv4, resnet10, resnet18, resnet26, resnet10_cifar, resnet18_cifar
@@ -243,7 +243,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
         if args.adjust_weight_decay:
             weight_decay_ratio = weight_mag_before / weight_mag_after
             args.weight_decay *= weight_decay_ratio
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay * weight_decay_ratio, args) #, momentum=0.0)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -324,7 +324,7 @@ def _update_op_cts_eval(model, optimizer, minibatch, iter, args):
         if args.adjust_weight_decay:
             weight_decay_ratio = weight_mag_before / weight_mag_after
             args.weight_decay *= weight_decay_ratio
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay * weight_decay_ratio, args) #, momentum=0.0)
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -1808,38 +1808,38 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    raise Exception("Test outdated, unused, and won't work if uncommented")
-    # # Fix some args for the test (shouldn't ever be loading anythin)
-    # if hasattr(args, "flops_budget"):
-    #     del args.flops_budget
-    # if len(args.widen_times) > 1:
-    #     raise Exception("Widening times needs to be less than a list of length 2 for this test")
-    # if len(args.deepen_times) > 1:
-    #     raise Exception("Deepening times needs to be less than a list of length 2 for this test")
-    # args.deepen_indidces_list = [deepen_indices]
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) > 1:
+        raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    if len(args.deepen_times) > 1:
+        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    args.deepen_indidces_list = [deepen_indices]
 
-    # # Make the data loaders for imagenet
+    # Make the data loaders for imagenet
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
     # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
     # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # # Get the optimizer function to use
-    # make_optimizer_fn = _make_optimizer_fn
-    # if optimizer == 'sgd':
-    #     make_optimizer_fn = _make_optimizer_fn_sgd
-    # elif optimizer == 'adagrad':
-    #     make_optimizer_fn = _make_optimizer_fn_adagrad
-    # elif optimizer == 'rms':
-    #     make_optimizer_fn = _make_optimizer_fn_rms
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
 
 
-    # # R2R
-    # model = resnet_class(thin=use_thin, thinning_ratio=1.5)
-    # if not function_preserving:
-    #     model.function_preserving = False
-    #     model.init_scheme = 'match_std_exact'
-    # args.shard = shardname
-    # train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-    #            _validation_loss, args)
+    # R2R
+    model = resnet_class(thin=use_thin, thinning_ratio=1.5)
+    if not function_preserving:
+        model.function_preserving = False
+        model.init_scheme = 'match_std_exact'
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
 
 
 
