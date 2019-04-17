@@ -7,10 +7,11 @@ import tensorflow as tf
 import matplotlib
 from matplotlib import pyplot as plt
 
+# This is needed to have TrueType fonts.
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-
-
-
 
 
 
@@ -91,7 +92,7 @@ def _remove_discontinuity(logdir, scalar_name):
 
 
 
-def _read_sequence(logdir, scalar_name):
+def _read_sequence(logfile, scalar_name):
     """
     Reads from the TensorBoard summery to produce a list of
 
@@ -99,8 +100,10 @@ def _read_sequence(logdir, scalar_name):
     :param scalar_name: The scalar that we wish to get the values for
     :return: np.array with shape (N,2) for the sequence in
     """
-    summary_iterators = [EventAccumulator(logdir).Reload()]
 
+    """
+    summary_iterators = [EventAccumulator(logfile).Reload()]
+    print (summary_iterators)
     out = []
 
     steps = [[e.step] for e in summary_iterators[0].Scalars(scalar_name)]
@@ -108,13 +111,22 @@ def _read_sequence(logdir, scalar_name):
     for events in zip(*[acc.Scalars(scalar_name) for acc in summary_iterators]):
 
         assert len(set(e.step for e in events)) == 1
+        print(e.value)
         out.append([e.value for e in events])
 
     result = np.array(np.concatenate([np.array(steps), np.array(out)], axis=1))
+    print (result)
+    """
 
+    out = []
+    for event in tf.train.summary_iterator(logfile):
+        for value in event.summary.value:
+            if value.tag == scalar_name:
+                out.append([value.simple_value])
+
+    steps = [[i] for i in range(len(out))]
+    result = np.array(np.concatenate([np.array(steps), np.array(out)], axis=1))
     return result
-
-
 
 def _read_sequence_csv(csv_file):
     points = []
@@ -136,7 +148,7 @@ def _plot_sequence(sequence, linestyle, label):
     :param sequence: A np.array with shape (N,2) for the sequence we wish to add to the current figure.
     :param color: The color that we wish to plot with.
     """
-    df = pd.DataFrame(data=sequence, columns=["x","y"])
+    # df = pd.DataFrame(data=sequence, columns=["x","y"])
     # sns.lineplot(x=xaxis_name, y=yaxis_name, data=df, linestyle=line style)
     plt.plot(sequence[:,0], sequence[:,1], linestyle=linestyle, label=label)
 
@@ -148,8 +160,6 @@ def _save_current_fig(out_filename):
     Saves the current seaboarn figure in the file with name 'out_filename'.
     """
     plt.savefig(out_filename)
-
-
 
 
 
@@ -241,6 +251,16 @@ def _interpolate_value(p1, p2, u):
 
 
 
+def _add_rolling_mean_and_std(sequence, window_size):
+    df = pd.DataFrame(data=sequence, columns=["x", "y"])
+    rolling_mean = df.rolling(window=window_size, on='x').mean()
+    rolling_std = df.rolling(window=window_size, on='x').std()
+
+    new_df = pd.DataFrame({'x': df['x'], 'y': df['y'],
+                           'y_rmean': rolling_mean['y'].values,
+                           'y_rstd': rolling_std['y'].values})
+
+    return new_df.values[window_size:]
 
 
 
@@ -249,6 +269,38 @@ def _interpolate_value(p1, p2, u):
 Section: TensorPlot interface
 """
 
+
+def normal_plots_new(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_name, linestyles, labels, window_size=10):
+    """
+       Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
+
+       :param logdirs: The filepath(s) of the TB log directory
+       :param out_filename: The name of the file to save an image of the figure at
+       :param sclar_names: The scalars to plot
+       """
+    plt.figure()
+    sns.set(style="darkgrid")
+
+
+    scalar_filenames = _listify(event_filename_scalar_pair)
+    linestyles = _listify(linestyles)
+    labels = _listify(labels)
+    # logdirs = _listify(logdirs)
+    # if len(logdirs) == 1:
+    #     logdirs = logdirs * len(scalar_names)
+    # assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
+
+    for i in range(len(event_filename_scalar_pair)):
+        # logdir = logdirs[i]
+        event_filename = event_filename_scalar_pair[i][0]
+        scalar = event_filename_scalar_pair[i][1]
+        scalar_sequence = _read_sequence(event_filename, scalar)
+        scalar_sequence = _add_rolling_mean_and_std(scalar_sequence, window_size=window_size)
+        _plot_sequence(scalar_sequence, linestyles[i], labels[i])
+    plt.xlabel(xaxis_name)
+    plt.ylabel(yaxis_name)
+    plt.gca().legend(loc='lower right')
+    _save_current_fig(out_filename)
 
 
 
@@ -281,6 +333,64 @@ def normal_plots(out_filename, scalar_filenames, xaxis_name, yaxis_name, linesty
     plt.gca().legend(loc='lower right')
     _save_current_fig(out_filename)
 
+
+def parametric_plots_new(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points, window_size=10):
+    """
+    Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
+    [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
+    equal to some (yi,y'j) where xi=x'j.
+
+    As the above rule can lead to some data being missed, we allow for the data to be made complete using one of three
+    options:
+    - ignore = we should ignore any values in y that don't have a corresponding y'
+    - use_last = assuming that we're parameterised by time,
+    - linear_interpolate = use a linear interpolation (or the same as use_last if we have run out of values to
+                interpolate with)
+
+    Typical usage of this should be that we have two values y and y' that are recorded over a period of time, and
+    rather than plotting y vs time and y' vs time, we wish to plot y vs y'.
+
+    :param logdirs: The filepath of the TB log directory(s)
+    :param out_filename: The name of the file to save an image of the figure at
+    :param scalar_names_one: The first scalar from TB to use in the parametric plot
+    :param scalar_names_two: The second scalar from TB to use in the parametric plot
+    :param missing_value_completion: How we should complete any missing values for the latent parameters
+    """
+    plt.figure()
+    sns.set(style="darkgrid")
+
+    event_filename_scalar_pair_one = _listify(event_filename_scalar_pair_one)
+    event_filename_scalar_pair_two = _listify(event_filename_scalar_pair_two)
+    linestyles = _listify(linestyles)
+    labels = _listify(labels)
+    # logdirs = _listify(logdirs)
+    # if len(logdirs) == 1:
+    #     logdirs = logdirs * len(scalar_names_one)
+    assert len(event_filename_scalar_pair_one) == len(event_filename_scalar_pair_two), "Invalid input to plot multiple parametric curves on a single axis."
+    # assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
+
+    for i in range(len(event_filename_scalar_pair_one)):
+        # logdir = logdirs[i]
+        event_filename_one = event_filename_scalar_pair_one[i][0]
+        scalar_one = event_filename_scalar_pair_one[i][1]
+
+        event_filename_two = event_filename_scalar_pair_two[i][0]
+        scalar_two = event_filename_scalar_pair_two[i][1]
+
+        scalar_sequence_one = _read_sequence(event_filename_one, scalar_one)
+        scalar_sequence_one = _add_rolling_mean_and_std(scalar_sequence_one, window_size=window_size)
+
+        scalar_sequence_two = _read_sequence(event_filename_two, scalar_two)
+        scalar_sequence_two = _add_rolling_mean_and_std(scalar_sequence_two, window_size=window_size)
+
+        parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
+        if num_points is not None:
+            parametric_sequence = parametric_sequence[:num_points]
+        _plot_sequence(parametric_sequence, linestyles[i], labels[i])
+    plt.xlabel(xaxis_name)
+    plt.ylabel(yaxis_name)
+    plt.gca().legend(loc='lower right')
+    _save_current_fig(out_filename)
 
 
 
@@ -371,6 +481,45 @@ if __name__ == "__main__":
     # matplotlib.rcParams['pdf.use14corefonts'] = True
     # matplotlib.rcParams['text.usetex'] = True
 
+
+    # Test normal plots
+    imgfile = os.path.join(base_dir, "test_normal.pdf")
+
+    event_filename_scalar_pair = [
+        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410', 'iter/train/valacc_1'),
+        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410','iter/train/valacc_1')]
+
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-','-','-','-','-','-','-']
+    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
+    normal_plots_new(imgfile, event_filename_scalar_pair, xaxis, yaxis, linestyles, labels)
+
+    # Test parametric plots
+    imgfile = os.path.join(base_dir, "test_parametric.pdf")
+
+    event_filename_scalar_pair_one = [
+        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
+         'iter/train/valacc_1'),
+        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
+         'iter/train/valacc_1')]
+
+    event_filename_scalar_pair_two = [
+        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
+         'iter/train/valacc_1'),
+        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
+         'iter/train/valacc_1')]
+
+    xaxis = "Epochs"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-', '-', '-']
+    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual',
+              'NetMorph']
+    parametric_plots_new(imgfile, event_filename_scalar_pair_one, event_filename_scalar_pair_two,
+                         xaxis, yaxis, linestyles, labels, num_points=100)
+
+
+    """
     # Net2WiderNet results
     imgfile = os.path.join(base_dir, "n2wn.png")
     nw_n2n  = os.path.join(base_dir, "nw_n2n.csv")
@@ -491,3 +640,4 @@ if __name__ == "__main__":
     normal_plots(imgfile, yfiles, xaxis, yaxis, linestyles, labels, 100)
     xaxis = "FLOPs"
     parametric_plots(imgfile_f, xfiles, yfiles, xaxis, yaxis, linestyles, labels, 100)
+    """
