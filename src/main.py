@@ -57,7 +57,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_identity_init":
         return {
@@ -75,7 +76,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -95,7 +97,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_widen":
         return {
@@ -113,7 +116,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_widen_with_budget":
         return {
@@ -131,7 +135,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_widen_with_budget":
         return {
@@ -149,7 +154,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -169,7 +175,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_widen_with_budget_multi_stage":
         return {
@@ -187,7 +194,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -207,7 +215,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_deepen":
         return {
@@ -225,7 +234,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_deepen_with_budget":
         return {
@@ -243,7 +253,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_deepen_with_budget":
         return {
@@ -261,7 +272,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -281,7 +293,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_deepen_with_budget_multi_stage":
         return {
@@ -299,7 +312,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -319,7 +333,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_net2deepernet_style":
         return {
@@ -337,7 +352,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -358,7 +374,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_net2deepernet_style":
         return {
@@ -376,7 +393,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -397,7 +415,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2r_wider_inception":
         return {} # TODO: actually set params
@@ -422,7 +441,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_r2r":
         return {
@@ -440,7 +460,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_r2r_conv":
         return {
@@ -458,7 +479,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_r2r_conv":
         return {
@@ -477,7 +499,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_net2net":
         return {
@@ -495,7 +518,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_net2net":
         return {
@@ -513,7 +537,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_net2net_conv":
         return {
@@ -531,7 +556,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_net2net_conv":
         return {
@@ -550,7 +576,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_netmorph":
         return {
@@ -568,7 +595,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_netmorph":
         return {
@@ -586,7 +614,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_netmorph_conv":
         return {
@@ -605,7 +634,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_netmorph_conv":
         return {
@@ -624,7 +654,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz":
         return {
@@ -642,7 +673,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz":
         return {
@@ -660,7 +692,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "mnist_weight_viz_conv":
         return {
@@ -678,7 +711,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "cifar_weight_viz_conv":
         return {
@@ -696,7 +730,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -719,7 +754,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "n2dn":
         return {
@@ -737,7 +773,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "n2wn_hps":
         return {
@@ -755,7 +792,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "n2dn_hps":
         return {
@@ -773,7 +811,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2wr": # @7epoch widen r2r, @___ epoch widen n2n
         return {
@@ -791,7 +830,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
     elif script == "r2dr":
@@ -810,7 +850,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -836,7 +877,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2r_weight_init_problem":
         return {
@@ -854,7 +896,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -880,7 +923,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "double_deepen":
         return {
@@ -898,7 +942,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "double_widen_deepen":
         return {
@@ -916,7 +961,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -942,7 +988,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_part_2": # split grad drops during widenings
         return {
@@ -960,7 +1007,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_part_3": # Only lr drops when there usually are in training a resnet18
         return {
@@ -978,7 +1026,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_part_4": # Training student network to completion
         return {
@@ -996,7 +1045,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20019*30, 20019*45],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_part_5": # Training teacher network to completion
         return {
@@ -1014,7 +1064,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*30, 5005*60], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -1040,7 +1091,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [np.sqrt(10.0), np.sqrt(10.0), 10.0],
-            "grad_clip": 1.0
+            "grad_clip": 1.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_redo_part_1": # thin resnet10 -> resnet18
         return {
@@ -1058,7 +1110,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 1.0
+            "grad_clip": 1.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_redo_part_2": # resnet10->18 at start
         return {
@@ -1076,7 +1129,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 1.0
+            "grad_clip": 1.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_redo_part_3": # resnet10
         return {
@@ -1094,7 +1148,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30], # 30, 60
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "r2fasterr_redo_part_4": # resnet18
         return {
@@ -1112,7 +1167,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [5005*15, 5005*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -1136,7 +1192,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f2aster_student": 
         return {
@@ -1154,7 +1211,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f3aster_resnet50":
         return {
@@ -1172,7 +1230,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f4aster_r2r":
         return {
@@ -1190,7 +1249,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f5aster_r2r_adagrad":
         return {
@@ -1208,7 +1268,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f6aster_r2r_rms":
         return {
@@ -1226,7 +1287,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
     elif script == "f7aster_r2r_adam":
         return {
@@ -1244,7 +1306,8 @@ def get_defaults(script_name):
             "momentum": 0.9,
             "lr_drops": [20020*15, 20020*30],
             "lr_drop_mag": [10.0],
-            "grad_clip": 10.0
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -1269,7 +1332,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "last_swrt":
         return {
@@ -1287,7 +1351,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script in ["last_ewrt", "last_ewrw"]:
         return {
@@ -1305,7 +1370,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
     elif script == "last_cdrt":
@@ -1324,7 +1390,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "last_sdrt":
         return {
@@ -1342,7 +1409,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script in ["last_edrt", "last_edrw"]:
         return {
@@ -1360,7 +1428,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_cwnt","last_cwnw"]:
@@ -1379,7 +1448,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_swnt","last_swnw"]:
@@ -1398,7 +1468,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_ewnt","last_ewnw"]:
@@ -1417,7 +1488,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_cdnt", "last_cdnw"]:
@@ -1436,7 +1508,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_sdnt", "last_sdnw"]:
@@ -1455,7 +1528,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
         
     elif script in ["last_ednt", "last_ednw"]:
@@ -1474,7 +1548,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     
     elif script == "last_cwr100":
@@ -1493,7 +1568,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "last_cdr100":
         return {
@@ -1511,7 +1587,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "last_cwn100":
         return {
@@ -1529,7 +1606,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
     elif script == "last_cdn100":
         return {
@@ -1547,7 +1625,8 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
     elif script == "last_svhn_wdtune":
@@ -1566,7 +1645,241 @@ def get_defaults(script_name):
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
-            "grad_clip": 0.0
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+
+
+
+    elif script == "paper_c_r2wr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [391*50],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c_r2dr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [391*50], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c_n2wn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c_n2dn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+
+    elif script == "paper_s_r2wr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 3,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [int(4722*1.5)], # unused
+            "deepen_times": [], 
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_s_r2dr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 3,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [int(4722*1.5)], 
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_s_n2wn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 3,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], 
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_s_n2dn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 3,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], # unused
+            "deepen_times": [], 
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+
+    elif script == "paper_c100_r2wr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [391*50],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c100_r2dr_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [391*50], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c100_n2wn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+    elif script == "paper_c100_n2dn_hs":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 100,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],#7], # unused
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -1603,6 +1916,9 @@ def make_arg_parser(defaults):
     parser.add_argument('--batch_size', type=int, default=defaults["batch_size"],
                         help='The batch size to use')
     parser.add_argument('--grad_clip', type=float, default=defaults['grad_clip'], help="A value to clip gradient norms to")
+
+    parser.add_argument('--adjust_weight_decay', dest='adjust_weight_decay', action='store_true')
+    parser.set_defaults(adjust_weight_decay=defaults['adjust_weight_decay'])
 
     # When to widen/deepen in widen/deepen tests
     parser.add_argument('--widen_times', type=int, nargs='+', default=defaults['widen_times'],
@@ -1890,6 +2206,34 @@ if __name__ == "__main__":
 
     elif script == "last_svhn_wdtune":
         last_svhn_weight_decay_tune(args)
+
+
+    elif script == "paper_c_r2wr_hs":
+        last_cifar_r2wr_hp_search(args)
+    elif script == "paper_c_r2dr_hs":
+        last_cifar_r2dr_hp_search(args)
+    elif script == "paper_c_n2wn_hs":
+        last_cifar_n2wn_hp_search(args)
+    elif script == "paper_c_n2dn_hs":
+        last_cifar_n2dn_hp_search(args)
+
+    elif script == "paper_s_r2wr_hs":
+        last_extsvhn_r2wr_hp_search(args)
+    elif script == "paper_s_r2dr_hs":
+        last_extsvhn_r2dr_hp_search(args)
+    elif script == "paper_s_n2wn_hs":
+        last_extsvhn_n2wn_hp_search(args)
+    elif script == "paper_s_n2dn_hs":
+        last_extsvhn_n2dn_hp_search(args)
+
+    elif script == "paper_c100_r2wr_hs":
+        last_cifar100_r2wr_hp_search(args)
+    elif script == "paper_c100_r2dr_hs":
+        last_cifar100_r2dr_hp_search(args)
+    elif script == "paper_c100_n2wn_hs":
+        last_cifar100_n2wn_hp_search(args)
+    elif script == "paper_c100_n2dn_hs":
+        last_cifar100_n2dn_hp_search(args)
 
 
     else:

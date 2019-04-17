@@ -226,7 +226,9 @@ def _update_op(model, optimizer, minibatch, iter, args):
     _adjust_learning_rate(args, iter, optimizer)
 
     # Widen or deepen the network at the correct times
+    # Also adjust weight decay if args are set to 
     if iter in args.widen_times or iter in args.deepen_times:
+        weight_mag_before = parameter_magnitude(model)
         if iter in args.widen_times:
             print("Widening!")
             model.widen(1.5)
@@ -236,8 +238,12 @@ def _update_op(model, optimizer, minibatch, iter, args):
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
+        weight_mag_after = parameter_magnitude(model)
         model = cudafy(model)
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
+        if args.adjust_weight_decay:
+            weight_decay_ratio = weight_mag_before / weight_mag_after
+            args.weight_decay *= weight_decay_ratio
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay * weight_decay_ratio, args) #, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -303,6 +309,7 @@ def _update_op_cts_eval(model, optimizer, minibatch, iter, args):
 
     # Widen or deepen the network at the correct times
     if iter in args.widen_times or iter in args.deepen_times:
+        weight_mag_before = parameter_magnitude(model)
         if iter in args.widen_times:
             print("Widening!")
             model.widen(1.5)
@@ -312,8 +319,12 @@ def _update_op_cts_eval(model, optimizer, minibatch, iter, args):
                 raise Exception("Too many deepen times for this test.")
             deepen_indices = args.deepen_indidces_list.pop(0)
             model.deepen(deepen_indices, minibatch=xs)
+        weight_mag_after = parameter_magnitude(model)
         model = cudafy(model)
-        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
+        if args.adjust_weight_decay:
+            weight_decay_ratio = weight_mag_before / weight_mag_after
+            args.weight_decay *= weight_decay_ratio
+        optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay * weight_decay_ratio, args) #, momentum=0.0)
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -459,13 +470,7 @@ def net_2_net_overfit_example(args):
     args.deepen_times = []
 
     # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                            num_workers=args.workers, pin_memory=True)
+    train_loader, val_loader = _make_cifar_data_loaders(args)
 
     orig_lr = args.lr
 
@@ -495,7 +500,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 0.0 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
+    initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=8, num_classes=10)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
 
@@ -516,7 +521,7 @@ def net_2_net_overfit_example(args):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = 1.0e-4 # less weight decay mostly
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
+    initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=8, num_classes=10)
     initial_model.widen(1.5)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op, _validation_loss, args)
@@ -543,18 +548,12 @@ def r_2_r_weight_init_example(args):
     args.deepen_times = []
 
     # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                            num_workers=args.workers, pin_memory=True)
+    train_loader, val_loader = _make_cifar_data_loaders(args)
 
     orig_lr = args.lr
 
     # He init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
+    model = orig_resnet18_cifar(thin=True, thinning_ratio=8, num_classes=10)
     model.init_scheme = 'He'
     args.shard = "widen_student_he"
     args.total_flops = 0
@@ -583,7 +582,7 @@ def r_2_r_weight_init_example(args):
     #            _validation_loss, args)
 
     # Scaled init widen
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
+    model = orig_resnet18_cifar(thin=True, thinning_ratio=8, num_classes=10)
     args.shard = "widen_student_std_match"
     args.total_flops = 0
     args.lr = orig_lr
@@ -627,72 +626,73 @@ def _net_2_wider_net_inception_test(args):
 
     :param args: Arguments from an ArgParser specifying how to run the trianing
     """
-    # Force some of the command line args, so can't ruin the experimaent
-    args.load = ""
-    args.widen_times = []
-    args.deepen_times = []
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Force some of the command line args, so can't ruin the experimaent
+    # args.load = ""
+    # args.widen_times = []
+    # args.deepen_times = []
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # Create a pre-trained inception network
-    model = inceptionv4()
+    # # Create a pre-trained inception network
+    # model = inceptionv4()
 
-    # Train for zero epochs, to run a single validation epoch on the base network
-    args.shard = "teacher"
-    args.total_flops = 0
-    epochs_cache = args.epochs
-    args.epochs = 0
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
-    args.epochs = epochs_cache
+    # # Train for zero epochs, to run a single validation epoch on the base network
+    # args.shard = "teacher"
+    # args.total_flops = 0
+    # epochs_cache = args.epochs
+    # args.epochs = 0
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+    # args.epochs = epochs_cache
 
-    # Widen the network with R2R and train
-    args.shard = "student_R2R"
-    args.total_flops = 0
-    model = cudafy(widen_network_(model, new_channels=1.4, new_hidden_nodes=0, init_type='match_std',
-                           function_preserving=True, multiplicative_widen=True))
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with R2R and train
+    # args.shard = "student_R2R"
+    # args.total_flops = 0
+    # model = cudafy(widen_network_(model, new_channels=1.4, new_hidden_nodes=0, init_type='match_std',
+    #                        function_preserving=True, multiplicative_widen=True))
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen the network with Net2Net and train
-    args.shard = "student_net2net"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    # TODO: widen the network with Net2Net
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with Net2Net and train
+    # args.shard = "student_net2net"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # # TODO: widen the network with Net2Net
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen the network with NetMorph and train
-    args.shard = "student_netmorph"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    # TODO: widen the network with NetMorph
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with NetMorph and train
+    # args.shard = "student_netmorph"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # # TODO: widen the network with NetMorph
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen with random padding and train
-    args.shard = "student_random_padding"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='match_std',
-                           function_preserving=False, multiplicative_widen=True))
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen with random padding and train
+    # args.shard = "student_random_padding"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # model = cudafy(widen_network_(model, new_channels=2, new_hidden_nodes=0, init_type='match_std',
+    #                        function_preserving=False, multiplicative_widen=True))
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Make an inception network without any pretraining
-    args.shard = "randomly_initialized"
-    args.total_flops = 0
-    del model
-    model = inceptionv4(pretrained=False)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Make an inception network without any pretraining
+    # args.shard = "randomly_initialized"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4(pretrained=False)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
 
 
@@ -704,124 +704,125 @@ def net_2_wider_net_resnet(args):
     :param args:
     :return:
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    args.deepen_times = []
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    orig_lr = args.lr
-    orig_wd = args.weight_decay
-    scaling_factor = 1.5
+    # orig_lr = args.lr
+    # orig_wd = args.weight_decay
+    # scaling_factor = 1.5
 
-    # Teacher network training loop
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
-
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.widen(scaling_factor)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 2.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-
-    # # NetMorph
-    model = copy.deepcopy(teacher_model)
-    model.morphism_scheme="netmorph"
-    model.widen(scaling_factor)
-    args.shard = "NetMorph_student"
-    args.total_flops = 0
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
     # args.lr = orig_lr
-    # args.weight_decay = 1.0e-5
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 5.0e-3
+    # initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
-
-
-    # RandomPadding
-    model = copy.deepcopy(teacher_model)
-    model.function_preserving = False
-    model.init_scheme = 'He'
-    model.widen(scaling_factor)
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 10.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-
-    # Random init start
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
-    model.widen(scaling_factor)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 2.0
-    args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-
-    # Net2Net teacher
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False, morphism_scheme="net2net")
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
-
-    # Net2Net
-    model = copy.deepcopy(teacher_model)
-    model.widen(scaling_factor)
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
+    # # R2R
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(scaling_factor)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 2.0e-3
     # args.lr = orig_lr / 5.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
-    # Random init start v2
-    model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
-    model.widen(scaling_factor)
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
+    # # # NetMorph
+    # model = copy.deepcopy(teacher_model)
+    # model.morphism_scheme="netmorph"
+    # model.widen(scaling_factor)
+    # args.shard = "NetMorph_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr
+    # # args.weight_decay = 1.0e-5
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+
+    # # RandomPadding
+    # model = copy.deepcopy(teacher_model)
+    # model.function_preserving = False
+    # model.init_scheme = 'He'
+    # model.widen(scaling_factor)
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 10.0
+    # # args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+    # # Random init start
+    # model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # model.widen(scaling_factor)
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
     # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr
-    args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+    # # Net2Net teacher
+    # initial_model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False, morphism_scheme="net2net")
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = 5.0e-3
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+
+    # # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(scaling_factor)
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+    # # Random init start v2
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
+    # model.widen(scaling_factor)
+    # args.shard = "Completely_Random_Init_Net2Net"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr
+    # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -833,102 +834,103 @@ def net_2_wider_net_resnet_hyper_search(args):
     :param args:
     :return:
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    args.deepen_times = []
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-
-    scaling_factor = 1.5
-    orig_lr = args.lr
-
-    # Teacher network training loop
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
-    r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
 
-    # Net2Net teacher
-    initial_model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False, morphism_scheme="net2net")
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    n2n_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # scaling_factor = 1.5
+    # orig_lr = args.lr
 
-    # R2R
-    model = copy.deepcopy(r2r_teacher_model)
-    model.widen(scaling_factor)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr / 5
-    args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = 5.0e-3
+    # initial_model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
 
+    # # Net2Net teacher
+    # initial_model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False, morphism_scheme="net2net")
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = 5.0e-3
+    # n2n_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
-    # RandomPadding
-    model = copy.deepcopy(r2r_teacher_model)
-    model.init_scheme = 'He'
-    model.function_preserving = False
-    model.widen(scaling_factor)
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-    # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
-    # other function preserving transforms
-    for lr_drop in [1.0, 2.0, 5.0, 10.0]:
-        for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
-
-            # Set args
-            args.lr = orig_lr / lr_drop
-            args.weight_decay = weight_decay
-
-            # NetMorph
-            model = copy.deepcopy(r2r_teacher_model)
-            model.morphism_scheme="netmorph"
-            model.widen(scaling_factor)
-            args.shard = "NetMorph_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # R2R
+    # model = copy.deepcopy(r2r_teacher_model)
+    # model.widen(scaling_factor)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr / 5
+    # args.weight_decay = 5.0e-3
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
-            # Random init start
-            model = resnet18_cifar(thin=True, thinning_ratio=8)
-            model.widen(scaling_factor)
-            args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
 
-            # Net2Net
-            model = copy.deepcopy(n2n_teacher_model)
-            model.widen(scaling_factor)
-            args.shard = "Net2Net_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # RandomPadding
+    # model = copy.deepcopy(r2r_teacher_model)
+    # model.init_scheme = 'He'
+    # model.function_preserving = False
+    # model.widen(scaling_factor)
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # args.weight_decay = 5.0e-3
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
+    # # other function preserving transforms
+    # for lr_drop in [1.0, 2.0, 5.0, 10.0]:
+    #     for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
+
+    #         # Set args
+    #         args.lr = orig_lr / lr_drop
+    #         args.weight_decay = weight_decay
+
+    #         # NetMorph
+    #         model = copy.deepcopy(r2r_teacher_model)
+    #         model.morphism_scheme="netmorph"
+    #         model.widen(scaling_factor)
+    #         args.shard = "NetMorph_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+
+
+    #         # Random init start
+    #         model = resnet18_cifar(thin=True, thinning_ratio=8)
+    #         model.widen(scaling_factor)
+    #         args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+
+    #         # Net2Net
+    #         model = copy.deepcopy(n2n_teacher_model)
+    #         model.widen(scaling_factor)
+    #         args.shard = "Net2Net_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
 
 
@@ -939,112 +941,113 @@ def net_2_deeper_net_resnet(args):
     :param args:
     :return:
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    args.deepen_times = []
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                            num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                         num_workers=args.workers, pin_memory=True)
 
-    orig_lr = args.lr
-    orig_wd = args.weight_decay
+    # orig_lr = args.lr
+    # orig_wd = args.weight_decay
 
-    # Teacher network training loop
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    initial_model = resnet10_cifar(thin=True, thinning_ratio=6)
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op,
-                               _validation_loss, args)
-
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.deepen([2,2,0,0])
-    model = cudafy(model)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-    # RandomPadding
-    model = copy.deepcopy(teacher_model)
-    model.init_scheme = 'He'
-    model.function_preserving = False
-    model.deepen([2,2,0,0])
-    model = cudafy(model)
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 10.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-    # Random init start
-    model = resnet10_cifar(thin=True, thinning_ratio=6)
-    model.deepen([2,2,0,0])
-    model = cudafy(model)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
     # args.lr = orig_lr
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 2.0
-    args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 5.0e-3
+    # initial_model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    #                            _update_op,
+    #                            _validation_loss, args)
 
-    # Net2Net teacher
-    initial_model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.weight_decay = 5.0e-3
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
-                               _update_op,
-                               _validation_loss, args)
-
-    # Net2Net
-    model = copy.deepcopy(teacher_model)
-    model = cudafy(model)
-    model.deepen([2,2,0,0], minibatch=next(iter(train_loader))[0].to('cuda'))
-    model = cudafy(model)
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
+    # # R2R
+    # model = copy.deepcopy(teacher_model)
+    # model.deepen([2,2,0,0])
+    # model = cudafy(model)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 3.0e-3
     # args.lr = orig_lr / 5.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
+    # # RandomPadding
+    # model = copy.deepcopy(teacher_model)
+    # model.init_scheme = 'He'
+    # model.function_preserving = False
+    # model.deepen([2,2,0,0])
+    # model = cudafy(model)
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 10.0
+    # # args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Random init start v2
-    model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False)
-    model.deepen([2,2,0,0])
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
+    # # Random init start
+    # model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # model.deepen([2,2,0,0])
+    # model = cudafy(model)
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # # args.lr = orig_lr
+    # # args.weight_decay = 1.0e-3
     # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr
-    args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # # Net2Net teacher
+    # initial_model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = 5.0e-3
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    #                            _update_op,
+    #                            _validation_loss, args)
+
+    # # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model = cudafy(model)
+    # model.deepen([2,2,0,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    # model = cudafy(model)
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+
+    # # Random init start v2
+    # model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False)
+    # model.deepen([2,2,0,0])
+    # args.shard = "Completely_Random_Init_Net2Net"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr
+    # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1061,89 +1064,90 @@ def net_2_deeper_net_resnet_hyper_search(args):
     :param args:
     :return:
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    args.deepen_times = []
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
-
-
-    orig_lr = args.lr
-
-    # Teacher network training loop
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    initial_model = resnet10_cifar(thin=True, thinning_ratio=6)
-    r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
-
-    # Net2Net teacher
-    initial_model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.weight_decay = 5.0e-3
-    n2n_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
-
-    # R2R
-    model = copy.deepcopy(r2r_teacher_model)
-    model.deepen([2,2,0,0])
-    model = cudafy(model)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr / 10
-    args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
-
-    # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
-    # other function preserving transforms
-    for lr_drop in [1.0, 2.0, 5.0, 10.0]:
-        for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
-
-            args.lr = orig_lr / lr_drop
-            args.weight_decay = weight_decay
-
-            # RandomPadding
-            model = copy.deepcopy(r2r_teacher_model)
-            model.init_scheme = 'He'
-            model.function_preserving = False
-            model.deepen([2,2,0,0])
-            model = cudafy(model)
-            args.shard = "RandomPadding_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
 
-            # Random init start
-            model = resnet10_cifar(thin=True, thinning_ratio=6)
-            model.deepen([2,2,0,0])
-            model = cudafy(model)
-            args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # orig_lr = args.lr
 
-            # Net2Net
-            model = copy.deepcopy(n2n_teacher_model)
-            model = cudafy(model)
-            model.deepen([2,2,0,0], minibatch=cudafy(next(iter(train_loader))[0]))
-            model = cudafy(model)
-            args.shard = "Net2Net_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
-            args.total_flops = 0
-            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # initial_model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # r2r_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+
+    # # Net2Net teacher
+    # initial_model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.weight_decay = 5.0e-3
+    # n2n_teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
+
+    # # R2R
+    # model = copy.deepcopy(r2r_teacher_model)
+    # model.deepen([2,2,0,0])
+    # model = cudafy(model)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr / 10
+    # args.weight_decay = 5.0e-3
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
+
+    # # Lets be unfair to ourselves, and only hyperparam search for the completely randomly initialized network, and the
+    # # other function preserving transforms
+    # for lr_drop in [1.0, 2.0, 5.0, 10.0]:
+    #     for weight_decay in [0.0, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 3.0e-3, 1.0e-2]:
+
+    #         args.lr = orig_lr / lr_drop
+    #         args.weight_decay = weight_decay
+
+    #         # RandomPadding
+    #         model = copy.deepcopy(r2r_teacher_model)
+    #         model.init_scheme = 'He'
+    #         model.function_preserving = False
+    #         model.deepen([2,2,0,0])
+    #         model = cudafy(model)
+    #         args.shard = "RandomPadding_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+
+
+    #         # Random init start
+    #         model = resnet10_cifar(thin=True, thinning_ratio=6)
+    #         model.deepen([2,2,0,0])
+    #         model = cudafy(model)
+    #         args.shard = "Completely_Random_Init_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+
+    #         # Net2Net
+    #         model = copy.deepcopy(n2n_teacher_model)
+    #         model = cudafy(model)
+    #         model.deepen([2,2,0,0], minibatch=cudafy(next(iter(train_loader))[0]))
+    #         model = cudafy(model)
+    #         args.shard = "Net2Net_student_lr={lr}_wd={wd}".format(lr=args.lr, wd=args.weight_decay)
+    #         args.total_flops = 0
+    #         train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
 
 
@@ -1165,71 +1169,72 @@ def _r_2_wider_r_inception_test(args):
 
     :param args: Arguments from an ArgParser specifying how to run the trianing
     """
-    raise Exception("Not implemented yet")
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # raise Exception("Not implemented yet")
 
-    # Force some of the command line args, so can't ruin the experimaent
-    args.load = ""
-    args.deepen_times = []
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
+    # # Force some of the command line args, so can't ruin the experimaent
+    # args.load = ""
+    # args.deepen_times = []
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # Create a pre-trained inception network
-    model = inceptionv4()
+    # # Create a pre-trained inception network
+    # model = inceptionv4()
 
-    # Train for zero epochs, to run a single validation epoch on the base network
-    args.shard = "teacher"
-    args.total_flops = 0
-    epochs_cache = args.epochs
-    args.epochs = 0
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
-    args.epochs = epochs_cache
+    # # Train for zero epochs, to run a single validation epoch on the base network
+    # args.shard = "teacher"
+    # args.total_flops = 0
+    # epochs_cache = args.epochs
+    # args.epochs = 0
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
+    # args.epochs = epochs_cache
 
-    # Widen the network with R2R and train
-    args.shard = "student_R2R"
-    args.total_flops = 0
-    # TODO: specify to widen the network with R2R (in the training loop)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with R2R and train
+    # args.shard = "student_R2R"
+    # args.total_flops = 0
+    # # TODO: specify to widen the network with R2R (in the training loop)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen the network with Net2Net and train
-    args.shard = "student_net2net"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    # TODO: specify to widen the network with Net2Net (in the training loop)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with Net2Net and train
+    # args.shard = "student_net2net"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # # TODO: specify to widen the network with Net2Net (in the training loop)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen the network with NetMorph and train
-    args.shard = "student_netmorph"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    # TODO: specify to widen the network with NetMorph (in the training loop)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen the network with NetMorph and train
+    # args.shard = "student_netmorph"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # # TODO: specify to widen the network with NetMorph (in the training loop)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Widen with random padding and train
-    args.shard = "student_random_padding"
-    args.total_flops = 0
-    del model
-    model = inceptionv4()
-    # TODO: specify to widen the network with random padding (in the training loop)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Widen with random padding and train
+    # args.shard = "student_random_padding"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4()
+    # # TODO: specify to widen the network with random padding (in the training loop)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
-    # Make an inception network without any pretraining
-    args.shard = "randomly_initialized"
-    args.total_flops = 0
-    del model
-    model = inceptionv4(pretrained=False)
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                       _validation_loss, args)
+    # # Make an inception network without any pretraining
+    # args.shard = "randomly_initialized"
+    # args.total_flops = 0
+    # del model
+    # model = inceptionv4(pretrained=False)
+    # model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                    _validation_loss, args)
 
 
 
@@ -1237,125 +1242,126 @@ def _r_2_wider_r_inception_test(args):
 
 def r_2_wider_r_resnet(args):
     # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    orig_lr = args.lr
+    # orig_lr = args.lr
 
-    # R2R
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
+    # # R2R
+    # model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.widen_times
+    # # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 2.0e-3
     # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 2.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Net2Net
-    model = resnet18_cifar(thin=True, thinning_ratio=8, morphism_scheme="net2net")
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    # args.lr_drop_mag = [2.0]
-    # args.weight_decay = 2.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Net2Net
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, morphism_scheme="net2net")
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.widen_times
+    # # args.lr_drop_mag = [2.0]
+    # # args.weight_decay = 2.0e-3
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # RandomPadding
-    model = resnet18_cifar(thin=True, thinning_ratio=8, function_preserving=False)
-    model.init_scheme = 'He'
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    # args.lr_drop_mag = [10.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # RandomPadding
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, function_preserving=False)
+    # model.init_scheme = 'He'
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.widen_times
+    # # args.lr_drop_mag = [10.0]
+    # # args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # # NetMorph
-    model = resnet18_cifar(thin=True, thinning_ratio=8, morphism_scheme="netmorph")
-    args.shard = "NetMorph_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # # NetMorph
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, morphism_scheme="netmorph")
+    # args.shard = "NetMorph_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.widen_times
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Random init start
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
-    model.widen(1.5)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr / 2.0
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Random init start
+    # model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # model.widen(1.5)
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr / 2.0
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 5.0e-3
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Random init start v2
-    model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
-    model.widen(1.5)
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Random init start v2
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
+    # model.widen(1.5)
+    # args.shard = "Completely_Random_Init_Net2Net"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 5.0e-3
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Teacher network training loop
-    model = resnet18_cifar(thin=True, thinning_ratio=8)
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = 0.0
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # # Teacher network training loop
+    # model = resnet18_cifar(thin=True, thinning_ratio=8)
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = 0.0
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
-    # Net2Net teacher
-    model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # # Net2Net teacher
+    # model = resnet18_cifar(thin=True, thinning_ratio=8, use_residual=False)
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
 
 
@@ -1363,106 +1369,107 @@ def r_2_wider_r_resnet(args):
 
 
 def r_2_deeper_r_resnet(args):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    orig_lr = args.lr
+    # orig_lr = args.lr
 
-    # R2R
-    model = resnet10_cifar(thin=True, thinning_ratio=6)
-    args.deepen_indidces_list = [[2,2,0,0]]
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
+    # # R2R
+    # model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # args.deepen_indidces_list = [[2,2,0,0]]
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 3.0e-3
     # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Net2Net
-    model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
-    args.deepen_indidces_list = [[2,2,0,0]]
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
+    # # Net2Net
+    # model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False, morphism_scheme="net2net")
+    # args.deepen_indidces_list = [[2,2,0,0]]
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 1.0e-3
     # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # RandomPadding
-    model = resnet10_cifar(thin=True, thinning_ratio=6, function_preserving=False)
-    model.init_scheme = 'He'
-    args.deepen_indidces_list = [[2,2,0,0]]
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
-    # args.lr_drop_mag = [10.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # RandomPadding
+    # model = resnet10_cifar(thin=True, thinning_ratio=6, function_preserving=False)
+    # model.init_scheme = 'He'
+    # args.deepen_indidces_list = [[2,2,0,0]]
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [10.0]
+    # # args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [5.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Random init start
-    model = resnet10_cifar(thin=True, thinning_ratio=6)
-    model.deepen([2,2,0,0])
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr / 2.-0
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Random init start
+    # model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # model.deepen([2,2,0,0])
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr / 2.-0
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Teacher network training loop
-    model = resnet10_cifar(thin=True, thinning_ratio=6)
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # # Teacher network training loop
+    # model = resnet10_cifar(thin=True, thinning_ratio=6)
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
-    # Net2Net teacher
-    model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False)
-    model = cudafy(model)
-    model.deepen([2,2,0,0], minibatch=next(iter(train_loader))[0].to('cuda'))
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    args.weight_decay = 1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-                               _validation_loss, args)
+    # # Net2Net teacher
+    # model = resnet10_cifar(thin=True, thinning_ratio=6, use_residual=False)
+    # model = cudafy(model)
+    # model.deepen([2,2,0,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # args.weight_decay = 1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #                            _validation_loss, args)
 
 
 
@@ -1478,107 +1485,110 @@ Learning rate and weight decay adaption tests
 
 
 def quadruple_widen_run(args):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.deepen_times = []
-    if len(args.widen_times) != 4:
-        raise Exception("Widening times needs to be a list of length 4 for this test")
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.deepen_times = []
+    # if len(args.widen_times) != 4:
+    #     raise Exception("Widening times needs to be a list of length 4 for this test")
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    # R2R
-    model = resnet18(thin=True, thinning_ratio=4*4)
-    args.shard = "R2R"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet18(thin=True, thinning_ratio=4*4)
+    # args.shard = "R2R"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Net2Net
-    model = resnet18(thin=True, thinning_ratio=4*4, morphism_scheme="net2net")
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Net2Net
+    # model = resnet18(thin=True, thinning_ratio=4*4, morphism_scheme="net2net")
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
 
 
 def double_deepen_run(args):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    if len(args.deepen_times) != 2:
-        raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # if len(args.deepen_times) != 2:
+    #     raise Exception("Deepening times needs to be a list of length 2 for this test")
+    # args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    # R2R
-    model = resnet10(thin=True, thinning_ratio=4)
-    args.shard = "R2R"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet10(thin=True, thinning_ratio=4)
+    # args.shard = "R2R"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Net2Net
-    model = resnet10(thin=True, thinning_ratio=4, morphism_scheme="net2net")
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Net2Net
+    # model = resnet10(thin=True, thinning_ratio=4, morphism_scheme="net2net")
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
 
 
 def double_widen_and_deepen_run(args):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 2:
-        raise Exception("Widening times needs to be a list of length 2 for this test")
-    if len(args.deepen_times) != 2:
-        raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 2:
+    #     raise Exception("Widening times needs to be a list of length 2 for this test")
+    # if len(args.deepen_times) != 2:
+    #     raise Exception("Deepening times needs to be a list of length 2 for this test")
+    # args.deepen_indidces_list = [[2,2,0,0], [2,2,0,0]]
 
-    # Make the data loader objects
-    train_dataset = CifarDataset(mode="train", labels_as_logits=False)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # # Make the data loader objects
+    # train_dataset = CifarDataset(mode="train", labels_as_logits=False)
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val", labels_as_logits=False)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+    # val_dataset = CifarDataset(mode="val", labels_as_logits=False)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
+    #                           num_workers=args.workers, pin_memory=True)
 
-    # R2R
-    model = resnet10(thin=True, thinning_ratio=4*2)
-    args.shard = "R2R"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet10(thin=True, thinning_ratio=4*2)
+    # args.shard = "R2R"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
-    # Net2Net
-    model = resnet10(thin=True, thinning_ratio=4*2, morphism_scheme="net2net")
-    args.shard = "Net2Net_student"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Net2Net
+    # model = resnet10(thin=True, thinning_ratio=4*2, morphism_scheme="net2net")
+    # args.shard = "Net2Net_student"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1600,24 +1610,25 @@ def r2r_faster_test_part_1(args):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 2:
-        raise Exception("Widening times needs to be a list of length 2 for this test")
-    if len(args.deepen_times) != 2:
-        raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 2:
+    #     raise Exception("Widening times needs to be a list of length 2 for this test")
+    # if len(args.deepen_times) != 2:
+    #     raise Exception("Deepening times needs to be a list of length 2 for this test")
+    # args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # R2R
-    model = resnet26(thin=True, thinning_ratio=2)
-    args.shard = "R2R_Then_Widened"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet26(thin=True, thinning_ratio=2)
+    # args.shard = "R2R_Then_Widened"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1630,30 +1641,31 @@ def r2r_faster_test_part_2(args):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 0:
-        raise Exception("Widening times needs to be a list of length 0 for this test")
-    if len(args.deepen_times) != 0:
-        raise Exception("Deepening times needs to be a list of length 0 for this test")
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 0:
+    #     raise Exception("Widening times needs to be a list of length 0 for this test")
+    # if len(args.deepen_times) != 0:
+    #     raise Exception("Deepening times needs to be a list of length 0 for this test")
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # Larger model trained staight up
-    model = resnet26(thin=True, thinning_ratio=2)
-    model.deepen([1,1,1,1])
-    model.widen(1.414)
-    model.deepen([0,1,2,1])
-    model.widen(1.414)
-    model = cudafy(model)
-    args.shard = "Full_Model"
-    args.widen_times = []
-    args.deepen_times = []
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # Larger model trained staight up
+    # model = resnet26(thin=True, thinning_ratio=2)
+    # model.deepen([1,1,1,1])
+    # model.widen(1.414)
+    # model.deepen([0,1,2,1])
+    # model.widen(1.414)
+    # model = cudafy(model)
+    # args.shard = "Full_Model"
+    # args.widen_times = []
+    # args.deepen_times = []
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1666,24 +1678,25 @@ def r2r_faster_test_part_3(args):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 0:
-        raise Exception("Widening times needs to be a list of length 2 for this test")
-    if len(args.deepen_times) != 0:
-        raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 0:
+    #     raise Exception("Widening times needs to be a list of length 2 for this test")
+    # if len(args.deepen_times) != 0:
+    #     raise Exception("Deepening times needs to be a list of length 2 for this test")
+    # args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # R2R
-    model = resnet26(thin=True, thinning_ratio=1.414)
-    args.shard = "R2R_Teacher"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet26(thin=True, thinning_ratio=1.414)
+    # args.shard = "R2R_Teacher"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1694,24 +1707,25 @@ def r2r_faster_test_part_4(args):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 1:
-        raise Exception("Widening times needs to be a list of length 2 for this test")
-    if len(args.deepen_times) != 2:
-        raise Exception("Deepening times needs to be a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 1:
+    #     raise Exception("Widening times needs to be a list of length 2 for this test")
+    # if len(args.deepen_times) != 2:
+    #     raise Exception("Deepening times needs to be a list of length 2 for this test")
+    # args.deepen_indidces_list = [[1,1,1,1], [0,1,2,1]]
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # R2R
-    model = resnet26(thin=True, thinning_ratio=1.414)
-    args.shard = "R2R_One_Widen"
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet26(thin=True, thinning_ratio=1.414)
+    # args.shard = "R2R_One_Widen"
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1724,34 +1738,35 @@ def r2r_faster_test_redo(args, shardname, optimizer='sgd'):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) > 1:
-        raise Exception("Widening times needs to be less than a list of length 2 for this test")
-    if len(args.deepen_times) > 1:
-        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
-    args.deepen_indidces_list = [[1,1,1,1]]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) > 1:
+    #     raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    # if len(args.deepen_times) > 1:
+    #     raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    # args.deepen_indidces_list = [[1,1,1,1]]
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # Get the optimizer function to use
-    make_optimizer_fn = _make_optimizer_fn
-    if optimizer == 'sgd':
-        make_optimizer_fn = _make_optimizer_fn_sgd
-    elif optimizer == 'adagrad':
-        make_optimizer_fn = _make_optimizer_fn_adagrad
-    elif optimizer == 'rms':
-        make_optimizer_fn = _make_optimizer_fn_rms
+    # # Get the optimizer function to use
+    # make_optimizer_fn = _make_optimizer_fn
+    # if optimizer == 'sgd':
+    #     make_optimizer_fn = _make_optimizer_fn_sgd
+    # elif optimizer == 'adagrad':
+    #     make_optimizer_fn = _make_optimizer_fn_adagrad
+    # elif optimizer == 'rms':
+    #     make_optimizer_fn = _make_optimizer_fn_rms
 
 
-    # R2R
-    model = resnet10(thin=True, thinning_ratio=1.414)
-    args.shard = shardname
-    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet10(thin=True, thinning_ratio=1.414)
+    # args.shard = shardname
+    # train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1764,23 +1779,24 @@ def r2r_faster_test_redo_18(args, shardname):
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) != 0:
-        raise Exception("Widening times needs to be less than a list of length 2 for this test")
-    if len(args.deepen_times) != 0:
-        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) != 0:
+    #     raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    # if len(args.deepen_times) != 0:
+    #     raise Exception("Deepening times needs to be less than a list of length 2 for this test")
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # R2R
-    model = resnet18()
-    args.shard = shardname
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet18()
+    # args.shard = shardname
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn_sgd, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1792,37 +1808,38 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
     """
     This is split into multiuple parts because otherwise it will take longer than 5 days to run.
     """
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    if len(args.widen_times) > 1:
-        raise Exception("Widening times needs to be less than a list of length 2 for this test")
-    if len(args.deepen_times) > 1:
-        raise Exception("Deepening times needs to be less than a list of length 2 for this test")
-    args.deepen_indidces_list = [deepen_indices]
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # if len(args.widen_times) > 1:
+    #     raise Exception("Widening times needs to be less than a list of length 2 for this test")
+    # if len(args.deepen_times) > 1:
+    #     raise Exception("Deepening times needs to be less than a list of length 2 for this test")
+    # args.deepen_indidces_list = [deepen_indices]
 
-    # Make the data loaders for imagenet
-    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
-    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+    # # Make the data loaders for imagenet
+    # train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    # val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
 
-    # Get the optimizer function to use
-    make_optimizer_fn = _make_optimizer_fn
-    if optimizer == 'sgd':
-        make_optimizer_fn = _make_optimizer_fn_sgd
-    elif optimizer == 'adagrad':
-        make_optimizer_fn = _make_optimizer_fn_adagrad
-    elif optimizer == 'rms':
-        make_optimizer_fn = _make_optimizer_fn_rms
+    # # Get the optimizer function to use
+    # make_optimizer_fn = _make_optimizer_fn
+    # if optimizer == 'sgd':
+    #     make_optimizer_fn = _make_optimizer_fn_sgd
+    # elif optimizer == 'adagrad':
+    #     make_optimizer_fn = _make_optimizer_fn_adagrad
+    # elif optimizer == 'rms':
+    #     make_optimizer_fn = _make_optimizer_fn_rms
 
 
-    # R2R
-    model = resnet_class(thin=use_thin, thinning_ratio=1.5)
-    if not function_preserving:
-        model.function_preserving = False
-        model.init_scheme = 'match_std_exact'
-    args.shard = shardname
-    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
-               _validation_loss, args)
+    # # R2R
+    # model = resnet_class(thin=use_thin, thinning_ratio=1.5)
+    # if not function_preserving:
+    #     model.function_preserving = False
+    #     model.init_scheme = 'match_std_exact'
+    # args.shard = shardname
+    # train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    #            _validation_loss, args)
 
 
 
@@ -1831,7 +1848,7 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
 
 
 """
-last set of tests
+last set of tests - on CIFAR10/CIFAR100/SVHN
 """
 
 
@@ -1927,7 +1944,7 @@ def last_svhn_extended_r2wider_resnet_wide(args):
 def last_cifar_r2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_cifar_data_loaders(args)
-    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_cifar_r2deeper_resnet_wide(args):
@@ -1939,7 +1956,7 @@ def last_cifar_r2deeper_resnet_wide(args):
 def last_svhn_r2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args)
-    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_svhn_r2deeper_resnet_wide(args):
@@ -1951,7 +1968,7 @@ def last_svhn_r2deeper_resnet_wide(args):
 def last_svhn_extended_r2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
-    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_svhn_extended_r2deeper_resnet_wide(args):
@@ -2010,7 +2027,7 @@ def last_svhn_extended_net2wider_resnet_wide(args):
 def last_cifar_net2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_cifar_data_loaders(args)
-    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_cifar_net2deeper_resnet_wide(args):
@@ -2022,7 +2039,7 @@ def last_cifar_net2deeper_resnet_wide(args):
 def last_svhn_net2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args)
-    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_svhn_net2deeper_resnet_wide(args):
@@ -2034,7 +2051,7 @@ def last_svhn_net2deeper_resnet_wide(args):
 def last_svhn_extended_net2deeper_resnet_thin(args):
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
-    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2)
+    _last_net2deeper_resnet(args, train_loader, val_loader, tr=2.7)
 
 
 def last_svhn_extended_net2deeper_resnet_wide(args):
@@ -2077,6 +2094,80 @@ def last_cifar100_net2deeper_resnet_wide(args):
 
 
 
+
+
+
+
+def last_cifar_r2wr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar_data_loaders(args)
+    _last_hyper_param_tune_r_2_wider_r(args, train_loader, val_loader, tr=4)
+
+def last_cifar_r2dr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar_data_loaders(args)
+    _last_hyper_param_tune_r_2_deeper_r(args, train_loader, val_loader, tr=2.7)
+
+def last_cifar_n2wn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar_data_loaders(args)
+    _last_hyper_param_tune_net_2_wider_net(args, train_loader, val_loader, tr=4)
+
+def last_cifar_n2dn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar_data_loaders(args)
+    _last_hyper_param_tune_net_2_deeper_net(args, train_loader, val_loader, tr=2.7)
+
+
+
+def last_extsvhn_r2wr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    _last_hyper_param_tune_r_2_wider_r(args, train_loader, val_loader, tr=1.5)
+
+def last_extsvhn_r2dr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    _last_hyper_param_tune_r_2_deeper_r(args, train_loader, val_loader, tr=1.0)
+
+def last_extsvhn_n2wn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    _last_hyper_param_tune_net_2_wider_net(args, train_loader, val_loader, tr=1.5)
+
+def last_extsvhn_n2dn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    _last_hyper_param_tune_net_2_deeper_net(args, train_loader, val_loader, tr=1.0)
+
+
+
+def last_cifar100_r2wr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar100_data_loaders(args)
+    _last_hyper_param_tune_r_2_wider_r(args, train_loader, val_loader, tr=1.5)
+
+def last_cifar100_r2dr_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar100_data_loaders(args)
+    _last_hyper_param_tune_r_2_deeper_r(args, train_loader, val_loader, tr=1.0)
+
+def last_cifar100_n2wn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar100_data_loaders(args)
+    _last_hyper_param_tune_net_2_wider_net(args, train_loader, val_loader, tr=1.5)
+
+def last_cifar100_n2dn_hp_search(args):
+    # Make the data loader objects
+    train_loader, val_loader = _make_cifar100_data_loaders(args)
+    _last_hyper_param_tune_net_2_deeper_net(args, train_loader, val_loader, tr=1.0)
+
+
+
+
+
+
+
 def last_svhn_weight_decay_tune(args):
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
@@ -2087,119 +2178,126 @@ def last_svhn_weight_decay_tune(args):
 
 
 
+#
+#
+# TODO: add orig_wd and rest args.weight_decay and args.adjust_weight_decay in tests below
+# TODO: add a way to specify in the above functions different defaults for weight_decay/lr_drop/using weight decay matching
+#
+#
 
 def _last_r2wider_resnet(args, train_loader, val_loader, tr, nc=10):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+#     # Fix some args for the test (shouldn't ever be loading anythin)
+#     args.load = ""
+#     if hasattr(args, "flops_budget"):
+#         del args.flops_budget
 
-    orig_lr = args.lr
+#     orig_lr = args.lr
 
-    # R2R
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 2.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # R2R
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+#     args.shard = "R2R_student"
+#     args.total_flops = 0
+#     args.lr = orig_lr
+#     args.lr_drops = args.widen_times
+#     # args.lr_drop_mag = [5.0]
+#     # args.weight_decay = 2.0e-3
+#     args.lr_drop_mag = [5.0]
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # Net2Net
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, morphism_scheme="net2net", num_classes=nc)
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    # args.lr_drop_mag = [2.0]
-    # args.weight_decay = 2.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # Net2Net
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, morphism_scheme="net2net", num_classes=nc)
+#     args.shard = "Net2Net_student"
+#     args.total_flops = 0
+#     args.lr = orig_lr
+#     args.lr_drops = args.widen_times
+#     # args.lr_drop_mag = [2.0]
+#     # args.weight_decay = 2.0e-3
+#     args.lr_drop_mag = [5.0]
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # RandomPadding
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
-    model.init_scheme = 'He'
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    # args.lr_drop_mag = [10.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # RandomPadding
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
+#     model.init_scheme = 'He'
+#     args.shard = "RandomPadding_student"
+#     args.total_flops = 0
+#     args.lr = orig_lr
+#     args.lr_drops = args.widen_times
+#     # args.lr_drop_mag = [10.0]
+#     # args.weight_decay = 3.0e-3
+#     args.lr_drop_mag = [5.0]
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # # NetMorph
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, morphism_scheme="netmorph", num_classes=nc)
-    args.shard = "NetMorph_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.widen_times
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # # NetMorph
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, morphism_scheme="netmorph", num_classes=nc)
+#     args.shard = "NetMorph_student"
+#     args.total_flops = 0
+#     args.lr = orig_lr
+#     args.lr_drops = args.widen_times
+#     args.lr_drop_mag = [5.0]
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # Random init start
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.widen(1.5)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr / 2.0
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # Random init start
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+#     model.widen(1.5)
+#     args.shard = "Completely_Random_Init"
+#     args.total_flops = 0
+#     args.widen_times = []
+#     args.deepen_times = []
+#     args.lr = orig_lr / 2.0
+#     args.lr_drops = []
+#     args.lr_drop_mag = [0.0]
+#     # args.weight_decay = 5.0e-3
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # Random init start v2
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    model.widen(1.5)
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 5.0e-3
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+#     # Random init start v2
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+#     model.widen(1.5)
+#     args.shard = "Completely_Random_Init_Net2Net"
+#     args.total_flops = 0
+#     args.widen_times = []
+#     args.deepen_times = []
+#     args.lr = orig_lr
+#     args.lr_drops = []
+#     args.lr_drop_mag = [0.0]
+#     # args.weight_decay = 5.0e-3
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                _validation_loss, args)
 
-    # Teacher network training loop
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = 0.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-                               _validation_loss, args)
+#     # Teacher network training loop
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+#     args.shard = "teacher_w_residual"
+#     args.total_flops = 0
+#     args.widen_times = []
+#     args.deepen_times = []
+#     args.lr = orig_lr
+#     args.lr_drops = []
+#     args.lr_drop_mag = 0.0
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                                _validation_loss, args)
 
-    # Net2Net teacher
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-                               _validation_loss, args)
+#     # Net2Net teacher
+#     model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+#     args.shard = "teacher_w_out_residual"
+#     args.total_flops = 0
+#     args.widen_times = []
+#     args.deepen_times = []
+#     args.lr = orig_lr
+#     args.lr_drops = []
+#     args.lr_drop_mag = [0.0]
+#     # args.weight_decay = 1.0e-4 #1.0e-2
+#     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+#                                _validation_loss, args)
 
 
 
@@ -2207,6 +2305,336 @@ def _last_r2wider_resnet(args, train_loader, val_loader, tr, nc=10):
 
 
 def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+
+    # orig_lr = args.lr
+
+    # # R2R
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # args.deepen_indidces_list = [[1,1,1,0]]
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # Net2Net
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
+    # args.deepen_indidces_list = [[1,1,1,0]]
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 1.0e-3
+    # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # RandomPadding
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
+    # model.init_scheme = 'He'
+    # args.deepen_indidces_list = [[1,1,1,0]]
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.lr_drops = args.deepen_times
+    # # args.lr_drop_mag = [10.0]
+    # # args.weight_decay = 3.0e-3
+    # args.lr_drop_mag = [5.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # Random init start
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # model.deepen([1,1,1,0])
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr / 2.-0
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # Teacher network training loop
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #                            _validation_loss, args)
+
+    # # Net2Net teacher
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+    # model = cudafy(model)
+    # model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.widen_times = []
+    # args.deepen_times = []
+    # args.lr = orig_lr
+    # args.lr_drops = []
+    # args.lr_drop_mag = [0.0]
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #                            _validation_loss, args)
+
+
+
+
+
+def _last_net2wider_resnet(args, train_loader, val_loader, tr, nc=10):
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
+
+    # orig_lr = args.lr
+    # orig_wd = args.weight_decay
+    # scaling_factor = 1.5
+
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # # args.weight_decay = 5.0e-3
+    # args.weight_decay = orig_wd
+    # initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #                            _validation_loss, args)
+
+    # # R2R
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(scaling_factor)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 2.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # # NetMorph
+    # model = copy.deepcopy(teacher_model)
+    # model.morphism_scheme="netmorph"
+    # model.widen(scaling_factor)
+    # args.shard = "NetMorph_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr
+    # # args.weight_decay = 1.0e-5
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # RandomPadding
+    # model = copy.deepcopy(teacher_model)
+    # model.function_preserving = False
+    # model.init_scheme = 'He'
+    # model.widen(scaling_factor)
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 10.0
+    # # args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # Random init start
+    # model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # model.widen(scaling_factor)
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 2.0
+    # args.weight_decay = orig_wd
+    # # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # Net2Net teacher
+    # initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # # args.weight_decay = 5.0e-3
+    # args.weight_decay = orig_wd 
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
+    #                            _update_op_cts_eval, _validation_loss, args)
+
+    # # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model.widen(scaling_factor)
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # Random init start v2
+    # model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+    # model.widen(scaling_factor)
+    # args.shard = "Completely_Random_Init_Net2Net"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr
+    # args.weight_decay = orig_wd 
+    # # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+
+
+def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
+
+    # orig_lr = args.lr
+    # orig_wd = args.weight_decay
+
+    # # Teacher network training loop
+    # args.shard = "teacher_w_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = orig_wd 
+    # # args.weight_decay = 5.0e-3
+    # initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    #                            _update_op_cts_eval, _validation_loss, args)
+
+    # # R2R
+    # model = copy.deepcopy(teacher_model)
+    # model.deepen([1,1,1,0])
+    # model = cudafy(model)
+    # args.shard = "R2R_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # RandomPadding
+    # model = copy.deepcopy(teacher_model)
+    # model.init_scheme = 'He'
+    # model.function_preserving = False
+    # model.deepen([1,1,1,0])
+    # model = cudafy(model)
+    # args.shard = "RandomPadding_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 10.0
+    # # args.weight_decay = 3.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # Random init start
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    # model.deepen([1,1,1,0])
+    # model = cudafy(model)
+    # args.shard = "Completely_Random_Init"
+    # args.total_flops = 0
+    # # args.lr = orig_lr
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 2.0
+    # args.weight_decay = orig_wd
+    # # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+    # # Net2Net teacher
+    # initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
+    # args.shard = "teacher_w_out_residual"
+    # args.total_flops = 0
+    # args.lr = orig_lr
+    # args.weight_decay = orig_wd 
+    # # args.weight_decay = 5.0e-3
+    # teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    #                            _update_op_cts_eval, _validation_loss, args)
+
+    # # Net2Net
+    # model = copy.deepcopy(teacher_model)
+    # model = cudafy(model)
+    # model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    # model = cudafy(model)
+    # args.shard = "Net2Net_student"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 5.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr / 5.0
+    # args.weight_decay = orig_wd / 10.0
+    # # args.weight_decay = 1.0e-4 #1.0e-2
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+    # # Random init start v2
+    # model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+    # model.deepen([1,1,1,0])
+    # args.shard = "Completely_Random_Init_Net2Net"
+    # args.total_flops = 0
+    # # args.lr = orig_lr / 2.0
+    # # args.weight_decay = 1.0e-3
+    # args.lr = orig_lr
+    # args.weight_decay = orig_wd 
+    # # args.weight_decay = 1.0e-4
+    # train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+    #            _validation_loss, args)
+
+
+
+
+
+
+def _last_hyper_param_tune_r_2_wider_r(args, train_loader, val_loader, tr, nc=10):
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
@@ -2214,96 +2642,119 @@ def _last_r2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
 
     orig_lr = args.lr
 
-    # R2R
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    args.deepen_indidces_list = [[1,1,1,0]]
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
-    # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+    for adapt_wd in [True, False]:
+        for lr_drop in [1.0, 3.0, 10.0]:
+            for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2]:
 
-    # Net2Net
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
-    args.deepen_indidces_list = [[1,1,1,0]]
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
-    # args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+                # R2R
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+                args.shard = "R2R_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.widen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                # args.weight_decay = 1.0e-4 #1.0e-2
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
-    # RandomPadding
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
-    model.init_scheme = 'He'
-    args.deepen_indidces_list = [[1,1,1,0]]
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    args.lr = orig_lr
-    args.lr_drops = args.deepen_times
-    # args.lr_drop_mag = [10.0]
-    # args.weight_decay = 3.0e-3
-    args.lr_drop_mag = [5.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+                # Net2Net
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, morphism_scheme="net2net", num_classes=nc)
+                args.shard = "Net2Net_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.widen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
-    # Random init start
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.deepen([1,1,1,0])
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr / 2.-0
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+                # RandomPadding
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
+                model.init_scheme = 'He'
+                args.shard = "RandomPadding_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.widen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
-    # Teacher network training loop
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    args.shard = "teacher_w_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-                               _validation_loss, args)
-
-    # Net2Net teacher
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    model = cudafy(model)
-    model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
-    args.shard = "teacher_w_out_residual"
-    args.total_flops = 0
-    args.widen_times = []
-    args.deepen_times = []
-    args.lr = orig_lr
-    args.lr_drops = []
-    args.lr_drop_mag = [0.0]
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-                               _validation_loss, args)
+                # # NetMorph
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, morphism_scheme="netmorph", num_classes=nc)
+                args.shard = "NetMorph_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.widen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
 
 
 
+def _last_hyper_param_tune_r_2_deeper_r(args, train_loader, val_loader, tr, nc=10):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
 
-def _last_net2wider_resnet(args, train_loader, val_loader, tr, nc=10):
+    orig_lr = args.lr
+
+    for adapt_wd in [True, False]:
+        for lr_drop in [1.0, 3.0, 10.0]:
+            for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2]:
+
+                # R2R
+                model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+                args.deepen_indidces_list = [[1,1,1,0]]
+                args.shard = "R2R_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.deepen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
+
+                # Net2Net
+                model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
+                args.deepen_indidces_list = [[1,1,1,0]]
+                args.shard = "Net2Net_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.deepen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
+
+                # RandomPadding
+                model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, function_preserving=False, num_classes=nc)
+                model.init_scheme = 'He'
+                args.deepen_indidces_list = [[1,1,1,0]]
+                args.shard = "RandomPadding_student_a={a}_l={l}_w={w}".format(a=adapt_wd, l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr
+                args.lr_drops = args.deepen_times
+                args.lr_drop_mag = [lr_drop]
+                args.weight_decay = weight_decay
+                args.adjust_weight_decay = adapt_wd
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
+
+
+
+
+def _last_hyper_param_tune_net_2_wider_net(args, train_loader, val_loader, tr, nc=10):
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
@@ -2319,112 +2770,114 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr, nc=10):
     args.shard = "teacher_w_residual"
     args.total_flops = 0
     args.lr = orig_lr
-    # args.weight_decay = 5.0e-3
     args.weight_decay = orig_wd
-    initial_model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+    args.adjust_weight_decay = False
+    initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                                _validation_loss, args)
 
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.widen(scaling_factor)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 2.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-
-    # # NetMorph
-    model = copy.deepcopy(teacher_model)
-    model.morphism_scheme="netmorph"
-    model.widen(scaling_factor)
-    args.shard = "NetMorph_student"
-    args.total_flops = 0
-    # args.lr = orig_lr
-    # args.weight_decay = 1.0e-5
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-
-    # RandomPadding
-    model = copy.deepcopy(teacher_model)
-    model.function_preserving = False
-    model.init_scheme = 'He'
-    model.widen(scaling_factor)
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 10.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-
-    # Random init start
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.widen(scaling_factor)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 2.0
-    args.weight_decay = orig_wd
-    # args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-
     # Net2Net teacher
-    initial_model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
+    initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
     args.shard = "teacher_w_out_residual"
     args.total_flops = 0
     args.lr = orig_lr
-    # args.weight_decay = 5.0e-3
     args.weight_decay = orig_wd 
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
+    args.adjust_weight_decay = False
+    n2nteacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
                                _update_op_cts_eval, _validation_loss, args)
 
-    # Net2Net
-    model = copy.deepcopy(teacher_model)
-    model.widen(scaling_factor)
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+    for lr_drop in [1.0, 3.0, 10.0]:
+        for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2, 100]:
+
+            # R2R
+            weight_before = parameter_magnitude(teacher_model)
+            model = copy.deepcopy(teacher_model)
+            model.widen(scaling_factor)
+            weight_after = parameter_magnitude(model)
+            args.shard = "R2R_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop 
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
 
 
-    # Random init start v2
-    model = orig_resnet24_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    model.widen(scaling_factor)
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
-    # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr
-    args.weight_decay = orig_wd 
-    # args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+            # # NetMorph
+            weight_before = parameter_magnitude(teacher_model)
+            model = copy.deepcopy(teacher_model)
+            model.morphism_scheme="netmorph"
+            model.widen(scaling_factor)
+            weight_after = parameter_magnitude(model)
+            args.shard = "NetMorph_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop 
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
+
+
+            # RandomPadding
+            weight_before = parameter_magnitude(teacher_model)
+            model = copy.deepcopy(teacher_model)
+            model.function_preserving = False
+            model.init_scheme = 'He'
+            model.widen(scaling_factor)
+            weight_after = parameter_magnitude(model)
+            args.shard = "RandomPadding_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop 
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
+
+
+            # Random init start
+            if weight_decay != 100:
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+                model.widen(scaling_factor)
+                args.shard = "Completely_Random_Init_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr / lr_drop 
+                args.weight_decay = weight_decay 
+                args.adjust_weight_decay = False
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
+
+            # Net2Net
+            weight_before = parameter_magnitude(n2nteacher_model)
+            model = copy.deepcopy(n2nteacher_model)
+            model.widen(scaling_factor)
+            weight_after = parameter_magnitude(model)
+            args.shard = "Net2Net_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop 
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
+
+
+            # Random init start v2
+            if weight_decay != 100:
+                model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+                model.widen(scaling_factor)
+                args.shard = "Completely_Random_Init_Net2Net_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr / lr_drop 
+                args.weight_decay = weight_decay 
+                args.adjust_weight_decay = False
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
 
 
 
-def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
+
+
+def _last_hyper_param_tune_net_2_deeper_net(args, train_loader, val_loader, tr, nc=10):
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
@@ -2440,54 +2893,9 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = orig_wd 
-    # args.weight_decay = 5.0e-3
     initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op_cts_eval, _validation_loss, args)
-
-    # R2R
-    model = copy.deepcopy(teacher_model)
-    model.deepen([1,1,1,0])
-    model = cudafy(model)
-    args.shard = "R2R_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-    # RandomPadding
-    model = copy.deepcopy(teacher_model)
-    model.init_scheme = 'He'
-    model.function_preserving = False
-    model.deepen([1,1,1,0])
-    model = cudafy(model)
-    args.shard = "RandomPadding_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 10.0
-    # args.weight_decay = 3.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-    # Random init start
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
-    model.deepen([1,1,1,0])
-    model = cudafy(model)
-    args.shard = "Completely_Random_Init"
-    args.total_flops = 0
-    # args.lr = orig_lr
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 2.0
-    args.weight_decay = orig_wd
-    # args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
 
     # Net2Net teacher
     initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, morphism_scheme="net2net", num_classes=nc)
@@ -2496,59 +2904,103 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, nc=10):
     args.lr = orig_lr
     args.weight_decay = orig_wd 
     # args.weight_decay = 5.0e-3
-    teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
+    n2nteacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op_cts_eval, _validation_loss, args)
 
-    # Net2Net
-    model = copy.deepcopy(teacher_model)
-    model = cudafy(model)
-    model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
-    model = cudafy(model)
-    args.shard = "Net2Net_student"
-    args.total_flops = 0
-    # args.lr = orig_lr / 5.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr / 5.0
-    args.weight_decay = orig_wd / 10.0
-    # args.weight_decay = 1.0e-4 #1.0e-2
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
+    for lr_drop in [1.0, 3.0, 10.0]:
+        for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2, 100]:
+
+            # R2R
+            weight_before = parameter_magnitude(teacher_model)
+            model = copy.deepcopy(teacher_model)
+            model.deepen([1,1,1,0])
+            model = cudafy(model)
+            weight_after = parameter_magnitude(model)
+            args.shard = "R2R_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
+
+            # RandomPadding
+            weight_before = parameter_magnitude(teacher_model)
+            model = copy.deepcopy(teacher_model)
+            model.init_scheme = 'He'
+            model.function_preserving = False
+            model.deepen([1,1,1,0])
+            model = cudafy(model)
+            weight_after = parameter_magnitude(model)
+            args.shard = "RandomPadding_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
+
+            # Random init start
+            if weight_decay != 100:
+                model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
+                model.deepen([1,1,1,0])
+                model = cudafy(model)
+                args.shard = "Completely_Random_Init_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr / lr_drop
+                args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+                args.adjust_weight_decay = False
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
+
+            # Net2Net
+            weight_before = parameter_magnitude(n2nteacher_model)
+            model = copy.deepcopy(n2nteacher_model)
+            model = cudafy(model)
+            weight_after = parameter_magnitude(model)
+            model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+            model = cudafy(model)
+            args.shard = "Net2Net_student_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+            args.total_flops = 0
+            args.lr = orig_lr / lr_drop
+            args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+            args.adjust_weight_decay = False
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)
 
 
-    # Random init start v2
-    model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
-    model.deepen([1,1,1,0])
-    args.shard = "Completely_Random_Init_Net2Net"
-    args.total_flops = 0
-    # args.lr = orig_lr / 2.0
-    # args.weight_decay = 1.0e-3
-    args.lr = orig_lr
-    args.weight_decay = orig_wd 
-    # args.weight_decay = 1.0e-4
-    train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
-               _validation_loss, args)
-
-
+            # Random init start v2
+            if weight_decay != 100:
+                model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, use_residual=False, num_classes=nc)
+                model.deepen([1,1,1,0])
+                args.shard = "Completely_Random_Init_Net2Net_l={l}_w={w}".format(l=lr_drop, w=weight_decay)
+                args.total_flops = 0
+                args.lr = orig_lr / lr_drop
+                args.weight_decay = weight_decay if weight_decay != 100 else orig_wd / weight_after * weight_before
+                args.adjust_weight_decay = False
+                train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                        _validation_loss, args)
 
 
 
 def _last_weight_decay_tune(args, train_loader, val_loader):
-    # Fix some args for the test (shouldn't ever be loading anythin)
-    args.load = ""
-    if hasattr(args, "flops_budget"):
-        del args.flops_budget
-    args.widen_times = []
-    args.deepen_times = []
+    raise Exception("Test outdated, unused, and won't work if uncommented")
+    # # Fix some args for the test (shouldn't ever be loading anythin)
+    # args.load = ""
+    # if hasattr(args, "flops_budget"):
+    #     del args.flops_budget
+    # args.widen_times = []
+    # args.deepen_times = []
 
-    orig_lr = args.lr
-    orig_wd = args.weight_decay
-    scaling_factor = 1.5
+    # orig_lr = args.lr
+    # orig_wd = args.weight_decay
+    # scaling_factor = 1.5
 
-    # Teacher network training loop
-    for wd in [0, 1e-6, 1e-5, 1e-4, 3e-3, 1e-3, 1e-2, 1e-1]:
-        args.shard = str(wd)
-        args.total_flops = 0
-        args.lr = orig_lr
-        args.weight_decay = wd
-        train_loop(orig_resnet24_cifar(), train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
-                   _update_op_cts_eval, _validation_loss, args)
+    # # Teacher network training loop
+    # for wd in [0, 1e-6, 1e-5, 1e-4, 3e-3, 1e-3, 1e-2, 1e-1]:
+    #     args.shard = str(wd)
+    #     args.total_flops = 0
+    #     args.lr = orig_lr
+    #     args.weight_decay = wd
+    #     train_loop(orig_resnet24_cifar(), train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
+    #                _update_op_cts_eval, _validation_loss, args)
