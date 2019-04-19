@@ -228,6 +228,12 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     # Also adjust weight decay if args are set to 
     if iter in args.widen_times or iter in args.deepen_times:
+
+        print("Num params before transform:")
+        print(count_parameters(model))
+        print("Weight magnitude before transform:")
+        print(parameter_magnitude(model))
+
         weight_mag_before = parameter_magnitude(model)
         if iter in args.widen_times:
             print("Widening!")
@@ -244,6 +250,13 @@ def _update_op(model, optimizer, minibatch, iter, args):
             weight_decay_ratio = weight_mag_before / weight_mag_after
             args.weight_decay *= weight_decay_ratio
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
+
+        print("Num params after transform:")
+        print(count_parameters(model))
+        print("Weight magnitude after transform:")
+        print(parameter_magnitude(model))
+
+        raise Exception()
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -2643,7 +2656,7 @@ def _last_hyper_param_tune_r_2_wider_r(args, train_loader, val_loader, tr, nc=10
     orig_lr = args.lr
 
     for adapt_wd in [True, False]:
-        for lr_drop in [1.0, 3.0, 10.0]:
+        for lr_drop in [3.0, 10.0]: #[1.0, 3.0, 10.0]:
             for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2]:
 
                 # R2R
@@ -2708,7 +2721,7 @@ def _last_hyper_param_tune_r_2_deeper_r(args, train_loader, val_loader, tr, nc=1
     orig_lr = args.lr
 
     for adapt_wd in [True, False]:
-        for lr_drop in [1.0, 3.0, 10.0]:
+        for lr_drop in [3.0, 10.0]: #[1.0, 3.0, 10.0]:
             for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2]:
 
                 # R2R
@@ -2786,7 +2799,7 @@ def _last_hyper_param_tune_net_2_wider_net(args, train_loader, val_loader, tr, n
     n2nteacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
                                _update_op_cts_eval, _validation_loss, args)
 
-    for lr_drop in [1.0, 3.0, 10.0]:
+    for lr_drop in [3.0, 10.0]: #[1.0, 3.0, 10.0]:
         for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2, 100]:
 
             # R2R
@@ -2907,7 +2920,7 @@ def _last_hyper_param_tune_net_2_deeper_net(args, train_loader, val_loader, tr, 
     n2nteacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op_cts_eval, _validation_loss, args)
 
-    for lr_drop in [1.0, 3.0, 10.0]:
+    for lr_drop in [3.0, 10.0]: #[1.0, 3.0, 10.0]:
         for weight_decay in [0.0, 1.0e-5, 1.0e-3, 3.0e-3, 1.0e-2, 100]:
 
             # R2R
