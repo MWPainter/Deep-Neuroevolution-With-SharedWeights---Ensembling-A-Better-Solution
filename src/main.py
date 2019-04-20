@@ -1316,7 +1316,7 @@ def get_defaults(script_name):
     ######
     # Last set of tests, using SVHN and proper resnet architectures
     ######
-    elif script == "last_cwrt":
+    elif script == "paper_cwrt":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1326,7 +1326,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [391*50],#7], # unused
+            "widen_times": [391*10],#7], # unused
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1335,7 +1335,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "last_swrt":
+    elif script == "paper_swrt":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1354,7 +1354,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script in ["last_ewrt", "last_ewrw"]:
+    elif script in ["paper_ewrt", "paper_ewrw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-5,
@@ -1364,7 +1364,7 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 128,
             "workers": 6,
-            "widen_times": [int(4722*1.5)], ### TOCHANGE
+            "widen_times": [int(4722*0.125)], ### TOCHANGE
             "deepen_times": [], # unused
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
@@ -1374,7 +1374,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
 
-    elif script == "last_cdrt":
+    elif script == "paper_cdrt":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1385,7 +1385,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [391*50], ### TOCHANGE
+            "deepen_times": [391*10], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1393,7 +1393,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "last_sdrt":
+    elif script == "paper_sdrt":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1412,7 +1412,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script in ["last_edrt", "last_edrw"]:
+    elif script in ["paper_edrt", "paper_edrw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-5,
@@ -1423,7 +1423,7 @@ def get_defaults(script_name):
             "batch_size": 128,
             "workers": 6,
             "widen_times": [], # unused
-            "deepen_times": [int(4722*1.5)], ### TOCHANGE
+            "deepen_times": [int(4722*0.125)], ### TOCHANGE
             "flops_budget": 0, # unused
             "momentum": 0.0, # unused
             "lr_drops": [], # unused
@@ -1432,7 +1432,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_cwnt","last_cwnw"]:
+    elif script in ["paper_cwnt","paper_cwnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1452,7 +1452,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_swnt","last_swnw"]:
+    elif script in ["paper_swnt","paper_swnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1472,7 +1472,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_ewnt","last_ewnw"]:
+    elif script in ["paper_ewnt","paper_ewnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-5,
@@ -1492,7 +1492,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_cdnt", "last_cdnw"]:
+    elif script in ["paper_cdnt", "paper_cdnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1512,7 +1512,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_sdnt", "last_sdnw"]:
+    elif script in ["paper_sdnt", "paper_sdnw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1532,7 +1532,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
         
-    elif script in ["last_ednt", "last_ednw"]:
+    elif script in ["paper_ednt", "paper_ednw"]:
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-5,
@@ -1552,7 +1552,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
     
-    elif script == "last_cwr100":
+    elif script == "paper_cwr100":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1571,7 +1571,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "last_cdr100":
+    elif script == "paper_cdr100":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1590,7 +1590,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "last_cwn100":
+    elif script == "paper_cwn100":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1609,7 +1609,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "last_cdn100":
+    elif script == "paper_cdn100":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-4,
@@ -1629,7 +1629,7 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
 
-    elif script == "last_svhn_wdtune":
+    elif script == "paper_svhn_wdtune":
         return {
             "lr": 3.0e-3,
             "weight_decay": 0.0,
@@ -2143,68 +2143,68 @@ if __name__ == "__main__":
     ######
     # Last set of tests, using SVHN and proper resnet architectures
     ######
-    elif script == "last_cwrt":
+    elif script == "paper_cwrt":
         last_cifar_r2wider_resnet_thin(args)
-    # elif script == "last_cwrw":
+    # elif script == "paper_cwrw":
     #     last_cifar_r2wider_resnet_wide(args)
-    elif script == "last_swrt":
-        last_svhn_r2wider_resnet_thin(args)
-    # elif script == "last_swrw":
+    # elif script == "paper_swrt":
+    #     last_svhn_r2wider_resnet_thin(args)
+    # elif script == "paper_swrw":
     #     last_svhn_r2wider_resnet_wide(args)
-    elif script == "last_ewrt":
-        last_svhn_extended_r2wider_resnet_thin(args)
-    elif script == "last_ewrw":
+    # elif script == "paper_ewrt":
+    #     last_svhn_extended_r2wider_resnet_thin(args)
+    elif script == "paper_ewrw":
         last_svhn_extended_r2wider_resnet_wide(args)
 
-    elif script == "last_cdrt":
+    elif script == "paper_cdrt":
         last_cifar_r2deeper_resnet_thin(args)
-    # elif script == "last_cdrw":
+    # elif script == "paper_cdrw":
     #     last_cifar_r2deeper_resnet_wide(args)
-    elif script == "last_sdrt":
-        last_svhn_r2deeper_resnet_thin(args)
-    # elif script == "last_sdrw":
+    # elif script == "paper_sdrt":
+    #     last_svhn_r2deeper_resnet_thin(args)
+    # elif script == "paper_sdrw":
     #     last_svhn_r2deeper_resnet_wide(args)
-    elif script == "last_edrt":
-        last_svhn_extended_r2deeper_resnet_thin(args)
-    elif script == "last_edrw":
+    # elif script == "paper_edrt":
+    #     last_svhn_extended_r2deeper_resnet_thin(args)
+    elif script == "paper_edrw":
         last_svhn_extended_r2deeper_resnet_wide(args)
         
-    elif script == "last_cwnt":
+    elif script == "paper_cwnt":
         last_cifar_net2wider_resnet_thin(args)
-    elif script == "last_cwnw":
-        last_cifar_net2wider_resnet_wide(args)
-    elif script == "last_swnt":
-        last_svhn_net2wider_resnet_thin(args)
-    elif script == "last_swnw":
-        last_svhn_net2wider_resnet_wide(args)
-    elif script == "last_ewnt":
-        last_svhn_extended_net2wider_resnet_thin(args)
-    elif script == "last_ewnw":
+    # elif script == "paper_cwnw":
+    #     last_cifar_net2wider_resnet_wide(args)
+    # elif script == "paper_swnt":
+    #     last_svhn_net2wider_resnet_thin(args)
+    # elif script == "paper_swnw":
+    #     last_svhn_net2wider_resnet_wide(args)
+    # elif script == "paper_ewnt":
+    #     last_svhn_extended_net2wider_resnet_thin(args)
+    elif script == "paper_ewnw":
         last_svhn_extended_net2wider_resnet_wide(args)
         
-    elif script == "last_cdnt":
+    elif script == "paper_cdnt":
         last_cifar_net2deeper_resnet_thin(args)
-    elif script == "last_cdnw":
-        last_cifar_net2deeper_resnet_wide(args)
-    elif script == "last_sdnt":
-        last_svhn_net2deeper_resnet_thin(args)
-    elif script == "last_sdnw":
-        last_svhn_net2deeper_resnet_wide(args)
-    elif script == "last_ednt":
-        last_svhn_extended_net2deeper_resnet_thin(args)
-    elif script == "last_ednw":
+    # elif script == "paper_cdnw":
+    #     last_cifar_net2deeper_resnet_wide(args)
+    # elif script == "paper_sdnt":
+    #     last_svhn_net2deeper_resnet_thin(args)
+    # elif script == "paper_sdnw":
+    #     last_svhn_net2deeper_resnet_wide(args)
+    # elif script == "paper_ednt":
+    #     last_svhn_extended_net2deeper_resnet_thin(args)
+    elif script == "paper_ednw":
         last_svhn_extended_net2deeper_resnet_wide(args)
 
-    elif script == "last_cwr100":
+    elif script == "paper_cwr100":
         last_cifar100_r2wider_resnet_wide(args)
-    elif script == "last_cdr100":
+    elif script == "paper_cdr100":
         last_cifar100_r2deeper_resnet_wide(args)
-    elif script == "last_cwn100":
+    elif script == "paper_cwn100":
         last_cifar100_net2wider_resnet_wide(args)
-    elif script == "last_cdn100":
+    elif script == "paper_cdn100":
         last_cifar100_net2deeper_resnet_wide(args)
 
-    elif script == "last_svhn_wdtune":
+    elif script == "paper_svhn_wdtune":
         last_svhn_weight_decay_tune(args)
 
 
