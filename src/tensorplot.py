@@ -60,6 +60,32 @@ def _si(arr, i, j=None):
 
 
 
+
+def _log_scale_(curve):
+    """Puts curve on log x scale, assumes curve is a np.array of shape (N,2)"""
+    curve[:,0] = np.log10(curve[:,0])
+    return curve
+
+
+
+
+
+def _crop_points(points, xmin, xmax, ymin, ymax):
+    """Considers a set of points 'points', with shape (N,2) and crops them to 
+    the ranges [xmin,xmax] and [ymin,ymax]. Treats the points as points and not 
+    as a curve. If this eliminates points in the middle of a curve it would 
+    change how it looks (consider cropping a sine curve to [0,1] on yaxis)."""
+    indxs = (points[:,0] >= xmin) 
+          & (points[:,0] <= xmax) 
+          & (points[:,1] >= ymin) 
+          & (points[:,1] <= ymax) 
+
+
+
+
+
+
+
 """
 Section: wrappers for reading TensorBoard summaries and for plotting with Seaboarn.
 """
@@ -270,7 +296,8 @@ Section: TensorPlot interface
 """
 
 
-def normal_plots_new(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_name, linestyles, labels, window_size=10):
+def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_name, linestyles, labels, window_size=10,
+                 xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
     """
        Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
 
@@ -296,6 +323,9 @@ def normal_plots_new(out_filename, event_filename_scalar_pair, xaxis_name, yaxis
         scalar = event_filename_scalar_pair[i][1]
         scalar_sequence = _read_sequence(event_filename, scalar)
         scalar_sequence = _add_rolling_mean_and_std(scalar_sequence, window_size=window_size)
+        scalar_sequence = _crop_points(scalar_sequence, xmin, xmax, ymin, ymax)
+        if log_x_axis:
+            scalar_sequence = _log_scale_(scalar_sequence)
         _plot_sequence(scalar_sequence, linestyles[i], labels[i])
     plt.xlabel(xaxis_name)
     plt.ylabel(yaxis_name)
@@ -304,37 +334,38 @@ def normal_plots_new(out_filename, event_filename_scalar_pair, xaxis_name, yaxis
 
 
 
-def normal_plots(out_filename, scalar_filenames, xaxis_name, yaxis_name, linestyles, labels):
-    """
-    Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
+# def normal_plots(out_filename, scalar_filenames, xaxis_name, yaxis_name, linestyles, labels):
+#     """
+#     Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
 
-    :param logdirs: The filepath(s) of the TB log directory
-    :param out_filename: The name of the file to save an image of the figure at
-    :param sclar_names: The scalars to plot
-    """
-    plt.figure()
-    sns.set(style="darkgrid")
+#     :param logdirs: The filepath(s) of the TB log directory
+#     :param out_filename: The name of the file to save an image of the figure at
+#     :param sclar_names: The scalars to plot
+#     """
+#     plt.figure()
+#     sns.set(style="darkgrid")
 
-    scalar_filenames = _listify(scalar_filenames)
-    linestyles = _listify(linestyles)
-    labels = _listify(labels)
-    # logdirs = _listify(logdirs)
-    # if len(logdirs) == 1:
-    #     logdirs = logdirs * len(scalar_names)
-    # assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
+#     scalar_filenames = _listify(scalar_filenames)
+#     linestyles = _listify(linestyles)
+#     labels = _listify(labels)
+#     # logdirs = _listify(logdirs)
+#     # if len(logdirs) == 1:
+#     #     logdirs = logdirs * len(scalar_names)
+#     # assert len(logdirs) == len(scalar_names), "Invalid number of logdirs provided"
 
-    for i in range(len(scalar_filenames)):
-        # logdir = logdirs[i]
-        scalar_filename = scalar_filenames[i]
-        scalar_sequence = _read_sequence_csv(scalar_filename)
-        _plot_sequence(scalar_sequence, linestyles[i], labels[i])
-    plt.xlabel(xaxis_name)
-    plt.ylabel(yaxis_name)
-    plt.gca().legend(loc='lower right')
-    _save_current_fig(out_filename)
+#     for i in range(len(scalar_filenames)):
+#         # logdir = logdirs[i]
+#         scalar_filename = scalar_filenames[i]
+#         scalar_sequence = _read_sequence_csv(scalar_filename)
+#         _plot_sequence(scalar_sequence, linestyles[i], labels[i])
+#     plt.xlabel(xaxis_name)
+#     plt.ylabel(yaxis_name)
+#     plt.gca().legend(loc='lower right')
+#     _save_current_fig(out_filename)
 
 
-def parametric_plots_new(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points, window_size=10):
+def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points, window_size=10,
+                 xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
     """
     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
     [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
@@ -384,8 +415,11 @@ def parametric_plots_new(out_filename, event_filename_scalar_pair_one, event_fil
         scalar_sequence_two = _add_rolling_mean_and_std(scalar_sequence_two, window_size=window_size)
 
         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
-        if num_points is not None:
-            parametric_sequence = parametric_sequence[:num_points]
+
+        parametric_sequence = _crop_points(parametric_sequence, xmin, xmax, ymin, ymax)
+        if log_x_axis:
+            parametric_sequence = _log_scale_(parametric_sequence)
+        
         _plot_sequence(parametric_sequence, linestyles[i], labels[i])
     plt.xlabel(xaxis_name)
     plt.ylabel(yaxis_name)
@@ -394,55 +428,55 @@ def parametric_plots_new(out_filename, event_filename_scalar_pair_one, event_fil
 
 
 
-def parametric_plots(out_filename, scalar_filenames_one, scalar_filenames_two, xaxis_name, yaxis_name, linestyles, labels, num_points):
-    """
-    Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
-    [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
-    equal to some (yi,y'j) where xi=x'j.
+# def parametric_plots(out_filename, scalar_filenames_one, scalar_filenames_two, xaxis_name, yaxis_name, linestyles, labels, num_points):
+#     """
+#     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
+#     [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
+#     equal to some (yi,y'j) where xi=x'j.
 
-    As the above rule can lead to some data being missed, we allow for the data to be made complete using one of three
-    options:
-    - ignore = we should ignore any values in y that don't have a corresponding y'
-    - use_last = assuming that we're parameterised by time,
-    - linear_interpolate = use a linear interpolation (or the same as use_last if we have run out of values to
-                interpolate with)
+#     As the above rule can lead to some data being missed, we allow for the data to be made complete using one of three
+#     options:
+#     - ignore = we should ignore any values in y that don't have a corresponding y'
+#     - use_last = assuming that we're parameterised by time,
+#     - linear_interpolate = use a linear interpolation (or the same as use_last if we have run out of values to
+#                 interpolate with)
 
-    Typical usage of this should be that we have two values y and y' that are recorded over a period of time, and
-    rather than plotting y vs time and y' vs time, we wish to plot y vs y'.
+#     Typical usage of this should be that we have two values y and y' that are recorded over a period of time, and
+#     rather than plotting y vs time and y' vs time, we wish to plot y vs y'.
 
-    :param logdirs: The filepath of the TB log directory(s)
-    :param out_filename: The name of the file to save an image of the figure at
-    :param scalar_names_one: The first scalar from TB to use in the parametric plot
-    :param scalar_names_two: The second scalar from TB to use in the parametric plot
-    :param missing_value_completion: How we should complete any missing values for the latent parameters
-    """
-    plt.figure()
-    sns.set(style="darkgrid")
+#     :param logdirs: The filepath of the TB log directory(s)
+#     :param out_filename: The name of the file to save an image of the figure at
+#     :param scalar_names_one: The first scalar from TB to use in the parametric plot
+#     :param scalar_names_two: The second scalar from TB to use in the parametric plot
+#     :param missing_value_completion: How we should complete any missing values for the latent parameters
+#     """
+#     plt.figure()
+#     sns.set(style="darkgrid")
 
-    scalar_filenames_one = _listify(scalar_filenames_one)
-    scalar_filenames_two = _listify(scalar_filenames_two)
-    linestyles = _listify(linestyles)
-    labels = _listify(labels)
-    # logdirs = _listify(logdirs)
-    # if len(logdirs) == 1:
-    #     logdirs = logdirs * len(scalar_names_one)
-    assert len(scalar_filenames_one) == len(scalar_filenames_two), "Invalid input to plot multiple parametric curves on a single axis."
-    # assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
+#     scalar_filenames_one = _listify(scalar_filenames_one)
+#     scalar_filenames_two = _listify(scalar_filenames_two)
+#     linestyles = _listify(linestyles)
+#     labels = _listify(labels)
+#     # logdirs = _listify(logdirs)
+#     # if len(logdirs) == 1:
+#     #     logdirs = logdirs * len(scalar_names_one)
+#     assert len(scalar_filenames_one) == len(scalar_filenames_two), "Invalid input to plot multiple parametric curves on a single axis."
+#     # assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
 
-    for i in range(len(scalar_filenames_one)):
-        # logdir = logdirs[i]
-        scalar_filename_one = scalar_filenames_one[i]
-        scalar_filename_two = scalar_filenames_two[i]
-        scalar_sequence_one = _read_sequence_csv(scalar_filename_one)
-        scalar_sequence_two = _read_sequence_csv(scalar_filename_two)
-        parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
-        if num_points is not None:
-            parametric_sequence = parametric_sequence[:num_points]
-        _plot_sequence(parametric_sequence, linestyles[i], labels[i])
-    plt.xlabel(xaxis_name)
-    plt.ylabel(yaxis_name)
-    plt.gca().legend(loc='lower right')
-    _save_current_fig(out_filename)
+#     for i in range(len(scalar_filenames_one)):
+#         # logdir = logdirs[i]
+#         scalar_filename_one = scalar_filenames_one[i]
+#         scalar_filename_two = scalar_filenames_two[i]
+#         scalar_sequence_one = _read_sequence_csv(scalar_filename_one)
+#         scalar_sequence_two = _read_sequence_csv(scalar_filename_two)
+#         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
+#         if num_points is not None:
+#             parametric_sequence = parametric_sequence[:num_points]
+#         _plot_sequence(parametric_sequence, linestyles[i], labels[i])
+#     plt.xlabel(xaxis_name)
+#     plt.ylabel(yaxis_name)
+#     plt.gca().legend(loc='lower right')
+#     _save_current_fig(out_filename)
 
 
 
@@ -475,6 +509,7 @@ def clean_scalar(logdir, scalar_name):
 
 
 if __name__ == "__main__":
+    raise Exception("TODO: set files correctly for plots")
     base_dir = sys.argv[1]
 
     # matplotlib.rcParams['ps.useafm'] = True
@@ -482,41 +517,349 @@ if __name__ == "__main__":
     # matplotlib.rcParams['text.usetex'] = True
 
 
-    # Test normal plots
-    imgfile = os.path.join(base_dir, "test_normal.pdf")
+    # # Test normal plots
+    # imgfile = os.path.join(base_dir, "test_normal.pdf")
 
-    event_filename_scalar_pair = [
-        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410', 'iter/train/valacc_1'),
-        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410','iter/train/valacc_1')]
+    # event_filename_scalar_pair = [
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410', 'iter/train/valacc_1'),
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410','iter/train/valacc_1')]
 
-    xaxis = "Epochs"
+    # xaxis = "Epochs"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-','-','-','-','-','-','-']
+    # labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
+    # normal_plots_new(imgfile, event_filename_scalar_pair, xaxis, yaxis, linestyles, labels)
+
+    # # Test parametric plots
+    # imgfile = os.path.join(base_dir, "test_parametric.pdf")
+
+    # event_filename_scalar_pair_one = [
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
+    #      'iter/train/valacc_1'),
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
+    #      'iter/train/valacc_1')]
+
+    # event_filename_scalar_pair_two = [
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
+    #      'iter/train/valacc_1'),
+    #     ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
+    #      'iter/train/valacc_1')]
+
+    # xaxis = "Epochs"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual',
+    #           'NetMorph']
+    # parametric_plots_new(imgfile, event_filename_scalar_pair_one, event_filename_scalar_pair_two,
+    #                      xaxis, yaxis, linestyles, labels, num_points=100)
+
+
+
+    # Fig 5 / CIFAR / net2widernet tests, validation curves
+    imgfile = os.path.join(base_dir, "cifar_net2widernet.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
+    xaxis = "Iterations"
     yaxis = "Validation Accuracy"
-    linestyles = ['-','-','-','-','-','-','-']
-    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual', 'NetMorph']
-    normal_plots_new(imgfile, event_filename_scalar_pair, xaxis, yaxis, linestyles, labels)
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-    # Test parametric plots
-    imgfile = os.path.join(base_dir, "test_parametric.pdf")
 
-    event_filename_scalar_pair_one = [
-        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
-         'iter/train/valacc_1'),
-        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
-         'iter/train/valacc_1')]
 
-    event_filename_scalar_pair_two = [
-        ('tb_logs/tblogs/last_ednw_default_tb_log/R2R_student/events.out.tfevents.1552424267.dgj410',
-         'iter/train/valacc_1'),
-        ('tb_logs/tblogs/last_ednw_default_tb_log/Completely_Random_Init_Net2Net/events.out.tfevents.1552469288.dgj410',
-         'iter/train/valacc_1')]
+    # Fig 5 / SVHN / net2widernet tests, validation curves
+    imgfile = os.path.join(base_dir, "svhn_net2widernet.pdf")
 
-    xaxis = "Epochs"
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResnetCifar18(2/3)']
+    xaxis = "Iterations"
     yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-', '-', '-']
-    labels = ['Net2WiderNet', 'R2WiderR', 'RandomPad', 'ResNetCifar18(1/6)', 'Teacher', 'Teacher-NoResidual',
-              'NetMorph']
-    parametric_plots_new(imgfile, event_filename_scalar_pair_one, event_filename_scalar_pair_two,
-                         xaxis, yaxis, linestyles, labels, num_points=100)
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+    # Fig 6 / CIFAR / net2deepernet tests, validation curves
+    imgfile = os.path.join(base_dir, "cifar_net2deepernet.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+    # Fig 6 / SVHN / net2deepernet tests, validation curves
+    imgfile = os.path.join(base_dir, "svhn_net2deepernet.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+    # Fig 7 / CIFAR / overfitting
+    imgfile = os.path.join(base_dir, "cifar_overfit.pdf")
+
+    scalars = [
+        ('overfitting_teacher_file': 'iter/train/accuracy_1'),
+        ('overfitting_teacher_file': 'iter/train/valacc_1'),
+        ('overfitting_student_file': 'iter/train/accuracy_1'),
+        ('overfitting_student_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/accuracy_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+    ]
+    labels = ['Teacher-Train', 'Teacher-Test', 'Student-Train', 'Student-Test', 'ResNetCifar18(3/8)-Train', 'ResNetCifar18(3/8)-Test']
+    xaxis = "Iterations"
+    yaxis = "Training/Validation Accuracy"
+    linestyles = ['--', '-', '--', '-', '--', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 8 / CIFAR / Weight init
+    imgfile = os.path.join(base_dir, "cifar_large_init.pdf")
+
+    scalars = [
+        ('largewieghts_file': 'iter/train/accuracy_1'),
+        ('matchstd_file': 'iter/train/accuracy_1'),
+    ]
+    labels = ['He Init', 'StdDev Matching']
+    xaxis = "Iterations"
+    yaxis = "Training/Validation Accuracy"
+    linestyles = ['--', '--']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 9.1 / CIFAR / R2WiderR tests
+    imgfile = os.path.join(base_dir, "cifar_r2widerr.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 9.1 / SVHN / R2WiderR tests
+    imgfile = os.path.join(base_dir, "svhn_r2widerr.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 9.1 / CIFAR / R2DeeprR tests
+    imgfile = os.path.join(base_dir, "cifar_r2deeperr.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 9.1 / SVHN / R2DeeprR tests
+    imgfile = os.path.join(base_dir, "svhn_r2deeperr.pdf")
+
+    scalars = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # Fig 9.2 / CIFAR / R2WiderR tests
+    imgfile = os.path.join(base_dir, "cifar_r2widerr_flops.pdf")
+
+    scalars_xvals = [
+        ('n2n_file': 'iter/train/total_flops'),
+        ('r2r_file': 'iter/train/total_flops'),
+        ('netmorph_file': 'iter/train/total_flops'),
+        ('rand_pad_file': 'iter/train/total_flops'),
+        ('rand_init_file': 'iter/train/total_flops'),
+        ('teacher_file'): 'iter/train/total_flops'),
+    ]
+
+    scalars_yvals = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # Fig 9.2 / SVHN / R2WiderR tests
+    imgfile = os.path.join(base_dir, "svhn_r2widerr_flops.pdf")
+
+    scalars_xvals = [
+        ('n2n_file': 'iter/train/total_flops'),
+        ('r2r_file': 'iter/train/total_flops'),
+        ('netmorph_file': 'iter/train/total_flops'),
+        ('rand_pad_file': 'iter/train/total_flops'),
+        ('rand_init_file': 'iter/train/total_flops'),
+        ('teacher_file'): 'iter/train/total_flops'),
+    ]
+
+    scalars_yvals = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('netmorph_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # Fig 9.2 / CIFAR / R2DeeprR tests
+    imgfile = os.path.join(base_dir, "cifar_r2deeperr_flops.pdf")
+
+    scalars_xvals = [
+        ('n2n_file': 'iter/train/total_flops'),
+        ('r2r_file': 'iter/train/total_flops'),
+        ('rand_pad_file': 'iter/train/total_flops'),
+        ('rand_init_file': 'iter/train/total_flops'),
+        ('teacher_file'): 'iter/train/total_flops'),
+    ]
+
+    scalars_yvals = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # Fig 9.2 / SVHN / R2DeeprR tests
+    imgfile = os.path.join(base_dir, "svhn_r2deeperr_flops.pdf")
+
+    scalars_xvals = [
+        ('n2n_file': 'iter/train/total_flops'),
+        ('r2r_file': 'iter/train/total_flops'),
+        ('rand_pad_file': 'iter/train/total_flops'),
+        ('rand_init_file': 'iter/train/total_flops'),
+        ('teacher_file'): 'iter/train/total_flops'),
+    ]
+
+    scalars_yvals = [
+        ('n2n_file': 'iter/train/valacc_1'),
+        ('r2r_file': 'iter/train/valacc_1'),
+        ('rand_pad_file': 'iter/train/valacc_1'),
+        ('rand_init_file': 'iter/train/valacc_1'),
+        ('teacher_file'): 'iter/train/valacc_1'),
+    ]
+    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    xaxis = "Iterations"
+    yaxis = "Validation Accuracy"
+    linestyles = ['-', '-', '-', '-', '-']
+    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
 
 
     """
