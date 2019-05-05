@@ -428,7 +428,7 @@ def _validation_loss(model, minibatch, args):
         loss_fn = _make_loss_fn()
         ys_pred = model(xs).cpu()
         loss = loss_fn(ys_pred, ys)
-        acc = _accuracy(ys_pred, ys)
+        acc = _accuracy(ys_pred, ys)[0]
 
         # Return the dictionary of losses
         return {'loss': loss,
