@@ -228,12 +228,6 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Widen or deepen the network at the correct times
     # Also adjust weight decay if args are set to 
     if iter in args.widen_times or iter in args.deepen_times:
-
-        print("Num params before transform:")
-        print(count_parameters(model))
-        print("Weight magnitude before transform:")
-        print(parameter_magnitude(model))
-
         weight_mag_before = parameter_magnitude(model)
         if iter in args.widen_times:
             print("Widening!")
@@ -250,13 +244,6 @@ def _update_op(model, optimizer, minibatch, iter, args):
             weight_decay_ratio = weight_mag_before / weight_mag_after
             args.weight_decay *= weight_decay_ratio
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args) #, momentum=0.0)
-
-        print("Num params after transform:")
-        print(count_parameters(model))
-        print("Weight magnitude after transform:")
-        print(parameter_magnitude(model))
-
-        raise Exception()
 
     # Forward pass - compute a loss
     loss_fn = _make_loss_fn()
@@ -1963,16 +1950,15 @@ def last_svhn_extended_r2wider_resnet_thin(args):
 
 
 def last_svhn_extended_r2wider_resnet_wide(args):
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     var_args = {
-        "r2r": (True, 5.0, 3.0e-3),
-        "n2n": (True, 5.0, 3.0e-3),
-        "rand_pad": (True, 5.0, 3.0e-3),
-        "netmorph": (True, 5.0, 3.0e-3),
-        "rand_init": (True, 5.0, 3.0e-3),
-        "rand_init_n2n": (True, 5.0, 3.0e-3),
-        "teacher": (True, 5.0, 3.0e-3),
-        "teacher_n2n": (True, 5.0, 3.0e-3),
+        "r2r": (True, 10.0, 1.0e-5),
+        "n2n": (False, 3.0, 0.0),
+        "rand_pad": (True, 10.0, 1.0e-3),
+        "netmorph": (True, 10.0, 1.0e-5),
+        "rand_init": (False, 3.0, 1.0e-5),
+        "rand_init_n2n": (False, 3.0, 0.0),
+        "teacher": (True, 1.0, 1.0e-4),
+        "teacher_n2n": (True, 1.0, 1.0e-4),
     }
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
@@ -1996,7 +1982,7 @@ def last_cifar_r2deeper_resnet_thin(args):
     }
     # Make the data loader objects
     train_loader, val_loader = _make_cifar_data_loaders(args)
-    _last_r2deeper_resnet(args, train_loader, val_loader, var_args, tr=2.7, var_args=var_args)
+    _last_r2deeper_resnet(args, train_loader, val_loader, tr=2.7, var_args=var_args)
 
 
 def last_cifar_r2deeper_resnet_wide(args):
@@ -2028,14 +2014,13 @@ def last_svhn_extended_r2deeper_resnet_thin(args):
 
 
 def last_svhn_extended_r2deeper_resnet_wide(args):
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     var_args = {
-        "r2r": (True, 5.0, 3.0e-3),
-        "n2n": (True, 5.0, 3.0e-3),
-        "rand_pad": (True, 5.0, 3.0e-3),
-        "rand_init": (True, 5.0, 3.0e-3),
-        "teacher": (True, 5.0, 3.0e-3),
-        "teacher_n2n": (True, 5.0, 3.0e-3),
+        "r2r": (True, 10.0, 1.0e-5),
+        "n2n": (True, 10.0, 1.0e-5),
+        "rand_pad": (True, 10.0, 1.0e-5),
+        "rand_init": (True, 3.0, 0.0),
+        "teacher": (True, 3.0, 1.0e-4),
+        "teacher_n2n": (True, 3.0, 1.0e-4),
     }
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
@@ -2091,14 +2076,13 @@ def last_svhn_extended_net2wider_resnet_thin(args):
 
 
 def last_svhn_extended_net2wider_resnet_wide(args):
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     var_args = {
-        "r2r": (True, 5.0, 3.0e-3),
-        "n2n": (True, 5.0, 3.0e-3),
-        "rand_pad": (True, 5.0, 3.0e-3),
-        "netmorph": (True, 5.0, 3.0e-3),
-        "rand_init": (True, 5.0, 3.0e-3),
-        "rand_init_n2n": (True, 5.0, 3.0e-3),
+        "r2r": (True, 10.0, None),# ignore weight decay, as adapting here
+        "n2n": (True, 10.0, None),# ignore weight decay, as adapting here
+        "rand_pad": (False, 10.0, 1.0e-5),
+        "netmorph": (True, 10.0, None), # ignore weight decay, as adapting here
+        "rand_init": (False, 3.0, 1.0e-5),
+        "rand_init_n2n": (False, 3.0, 0.0),
     }
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
@@ -2153,13 +2137,12 @@ def last_svhn_extended_net2deeper_resnet_thin(args):
 
 
 def last_svhn_extended_net2deeper_resnet_wide(args):
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     var_args = {
-        "r2r": (True, 5.0, 3.0e-3),
-        "n2n": (True, 5.0, 3.0e-3),
-        "rand_pad": (True, 5.0, 3.0e-3),
-        "rand_init": (True, 5.0, 3.0e-3),
-        "rand_init_n2n": (True, 5.0, 3.0e-3),
+        "r2r": (True, 3.0, None),# ignore weight decay, as adapting here
+        "n2n": (True, 10.0, None),# ignore weight decay, as adapting here
+        "rand_pad": (False, 3.0, 0.0),
+        "rand_init": (False, 1.0, 0.0),
+        "rand_init_n2n": (False, 3.0, 0.0),
     }
     # Make the data loader objects
     train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
@@ -2584,16 +2567,18 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr, var_args, nc=10):
     initial_model = orig_resnet18_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                                _validation_loss, args)
+    weight_before = parameter_magnitude(teacher_model)
 
     # R2R
     model = copy.deepcopy(teacher_model)
     model.widen(scaling_factor)
+    weight_after = parameter_magnitude(model)
     args.shard = "R2R_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["r2r"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2602,12 +2587,13 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr, var_args, nc=10):
     model = copy.deepcopy(teacher_model)
     model.morphism_scheme="netmorph"
     model.widen(scaling_factor)
+    weight_after = parameter_magnitude(model)
     args.shard = "NetMorph_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["netmorph"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2617,12 +2603,13 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr, var_args, nc=10):
     model.function_preserving = False
     model.init_scheme = 'He'
     model.widen(scaling_factor)
+    weight_after = parameter_magnitude(model)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["rand_pad"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2648,16 +2635,18 @@ def _last_net2wider_resnet(args, train_loader, val_loader, tr, var_args, nc=10):
     args.weight_decay = orig_wd 
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
                                _update_op_cts_eval, _validation_loss, args)
+    weight_before = parameter_magnitude(teacher_model)
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
     model.widen(scaling_factor)
+    weight_after = parameter_magnitude(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["n2n"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2697,17 +2686,19 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, var_args, nc=10)
     initial_model = orig_resnet12_cifar(thin=True, thinning_ratio=tr, num_classes=nc)
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op_cts_eval, _validation_loss, args)
+    weight_before = parameter_magnitude(teacher_model)
 
     # R2R
     model = copy.deepcopy(teacher_model)
     model.deepen([1,1,1,0])
+    weight_after = parameter_magnitude(model)
     model = cudafy(model)
     args.shard = "R2R_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["r2r"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2716,13 +2707,14 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, var_args, nc=10)
     model.init_scheme = 'He'
     model.function_preserving = False
     model.deepen([1,1,1,0])
+    weight_after = parameter_magnitude(model)
     model = cudafy(model)
     args.shard = "RandomPadding_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["rand_pad"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 
@@ -2747,18 +2739,20 @@ def _last_net2deeper_resnet(args, train_loader, val_loader, tr, var_args, nc=10)
     args.weight_decay = orig_wd 
     teacher_model = train_loop(initial_model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn,
                                _update_op_cts_eval, _validation_loss, args)
+    weight_before = parameter_magnitude(teacher_model)
 
     # Net2Net
     model = copy.deepcopy(teacher_model)
     model = cudafy(model)
     model.deepen([1,1,1,0], minibatch=next(iter(train_loader))[0].to('cuda'))
+    weight_after = parameter_magnitude(model)
     model = cudafy(model)
     args.shard = "Net2Net_student"
     args.total_flops = 0
     adjust_weight_decay, lr_drop_mag, weight_decay = var_args["n2n"]
     args.adjust_weight_decay = adjust_weight_decay
     args.lr = orig_lr / lr_drop_mag
-    args.weight_decay = weight_decay
+    args.weight_decay = orig_wd / weight_after * weight_before if adjust_weight_decay else weight_decay
     train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
                _validation_loss, args)
 

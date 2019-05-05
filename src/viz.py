@@ -1,5 +1,6 @@
 import os
 import math
+import copy
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -118,8 +119,7 @@ class FC_Net(nn.Module):
         shape = (self.hidden_units, self.in_channels, 32, 32)
         weights = self.W1.weight.data.detach().cpu().view(shape).numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
-        weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=False)) # (self.widen_method=='netmorph')))
+        weights_img = np.squeeze(_visualize_grid(weights_scipy, viz_width=viz_width, kernel_norm=True)) # (self.widen_method=='netmorph')))
         filename = "{iter:0>6d}.png".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -128,10 +128,11 @@ class FC_Net(nn.Module):
 
 
 class Conv_Net(nn.Module):
-    def __init__(self, hidden_units, conv_channels, in_channels=1, widen_method='r2r', multiplicative_widen=False):
+    def __init__(self, hidden_units, conv_channels, in_channels=1, widen_method='r2r', multiplicative_widen=False, init_scale=1.0):
         super(Conv_Net, self).__init__()
         self.widen_method = widen_method.lower()
         self.multiplicative_widen = multiplicative_widen
+        self.init_scale = init_scale
         self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=7, padding=3, stride=1)
         self.pool1 = nn.MaxPool2d(2)
         # self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
@@ -160,7 +161,7 @@ class Conv_Net(nn.Module):
     def widen(self, num_channels=16, num_hidden=50):
         if self.widen_method == 'r2r':
             r_2_wider_r_(prev_layers=self.conv1, volume_shape=(self.conv1.weight.data.size(0),16,16),
-                         next_layers=self.W1, extra_channels=num_channels, init_type="match_std_exact",
+                         next_layers=self.W1, extra_channels=num_channels, init_type=self.init_scale,
                          function_preserving=True, multiplicative_widen=self.multiplicative_widen)
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
@@ -180,8 +181,8 @@ class Conv_Net(nn.Module):
     def save_weights(self, iter, dir, viz_width):
         weights = self.conv1.weight.data.detach().cpu().numpy()
         weights_scipy = np.transpose(weights, (0,2,3,1))
-        weights_normalized = (weights_scipy + 1.0) / 2.0
-        weights_img = np.squeeze(_visualize_grid(weights_normalized, viz_width=viz_width, kernel_norm=False))
+        # weights_normalized = (weights_scipy + 1.0) / 2.0
+        weights_img = np.squeeze(_visualize_grid(weights_scipy, viz_width=viz_width, kernel_norm=True))
         filename = "{iter:0>6d}.png".format(iter=iter)
         filepath = os.path.join(dir, filename)
         scipy.misc.imsave(filepath, weights_img)
@@ -303,13 +304,30 @@ def _update_op(model, optimizer, minibatch, iter, args):
     xs, ys = cudafy(minibatch[0]), cudafy(minibatch[1])
 
     # Widen or deepen the network at the correct times
-    if iter in args.widen_times:
-        model.widen()
-        #args.lr /= 2.0
-        args.weight_decay /= 10
-        if model.widen_method == 'netmorph':
-            args.weight_decay = 1.0e-5
+    # if iter in args.widen_times:
+    #     model.widen()
+    #     #args.lr /= 2.0
+    #     args.weight_decay /= 10
+    #     if model.widen_method == 'netmorph':
+    #         args.weight_decay = 1.0e-5
 
+
+    #     if args.adjust_weight_decay:
+    #         weight_decay_ratio = weight_mag_before / weight_mag_after
+    #         args.weight_decay *= weight_decay_ratio
+
+    #     optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
+
+    if iter in args.widen_times:
+        weight_mag_before = parameter_magnitude(model)
+        if iter in args.widen_times:
+            print("Widening!")
+            model.widen(1.5)
+        weight_mag_after = parameter_magnitude(model)
+        model = cudafy(model)
+        if args.adjust_weight_decay:
+            weight_decay_ratio = weight_mag_before / weight_mag_after
+            args.weight_decay *= weight_decay_ratio
         optimizer = _make_optimizer_fn(model, args.lr, args.weight_decay, args)
 
     # Forward pass - compute a loss
@@ -344,7 +362,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
     widen_pm = [w-1 for w in args.widen_times] + [w for w in args.widen_times] + [w+1 for w in args.widen_times]
     if iter % 10 == 0 or iter in widen_pm:
-        img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), "weight_visuals")
+        img_dir = os.path.join("{folder}/{exp}_checkpoints".format(folder=args.checkpoint_dir, exp=args.exp), args.shard, "weight_visuals")
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
         model.save_weights(iter, img_dir, args.initial_channels)
@@ -460,32 +478,84 @@ def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
+    # Args stuff
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.widen_times = []
+    args.deepen_times = []
+
+    orig_lr = args.lr
+    orig_wd = args.weight_decay
+
     # Make the data loader objects
-    train_dataset = CifarDataset(mode="train")
+    train_dataset = CifarDataset()
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(mode="val")
+    val_dataset = CifarDataset()
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    if use_conv:
-        args.initial_channels = 8
-        init_channels = 32 if start_wide else 16
-        init_hidden = 150 #250 if start_wide else 50
-        model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method)
-    else:
-        args.initial_channels = 2
-        init_channels = 8 if start_wide else 2
-        model = FC_Net(init_channels, in_channels=3, widen_method=widen_method)
+    args.initial_channels = 8
+    args.shard = "teacher"
+    args.total_flops = 0
+    args.lr = orig_lr
+    args.weight_decay = orig_wd
+    init_channels = 16
+    init_hidden = 150 #250 if start_wide else 50
+    model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method, init_scale=1.0)
 
-    # Train
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    # Train teacher
+    teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
+    weight_before = parameter_magnitude(teacher_model)
 
-    # return the model in case we want to do anything else with it
-    return model, train_loader, val_loader
+    for weight_decay_match in [True, False]:
+
+        # N2N
+        model = copy.deepcopy(teacher_model)
+        model.widen_method = 'net2net' 
+        model.widen()
+        weight_after = parameter_magnitude(model)
+        args.shard = "R2R_wd_match={w}".format(w=weight_decay_match)
+        args.total_flops = 0
+        args.adjust_weight_decay = weight_decay_match
+        args.lr = orig_lr / 10.0
+        args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
+        teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                        _validation_loss, args)
+
+
+        for init_scale in [1.0, 0.8, 0.6, 0.5, 0.4, 0.3, 0.1]: 
+
+            # R2R
+            model = copy.deepcopy(teacher_model)
+            model.init_scale = init_scale
+            model.widen_method = 'r2r' '
+            model.widen()
+            weight_after = parameter_magnitude(model)
+            args.shard = "R2R_scale={s}_wd_match={w}".format(l=init_scale, w=weight_decay_match)
+            args.total_flops = 0
+            args.adjust_weight_decay = weight_decay_match
+            args.lr = orig_lr / 10.0
+            args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
+            teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                            _validation_loss, args)
+    
+    # N2N
+    model = copy.deepcopy(teacher_model)
+    model.widen_method = 'netmorph'
+    model.widen()
+    weight_after = parameter_magnitude(model)
+    args.shard = "NetMorph"
+    args.total_flops = 0
+    args.adjust_weight_decay = weight_decay_match
+    args.lr = orig_lr / 10.0
+    args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
+    teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+                    _validation_loss, args)
 
 
 

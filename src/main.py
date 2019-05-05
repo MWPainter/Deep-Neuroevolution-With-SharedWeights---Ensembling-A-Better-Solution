@@ -1882,6 +1882,27 @@ def get_defaults(script_name):
             "adjust_weight_decay": False,
         }
 
+    
+    elif script == "paper_final_viz":
+        return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 400,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": False,
+        }
+
 
     else:
         print("Couldn't find defaults for '{s}'".format(s=script))
@@ -2234,6 +2255,9 @@ if __name__ == "__main__":
         last_cifar100_n2wn_hp_search(args)
     elif script == "paper_c100_n2dn_hs":
         last_cifar100_n2dn_hp_search(args)
+
+    elif script == "paper_final_viz":
+        _cifar_weight_visuals()
 
 
     else:

@@ -178,6 +178,9 @@ def _extend_filter_with_repeated_out_channels(extending_filter_shape, existing_f
         new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale)
     elif init_type == 'scale':
         new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=std)
+    elif isinstance(init_type, float):
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((C2,I,H,W), scale=scale*init_type)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -231,6 +234,9 @@ def _extend_filter_out_channels(extending_filter_shape, existing_filter=None, in
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale)
+    elif isinstance(init_type, float):
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((twoC2,I,H,W), scale=scale*init_type)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
 
@@ -312,6 +318,9 @@ def _extend_filter_with_repeated_in_channels(extending_filter_shape, existing_fi
         new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale)
     elif init_type == 'scale':
         new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=std)
+    elif isinstance(init_type, float):
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((C,I2,H,W), scale=scale*init_type)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
     
@@ -365,6 +374,9 @@ def _extend_filter_in_channels(extending_filter_shape, existing_filter=None, ini
     elif init_type == 'match_std_exact':
         scale = np.std(existing_filter)
         new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale)
+    elif isinstance(init_type, float):
+        scale = np.std(existing_filter)
+        new_channels_weights = _conv_match_scale_initialize((C,twoI2,H,W), scale=scale*init_type)
     else:
         raise Exception("Invalid initialization type specified. Please use 'He' or 'Xavier'.")
 
