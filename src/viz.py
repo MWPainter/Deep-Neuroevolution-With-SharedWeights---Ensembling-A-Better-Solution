@@ -489,11 +489,11 @@ def _cifar_weight_visuals(args):
     orig_wd = args.weight_decay
 
     # Make the data loader objects
-    train_dataset = CifarDataset()
+    train_dataset = CifarDataset(train=True, labels_as_logits=False)
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset()
+    val_dataset = CifarDataset(train=False, labels_as_logits=False)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
