@@ -505,7 +505,7 @@ def _cifar_weight_visuals(args):
     args.weight_decay = orig_wd
     init_channels = 16
     init_hidden = 150 #250 if start_wide else 50
-    model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method=widen_method, init_scale=1.0)
+    model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method='r2r', init_scale=1.0)
 
     # Train teacher
     teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
