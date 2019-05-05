@@ -346,7 +346,7 @@ def _update_op(model, optimizer, minibatch, iter, args):
     # Compute loss and accuracy
     losses = {}
     losses['loss'] = loss
-    losses['accuracy'] = _accuracy(ys_pred, ys)
+    losses['accuracy'] = _accuracy(ys_pred, ys)[0]
 
     # Losses about weight norms etc. Only compute occasionally because this is heavyweight
     if iter % args.tb_log_freq == 0:
@@ -374,16 +374,23 @@ def _update_op(model, optimizer, minibatch, iter, args):
 
 
 
-def _accuracy(prediction, target):
+def _accuracy(output, target, topk=(1,)):
     """
-    Helper to compute the accuracy of predictions in a minibatch.
-    :param prediction: Prediction probabilities
-    :param target: Ground truth prediction probabilities (one-hot)
-    :returns: Accuracy
+    Computes the precision@k for the specified values of k. I.e. if topk=(1,5) it will compute the precision@1 and the
+    precision@k.
     """
-    _, pred_classes = t.max(prediction, 1)
-    _, actual_classes = t.max(target, 1)
-    return t.mean((pred_classes == actual_classes).type(t.float))
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
 
 
 
@@ -394,7 +401,7 @@ def _make_loss_fn():
     Helper to keep the definition of the loss function in a single place
     :return:
     """
-    return nn.BCEWithLogitsLoss()
+    return nn.CrossEntropyLoss()
 
 
 
