@@ -474,7 +474,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
 
 
 
-def _cifar_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=False):
+def _cifar_weight_visuals(args):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
