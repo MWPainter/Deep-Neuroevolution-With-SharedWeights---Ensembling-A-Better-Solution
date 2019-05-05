@@ -861,7 +861,7 @@ def get_defaults(script_name):
     #######
     # Examples where things go wrong
     #######
-    elif script == "n2n_overfit_problem":
+    elif script == "paper_n2n_overfit_problem":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-6,
@@ -880,7 +880,7 @@ def get_defaults(script_name):
             "grad_clip": 0.0,
             "adjust_weight_decay": False,
         }
-    elif script == "r2r_weight_init_problem":
+    elif script == "paper_r2r_weight_init_problem":
         return {
             "lr": 3.0e-3,
             "weight_decay": 1.0e-3,
@@ -2092,9 +2092,9 @@ if __name__ == "__main__":
     ######
     # Anomolies in training examples
     ######
-    elif script == "n2n_overfit_problem":
+    elif script == "paper_n2n_overfit_problem":
         net_2_net_overfit_example(args)
-    elif script == "r2r_weight_init_problem":
+    elif script == "paper_r2r_weight_init_problem":
         r_2_r_weight_init_example(args)
 
     #######

@@ -462,7 +462,6 @@ def net_2_net_overfit_example(args):
     :param args:
     :return:
     """
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
@@ -541,7 +540,6 @@ def r_2_r_weight_init_example(args):
     :param args:
     :return:
     """
-    raise Exception("TODO: set params for lrs/lr_drops/weight_decay/weight_decay_adjustments")
     # Fix some args for the test (shouldn't ever be loading anythin)
     args.load = ""
     if hasattr(args, "flops_budget"):
