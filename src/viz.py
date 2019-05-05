@@ -533,7 +533,7 @@ def _cifar_weight_visuals(args):
             # R2R
             model = copy.deepcopy(teacher_model)
             model.init_scale = init_scale
-            model.widen_method = 'r2r' '
+            model.widen_method = 'r2r' 
             model.widen()
             weight_after = parameter_magnitude(model)
             args.shard = "R2R_scale={s}_wd_match={w}".format(l=init_scale, w=weight_decay_match)
