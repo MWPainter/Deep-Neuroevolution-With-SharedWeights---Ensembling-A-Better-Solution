@@ -2257,7 +2257,7 @@ if __name__ == "__main__":
         last_cifar100_n2dn_hp_search(args)
 
     elif script == "paper_final_viz":
-        _cifar_weight_visuals()
+        _cifar_weight_visuals(args)
 
 
     else:
