@@ -526,12 +526,12 @@ def _cifar_weight_visuals(args):
         model.widen_method = 'net2net' 
         model.widen()
         weight_after = parameter_magnitude(model)
-        args.shard = "R2R_wd_match={w}".format(w=weight_decay_match)
+        args.shard = "N2N_wd_match={w}".format(w=weight_decay_match)
         args.total_flops = 0
         args.adjust_weight_decay = weight_decay_match
         args.lr = orig_lr / 10.0
         args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-        teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+        model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                         _validation_loss, args)
 
 
@@ -543,15 +543,15 @@ def _cifar_weight_visuals(args):
             model.widen_method = 'r2r' 
             model.widen()
             weight_after = parameter_magnitude(model)
-            args.shard = "R2R_scale={s}_wd_match={w}".format(l=init_scale, w=weight_decay_match)
+            args.shard = "R2R_scale={s}_wd_match={w}".format(s=init_scale, w=weight_decay_match)
             args.total_flops = 0
             args.adjust_weight_decay = weight_decay_match
             args.lr = orig_lr / 10.0
             args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-            teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+            model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                             _validation_loss, args)
     
-    # N2N
+    # NetMorph
     model = copy.deepcopy(teacher_model)
     model.widen_method = 'netmorph'
     model.widen()
@@ -561,7 +561,7 @@ def _cifar_weight_visuals(args):
     args.adjust_weight_decay = weight_decay_match
     args.lr = orig_lr / 10.0
     args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-    teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                     _validation_loss, args)
 
 

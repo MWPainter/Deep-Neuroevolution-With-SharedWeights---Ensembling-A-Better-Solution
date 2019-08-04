@@ -1887,11 +1887,11 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 400,
+            "epochs": 50,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 128,
+            "batch_size": 256,
             "workers": 6,
             "widen_times": [],
             "deepen_times": [], # unused
@@ -1900,7 +1900,7 @@ def get_defaults(script_name):
             "lr_drops": [], # unused
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0,
-            "adjust_weight_decay": False,
+            "adjust_weight_decay": True,
         }
 
 
