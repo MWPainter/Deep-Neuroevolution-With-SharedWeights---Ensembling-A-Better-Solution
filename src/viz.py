@@ -36,9 +36,9 @@ Network Definition
 
 
 
-def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0, kernel_norm=False):
+def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0, kernel_norm=True):
     """
-    Taken from the cs231n starter code.
+    Adapted from the cs231n starter code.
     """
     (N, H, W, C) = Xs.shape
     viz_height = int(math.ceil(N / viz_width))
@@ -133,7 +133,7 @@ class Conv_Net(nn.Module):
         self.widen_method = widen_method.lower()
         self.multiplicative_widen = multiplicative_widen
         self.init_scale = init_scale
-        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=7, padding=3, stride=1)
+        self.conv1 = nn.Conv2d(in_channels, conv_channels, kernel_size=11, padding=5, stride=1)
         self.pool1 = nn.MaxPool2d(2)
         # self.conv2 = nn.Conv2d(conv_channels, conv_channels * 4, kernel_size=3, padding=1, stride=1)
         self.W1 = nn.Linear(conv_channels * 16 * 16, hidden_units)
