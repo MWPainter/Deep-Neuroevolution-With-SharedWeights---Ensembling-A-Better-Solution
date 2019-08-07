@@ -3,7 +3,7 @@ import torch as t
 import torch.nn as nn
 
 from r2r import Res_Block, Mnist_Resnet, Cifar_Resnet, widen_network_, make_deeper_network_, HVG, InceptionV4, resnet50, resnet18, orig_resnet12_cifar, orig_resnet24_cifar
-from utils import flatten, parameter_magnitude
+from utils import flatten, parameter_magnitude, cudafy
 
 
 
@@ -32,16 +32,17 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
+        rand_in = cudafy(t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim))))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
 
     # deepen and check that the outputs are (almost) identical
     if not resnet:
-        model = make_deeper_network_(model, layer1)
+        model = cudafy(make_deeper_network_(model, layer1))
     else:
         model.deepen([2,2,0,0])
+        model = cudafy(model)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -49,6 +50,12 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
         if t.abs(err) > thresh:
+            print("Failing because output changed. It was:")
+            print(rand_outs[i])
+            print("But is now:")
+            print(rand_out)
+            print("And the diff is:")
+            print(rand_out - rand_outs[i])
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -64,9 +71,10 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
 
     # widen (multiplicative_widen) and check that the outputs are (almost) identical
     if not resnet:
-        model = make_deeper_network_(model, layer2)
+        model = cudafy(make_deeper_network_(model, layer2))
     else:
         model.deepen([0,1,2,0])
+        model = cudafy(model)
 
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -74,6 +82,12 @@ def test_function_preserving_r2deeperr(model, thresh, data_channels=1, layer1=No
         if verbose:
             print("Avg output difference before and after ANOTHER transform is: {val}".format(val=err))
         if t.abs(err) > thresh:
+            print("Failing because output changed. It was:")
+            print(rand_outs[i])
+            print("But is now:")
+            print(rand_out)
+            print("And the diff is:")
+            print(rand_out - rand_outs[i])
             raise Exception("Unit test failed.")
 
 
@@ -88,7 +102,7 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
+        rand_in = cudafy(t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim))))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
@@ -107,6 +121,12 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         if verbose:
             print("Average output difference before and after transform is: {val}".format(val=err))
         if t.abs(err) > thresh:
+            print("Failing because output changed. It was:")
+            print(rand_outs[i])
+            print("But is now:")
+            print(rand_out)
+            print("And the diff is:")
+            print(rand_out - rand_outs[i])
             raise Exception("Unit test failed.")
     
     # Count params after widening
@@ -131,12 +151,18 @@ def test_function_preserving_r2widerr(model, thresh, function_preserving=True, d
         if verbose:
             print("Avg output difference before and after ANOTHER transform is: {val}".format(val=err))
         if t.abs(err) > thresh:
+            print("Failing because output changed. It was:")
+            print(rand_outs[i])
+            print("But is now:")
+            print(rand_out)
+            print("And the diff is:")
+            print(rand_out - rand_outs[i])
             raise Exception("Unit test failed.")
         
         
         
 def test_function_preserving_deepen_then_widen(model, thresh, function_preserving=True, data_channels=1, layer=None,
-                                               verbose=False, spatial_dim=32, resnet=False, wr=4):
+                                               verbose=False, spatial_dim=32, resnet=False, wr=2):
     # Count params before widening
     params_before = sum([np.prod(p.size()) for p in model.parameters()])
 
@@ -144,7 +170,7 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
+        rand_in = cudafy(t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim))))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
@@ -154,10 +180,12 @@ def test_function_preserving_deepen_then_widen(model, thresh, function_preservin
         model = make_deeper_network_(model, layer)
         model = widen_network_(model, new_channels=wr, new_hidden_nodes=2, init_type='He',
                                function_preserving=function_preserving, multiplicative_widen=True)
+        model = cudafy(model)
     else:
         model.deepen([2,2,0,0])
         model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std_exact',
                                function_preserving=function_preserving, multiplicative_widen=True)
+        model = cudafy(model)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -183,7 +211,7 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
     rand_ins = []
     rand_outs = []
     for _ in range(10):
-        rand_in = t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim)))
+        rand_in = cudafy(t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim))))
         rand_out = model(rand_in)
         rand_ins.append(rand_in)
         rand_outs.append(rand_out)
@@ -193,10 +221,12 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
         model = widen_network_(model, new_channels=wr, new_hidden_nodes=2, init_type='He',
                                function_preserving=function_preserving, multiplicative_widen=True)
         model = make_deeper_network_(model, layer)
+        model = cudafy(model)
     else:
         model = widen_network_(model, new_channels=2, new_hidden_nodes=2, init_type='match_std_exact',
                                function_preserving=function_preserving, multiplicative_widen=True)
         model.deepen([2,2,0,0])
+        model = cudafy(model)
     
     for i in range(10):
         rand_out = model(rand_ins[i])
@@ -211,6 +241,44 @@ def test_function_preserving_widen_then_deepen(model, thresh, function_preservin
     if verbose:
         print("Params before the transform is: {param}".format(param=params_before))
         print("Params after the transform is: {param}".format(param=params_after))
+
+
+def test_linearity_of_module(model, thresh, data_channels=1, scale=4.0, verbose=True, spatial_dim=32):
+    # store 10 random inputs, and their outputs
+    rand_ins = []
+    rand_outs = []
+    for _ in range(10):
+        rand_in = cudafy(t.Tensor(np.random.uniform(low=-0.5, high=0.5, size=(1,data_channels,spatial_dim,spatial_dim))))
+        rand_out = model(rand_in)
+        rand_ins.append(rand_in)
+        rand_outs.append(rand_out)
+    
+    for i in range(10):
+        rand_out = model(rand_ins[i] / scale) * scale
+        err = t.mean(t.abs(rand_out - rand_outs[i]))
+        if verbose:
+            print("Average output difference before and after transform is: {val}".format(val=err))
+        if t.abs(err) > thresh:
+            print("Model is not approximately linear in the input")
+        else:
+            print("Model is approximately linear in it's input")
+            
+    with t.no_grad():
+        for name, param in model.named_parameters():
+            if 'bn' in name:
+                continue
+            param.data /= scale
+
+    
+    for i in range(10):
+        rand_out = model(rand_ins[i]) * scale
+        err = t.mean(t.abs(rand_out - rand_outs[i]))
+        if verbose:
+            print("Average output difference before and after transform is: {val}".format(val=err))
+        if t.abs(err) > thresh:
+            print("Model is not approximately linear in its weights")
+        else:
+            print("Model is approximately linear in it's weights")
 
 
 
@@ -407,22 +475,22 @@ if __name__ == "__main__":
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for Mnist Resnet:")
-    test_function_preserving_r2widerr(Mnist_Resnet(), 1e-5, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(Mnist_Resnet()), 1e-5, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for Mnist Resnet:")
-    test_function_preserving_r2widerr(Mnist_Resnet(), 1e5, False, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(Mnist_Resnet()), 1e5, False, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet(), 1e-5, data_channels=3, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(Cifar_Resnet()), 1e-5, data_channels=3, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet(), 1e5, False, data_channels=3, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(Cifar_Resnet()), 1e5, False, data_channels=3, verbose=verbose)
 
 
 
@@ -433,7 +501,7 @@ if __name__ == "__main__":
                        identity_initialize=True, input_spatial_shape=(4,4))
     rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 1e-5, layer1=rblock, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(Mnist_Resnet()), 1e-5, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -442,7 +510,7 @@ if __name__ == "__main__":
                        identity_initialize=False, input_spatial_shape=(4,4))
     rblock2 = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
                        identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Mnist_Resnet(), 1e5, layer1=rblock, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(Mnist_Resnet()), 1e5, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -451,7 +519,7 @@ if __name__ == "__main__":
                        identity_initialize=True, input_spatial_shape=(4,4))
     rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 1e-5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(Cifar_Resnet()), 1e-5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -460,23 +528,23 @@ if __name__ == "__main__":
                        identity_initialize=False, input_spatial_shape=(4,4))
     rblock2 = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=False, input_spatial_shape=(4,4))
-    test_function_preserving_r2deeperr(Cifar_Resnet(), 1e5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(Cifar_Resnet()), 1e5, data_channels=3, layer1=rblock, layer2=rblock2, verbose=verbose)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR + R2WiderR for Mnist Resnet:")
-    rblock = Res_Block(input_channels=32, intermediate_channels=[32,32,32], output_channels=32,
+    rblock = Res_Block(input_channels=32, intermediate_channels=[16,16,16], output_channels=32,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_deepen_then_widen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
+    test_function_preserving_deepen_then_widen(cudafy(Mnist_Resnet()), 1e-5, layer=rblock, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR + R2WiderR for Cifar Resnet:")
     rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_deepen_then_widen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
+    test_function_preserving_deepen_then_widen(cudafy(Cifar_Resnet()), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -484,7 +552,7 @@ if __name__ == "__main__":
     # insert wider resblock, because widen before deepen this time
     rblock = Res_Block(input_channels=64, intermediate_channels=[32,32,32], output_channels=64,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_widen_then_deepen(Mnist_Resnet(), 1e-5, layer=rblock, verbose=verbose)
+    test_function_preserving_widen_then_deepen(cudafy(Mnist_Resnet()), 1e-5, layer=rblock, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -492,19 +560,19 @@ if __name__ == "__main__":
     # insert wider resblock, because widen before deepen this time
     rblock = Res_Block(input_channels=128, intermediate_channels=[32,32,32], output_channels=128,
                        identity_initialize=True, input_spatial_shape=(4,4))
-    test_function_preserving_widen_then_deepen(Cifar_Resnet(), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
+    test_function_preserving_widen_then_deepen(cudafy(Cifar_Resnet()), 1e-5, data_channels=3, layer=rblock, verbose=verbose)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese(), 1e-5, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(_Baby_Siamese()), 1e-5, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding widening for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese(), 1e5, False, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(_Baby_Siamese()), 1e5, False, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -513,7 +581,7 @@ if __name__ == "__main__":
                        identity_initialize=True, input_spatial_shape=(16,16))
     rblock2 = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
                        identity_initialize=True, input_spatial_shape=(16,16))
-    test_function_preserving_r2deeperr(_Baby_Siamese(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(_Baby_Siamese()), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -522,38 +590,38 @@ if __name__ == "__main__":
                        identity_initialize=False, input_spatial_shape=(16,16))
     rblock2 = Res_Block(input_channels=40, intermediate_channels=[32,32,32], output_channels=40,
                        identity_initialize=False, input_spatial_shape=(16,16))
-    test_function_preserving_r2deeperr(_Baby_Siamese(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(_Baby_Siamese()), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR + R2WiderR for Siamese Network:")
     rblock = Res_Block(input_channels=40, intermediate_channels=[20,20,20], output_channels=40,
                        identity_initialize=True, input_spatial_shape=(16,16))
-    test_function_preserving_deepen_then_widen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
+    test_function_preserving_deepen_then_widen(cudafy(_Baby_Siamese()), 1e-5, layer=rblock, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR + R2DeeperR for Siamese Network:")
     rblock = Res_Block(input_channels=80, intermediate_channels=[20,20,20], output_channels=80,
                        identity_initialize=True, input_spatial_shape=(32,32))
-    test_function_preserving_widen_then_deepen(_Baby_Siamese(), 1e-5, layer=rblock, verbose=verbose)
+    test_function_preserving_widen_then_deepen(cudafy(_Baby_Siamese()), 1e-5, layer=rblock, verbose=verbose)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception(), 1e-5, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(_Baby_Inception()), 1e-5, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR hvg.concat works:")
-    test_function_preserving_r2widerr(_Baby_Inception(test_concat=True), 1e-4, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(_Baby_Inception(test_concat=True)), 1e-4, verbose=verbose)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding widening for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception(), 1e5, False, verbose=verbose)
+    test_function_preserving_r2widerr(cudafy(_Baby_Inception()), 1e5, False, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -562,7 +630,7 @@ if __name__ == "__main__":
                        identity_initialize=True, input_spatial_shape=(8,8))
     rblock2 = Res_Block(input_channels=60, intermediate_channels=[20,20,20], output_channels=60,
                        identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_r2deeperr(_Baby_Inception(), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(_Baby_Inception()), 1e-5, layer1=rblock1, layer2=rblock2, verbose=verbose)
 
     if verbose:
         print("\n"*4)
@@ -571,7 +639,7 @@ if __name__ == "__main__":
                        identity_initialize=False, input_spatial_shape=(8,8))
     rblock2 = Res_Block(input_channels=60, intermediate_channels=[32,32,32], output_channels=60,
                        identity_initialize=False, input_spatial_shape=(8,8))
-    test_function_preserving_r2deeperr(_Baby_Inception(), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
+    test_function_preserving_r2deeperr(cudafy(_Baby_Inception()), 1e5, layer1=rblock1, layer2=rblock2, verbose=verbose)
 
 
     # for these two baby inceptions: the volume between a conv layer and linear is NOT considered a "convolutional" 
@@ -583,100 +651,100 @@ if __name__ == "__main__":
         print("Testing R2DeeperR + R2WiderR for Baby Inception Network:")
     rblock = Res_Block(input_channels=60, intermediate_channels=[60,60,60], output_channels=60,
                        identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_deepen_then_widen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose, wr=2)
+    test_function_preserving_deepen_then_widen(cudafy(_Baby_Inception()), 1e-5, layer=rblock, verbose=verbose, wr=2)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR + R2DeeperR for Baby Inception Network:")
     rblock = Res_Block(input_channels=120, intermediate_channels=[120,120,120], output_channels=120,
                        identity_initialize=True, input_spatial_shape=(8,8))
-    test_function_preserving_widen_then_deepen(_Baby_Inception(), 1e-5, layer=rblock, verbose=verbose, wr=2)
+    test_function_preserving_widen_then_deepen(cudafy(_Baby_Inception()), 1e-5, layer=rblock, verbose=verbose, wr=2)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    test_function_preserving_r2widerr(cudafy(InceptionV4()), 1e-3, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
+    test_function_preserving_r2widerr(cudafy(InceptionV4()), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=299)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet50()), 1e-3, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet50()), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet18()), 1e-5, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18(), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet18()), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR for ResNet18 network:")
-    test_function_preserving_r2deeperr(resnet18(), 1e-4, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    test_function_preserving_r2deeperr(cudafy(resnet18()), 1e-5, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding on deepening for ResNet18 network:")
-    test_function_preserving_r2deeperr(resnet18(function_preserving=False), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    test_function_preserving_r2deeperr(cudafy(resnet18(function_preserving=False)), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
 
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(thin=True, thinning_ratio=16*1.414), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet50(thin=True, thinning_ratio=16*1.414)), 1e-3, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50(thin=True, thinning_ratio=16*1.414), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet50(thin=True, thinning_ratio=16*1.414)), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing R2WiderR for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18(thin=True, thinning_ratio=16), 1e-5, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet18(thin=True, thinning_ratio=16)), 1e-5, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18(thin=True, thinning_ratio=16*1.414), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
+    test_function_preserving_r2widerr(cudafy(resnet18(thin=True, thinning_ratio=16*1.414)), 1e20, False, verbose=verbose, data_channels=3, deep=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing R2DeeperR for ResNet18 network:")
-    test_function_preserving_r2deeperr(resnet18(thin=True, thinning_ratio=16*1.414), 1e-5, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    test_function_preserving_r2deeperr(cudafy(resnet18(thin=True, thinning_ratio=16*1.414)), 1e-5, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing random padding on deepening for ResNet18 network:")
-    test_function_preserving_r2deeperr(resnet18(function_preserving=False, thin=True, thinning_ratio=16*1.414), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    test_function_preserving_r2deeperr(cudafy(resnet18(function_preserving=False, thin=True, thinning_ratio=16*1.414)), 1e20, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
     
     if verbose:
         print("\n"*4)
         print("Testing deeoeb then widen on deepening for ResNet50 network:")
-        test_function_preserving_widen_then_deepen(resnet50(), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+        test_function_preserving_widen_then_deepen(cudafy(resnet50()), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
     if verbose:
         print("\n"*4)
         print("Testing widen then deepen on deepening for ResNet50 network:")
-    test_function_preserving_deepen_then_widen(resnet50(), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
+    test_function_preserving_deepen_then_widen(cudafy(resnet50()), 1e-3, verbose=verbose, data_channels=3, resnet=True, spatial_dim=224)
 
 
 
@@ -751,68 +819,106 @@ if __name__ == "__main__":
     if verbose:
         print("\n" * 4)
         print("Testing random padding for Mnist Resnet:")
-    test_function_preserving_r2widerr(Mnist_Resnet().eval(), 1e5, False, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(Mnist_Resnet(), 1e5, False, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet().eval(), 1e-5, data_channels=3, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(Cifar_Resnet(), 1e-5, data_channels=3, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding for Cifar Resnet:")
-    test_function_preserving_r2widerr(Cifar_Resnet().eval(), 1e5, False, data_channels=3, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(Cifar_Resnet(), 1e5, False, data_channels=3, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese().eval(), 1e-5, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(_Baby_Siamese(), 1e-5, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding widening for Siamese network:")
-    test_function_preserving_r2widerr(_Baby_Siamese().eval(), 1e5, False, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(_Baby_Siamese(), 1e5, False, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception().eval(), 1e-5, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(_Baby_Inception(), 1e-5, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding widening for Baby Inception network:")
-    test_function_preserving_r2widerr(_Baby_Inception().eval(), 1e5, False, verbose=verbose, net_morph=True)
+    test_function_preserving_r2widerr(_Baby_Inception(), 1e5, False, verbose=verbose, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True,
+    test_function_preserving_r2widerr(InceptionV4(), 1e-3, verbose=verbose, data_channels=3, deep=True,
                                       spatial_dim=299, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding for Inception network:")
-    test_function_preserving_r2widerr(InceptionV4().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+    test_function_preserving_r2widerr(InceptionV4(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
                                       spatial_dim=299, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
+    test_function_preserving_r2widerr(resnet50(), 1e-3, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding for ResNet50 network:")
-    test_function_preserving_r2widerr(resnet50().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+    test_function_preserving_r2widerr(resnet50(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
                                       spatial_dim=224, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing NetMorph Widening for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18().eval(), 1e-4, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
+    test_function_preserving_r2widerr(resnet18(), 1e-3, verbose=verbose, data_channels=3, deep=True, spatial_dim=224, net_morph=True)
 
     if verbose:
         print("\n" * 4)
         print("Testing random padding for ResNet18 network:")
-    test_function_preserving_r2widerr(resnet18().eval(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
+    test_function_preserving_r2widerr(resnet18(), 1e20, False, verbose=verbose, data_channels=3, deep=True,
                                       spatial_dim=224, net_morph=True)
+
+
+
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Mnist Resnet:")
+    test_function_preserving_r2widerr(cudafy(Mnist_Resnet()), 1e-5, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Cifar Resnet:")
+    test_linearity_of_module(cudafy(Cifar_Resnet()), 1e-5, data_channels=3, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Baby Siamese:")
+    test_linearity_of_module(cudafy(_Baby_Siamese()), 1e-5, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Baby Inception:")
+    test_linearity_of_module(cudafy(_Baby_Inception()), 1e-5, verbose=verbose)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Resnet50:")
+    test_linearity_of_module(cudafy(resnet50()), 1e-5, data_channels=3, verbose=verbose, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Resnet18:")
+    test_linearity_of_module(cudafy(resnet18()), 1e-5, data_channels=3, verbose=verbose, spatial_dim=224)
+
+    if verbose:
+        print("\n"*4)
+        print("Testing linearity of Inceptionv4:")
+    test_linearity_of_module(cudafy(InceptionV4()), 1e-5, data_channels=3, verbose=verbose, spatial_dim=299)

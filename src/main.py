@@ -20,7 +20,7 @@ from batch_tests import mnist_net_to_net_style_test, cifar_net_to_net_style_test
 # from run import r2r_faster
 from run import *
 
-from viz import _mnist_weight_visuals, _cifar_weight_visuals
+from viz import _mnist_weight_visuals, _svhn_weight_visuals
 
 from r2r import *
 
@@ -1883,11 +1883,11 @@ def get_defaults(script_name):
         }
 
     
-    elif script == "paper_final_viz":
+    elif script == "iclr_viz":
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 50,
+            "epochs": 3,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1901,6 +1901,47 @@ def get_defaults(script_name):
             "lr_drop_mag": [0.0], # unused,
             "grad_clip": 0.0,
             "adjust_weight_decay": True,
+        }
+
+
+    elif script == "iclr_r2wr_imagenet_debug":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 45,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*0.25, 20020*2.5],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*0.25, 20020*2.5],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
+        }
+
+    elif script == "iclr_n2wn_imagenet_debug":
+        return {
+            "lr": 0.1,
+            "weight_decay": 1.0e-4,
+            "epochs": 45,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 64,
+            "workers": 6,
+            "widen_times": [20020*0.25, 20020*2.5],
+            "deepen_times": [],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [20020*0.25, 20020*2.5],
+            "lr_drop_mag": [10.0],
+            "grad_clip": 10.0,
+            "adjust_weight_decay": False,
         }
 
 
@@ -2043,35 +2084,35 @@ if __name__ == "__main__":
     elif script == "mnist_weight_viz_r2r":
         _mnist_weight_visuals(args, widen_method="r2r")
     elif script == "cifar_weight_viz_r2r":
-        _cifar_weight_visuals(args, widen_method="r2r")
+        _svhn_weight_visuals(args, widen_method="r2r")
     elif script == "mnist_weight_viz_r2r_conv":
         _mnist_weight_visuals(args, widen_method="r2r", use_conv=True)
     elif script == "cifar_weight_viz_r2r_conv":
-        _cifar_weight_visuals(args, widen_method="r2r", use_conv=True)
+        _svhn_weight_visuals(args, widen_method="r2r", use_conv=True)
     elif script == "mnist_weight_viz_net2net":
         _mnist_weight_visuals(args, widen_method="net2net")
     elif script == "cifar_weight_viz_net2net":
-        _cifar_weight_visuals(args, widen_method="net2net")
+        _svhn_weight_visuals(args, widen_method="net2net")
     elif script == "mnist_weight_viz_net2net_conv":
         _mnist_weight_visuals(args, widen_method="net2net", use_conv=True)
     elif script == "cifar_weight_viz_net2net_conv":
-        _cifar_weight_visuals(args, widen_method="net2net", use_conv=True)
+        _svhn_weight_visuals(args, widen_method="net2net", use_conv=True)
     elif script == "mnist_weight_viz_netmorph":
         _mnist_weight_visuals(args, widen_method="netmorph")
     elif script == "cifar_weight_viz_netmorph":
-        _cifar_weight_visuals(args, widen_method="netmorph")
+        _svhn_weight_visuals(args, widen_method="netmorph")
     elif script == "mnist_weight_viz_netmorph_conv":
         _mnist_weight_visuals(args, widen_method="netmorph", use_conv=True)
     elif script == "cifar_weight_viz_netmorph_conv":
-        _cifar_weight_visuals(args, widen_method="netmorph", use_conv=True)
+        _svhn_weight_visuals(args, widen_method="netmorph", use_conv=True)
     elif script == "mnist_weight_viz":
         _mnist_weight_visuals(args, widen_method="netmorph", start_wide=True)
     elif script == "cifar_weight_viz":
-        _cifar_weight_visuals(args, widen_method="netmorph", start_wide=True)
+        _svhn_weight_visuals(args, widen_method="netmorph", start_wide=True)
     elif script == "mnist_weight_viz_conv":
         _mnist_weight_visuals(args, widen_method="netmorph", use_conv=True, start_wide=True)
     elif script == "cifar_weight_viz_conv":
-        _cifar_weight_visuals(args, widen_method="netmorph", use_conv=True, start_wide=True)
+        _svhn_weight_visuals(args, widen_method="netmorph", use_conv=True, start_wide=True)
 
     #######
     # Net 2 Net Style tests, and R2R style tests
@@ -2255,9 +2296,24 @@ if __name__ == "__main__":
         last_cifar100_n2wn_hp_search(args)
     elif script == "paper_c100_n2dn_hs":
         last_cifar100_n2dn_hp_search(args)
+        
 
-    elif script == "paper_final_viz":
-        _cifar_weight_visuals(args)
+
+
+
+
+
+
+    elif script == "iclr_viz":
+        _svhn_weight_visuals(args)
+
+    elif script == "iclr_r2wr_imagenet_debug":
+        r2wr_imagenet(args, shardname="iclr_r2wr_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
+
+    elif script == "iclr_n2wn_imagenet_debug":  
+        n2wn_imagenet(args, shardname="iclr_n2wn_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
+
+
 
 
     else:

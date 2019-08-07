@@ -17,11 +17,11 @@ __all__ = ['cudafy', 'flatten']
 
 
 
-def cudafy(x):
+def cudafy(x, want_cpu=False):
     """
     If 'x' can be moved to the gpu, then do so.
     """
-    if t.cuda.is_available():
+    if t.cuda.is_available() and not want_cpu:
         return x.cuda()
     return x
 

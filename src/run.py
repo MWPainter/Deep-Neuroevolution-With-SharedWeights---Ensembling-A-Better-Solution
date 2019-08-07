@@ -1849,6 +1849,87 @@ def r2r_faster(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin
 
 
 
+def r2wr_imagenet(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=False, deepen_indices=[1,1,2,1], function_preserving=True):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 0:
+        raise Exception("Deepening times needs to be a list of length 0 for this test")
+    args.deepen_indidces_list = []
+
+    # Make the data loaders for imagenet
+    # train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
+
+
+    # R2R
+    model = resnet_class(thin=use_thin, thinning_ratio=1.5)
+    if not function_preserving:
+        model.function_preserving = False
+        model.init_scheme = 'match_std_exact'
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+def n2wn_imagenet(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=False, deepen_indices=[1,1,2,1], function_preserving=True):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 2:
+        raise Exception("Widening times needs to be a list of length 2 for this test")
+    if len(args.deepen_times) != 0:
+        raise Exception("Deepening times needs to be a list of length 0 for this test")
+    args.deepen_indidces_list = []
+
+    # Make the data loaders for imagenet
+    # train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
+
+
+    # R2R
+    model = resnet_class(thin=use_thin, thinning_ratio=1.5, use_residual=False, morphism_scheme="net2net")
+    if not function_preserving:
+        model.function_preserving = False
+        model.init_scheme = 'match_std_exact'
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
+
+
+
+
+
 """
 last set of tests - on CIFAR10/CIFAR100/SVHN
 """

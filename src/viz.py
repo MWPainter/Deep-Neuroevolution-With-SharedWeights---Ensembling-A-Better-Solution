@@ -8,7 +8,7 @@ import numpy as np
 import scipy.misc
 
 from torch.utils.data import Dataset, DataLoader
-from dataset import MnistDataset, CifarDataset
+from dataset import MnistDataset, CifarDataset, SvhnDataset
 
 from utils import cudafy
 from utils import train_loop
@@ -481,7 +481,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
 
 
 
-def _cifar_weight_visuals(args):
+def _svhn_weight_visuals(args):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -496,11 +496,13 @@ def _cifar_weight_visuals(args):
     orig_wd = args.weight_decay
 
     # Make the data loader objects
-    train_dataset = CifarDataset(train=True, labels_as_logits=False)
+    # train_dataset = CifarDataset(train=True, labels_as_logits=False)
+    train_dataset = SvhnDataset(train=True, labels_as_logits=False, use_extra_train=True)
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
-    val_dataset = CifarDataset(train=False, labels_as_logits=False)
+    # val_dataset = CifarDataset(train=False, labels_as_logits=False)
+    val_dataset = SvhnDataset(train=False, labels_as_logits=False)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
