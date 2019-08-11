@@ -203,7 +203,7 @@ Defining the training loop.
 
 
 
-def _make_optimizer_fn(model, lr, weight_decay, args=None):
+def _make_optimizer_fn(model, lr, weight_decay, args=None, adam=True):
     """
     The make optimizer function, as part of the interface for the "train_loop" function in utils.train_utils.
 
@@ -214,8 +214,10 @@ def _make_optimizer_fn(model, lr, weight_decay, args=None):
         training loop functions
     """
     # return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
-    # return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
-    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    if adam:
+        return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    else:
+        return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
     # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
 
@@ -484,7 +486,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
 
 
 
-def _svhn_weight_visuals(args, conv=True, svhn=True):
+def _svhn_weight_visuals(args, conv=True, svhn=True, adam=True):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -528,8 +530,12 @@ def _svhn_weight_visuals(args, conv=True, svhn=True):
         init_hidden = 4 
         model = FC_Net(hidden_units=init_hidden, in_channels=3, widen_method='r2r', init_scale=1.0)
 
+    # Setup using adam/sgd
+    optimizer_fn = (lambda model, lr, weight_decay, args=None:
+                        _make_optimizer_fn(model, lr, weight_decay, args, adam))
+
     # Train teacher
-    teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    teacher_model = train_loop(model, train_loader, val_loader, optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                        _validation_loss, args)
     weight_before = parameter_magnitude(teacher_model)
 
@@ -545,7 +551,7 @@ def _svhn_weight_visuals(args, conv=True, svhn=True):
         args.adjust_weight_decay = weight_decay_match
         args.lr = orig_lr #/ 10.0
         args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-        model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+        model = train_loop(model, train_loader, val_loader, optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                         _validation_loss, args)
 
 
@@ -562,7 +568,7 @@ def _svhn_weight_visuals(args, conv=True, svhn=True):
             args.adjust_weight_decay = weight_decay_match
             args.lr = orig_lr #/ 10.0
             args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-            model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+            model = train_loop(model, train_loader, val_loader, optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                             _validation_loss, args)
     
     # NetMorph
@@ -575,7 +581,7 @@ def _svhn_weight_visuals(args, conv=True, svhn=True):
     args.adjust_weight_decay = weight_decay_match
     args.lr = orig_lr #/ 10.0
     args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
-    model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+    model = train_loop(model, train_loader, val_loader, optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                     _validation_loss, args)
 
 
