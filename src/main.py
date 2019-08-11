@@ -1975,14 +1975,14 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256 // scaling,
             "workers": 6,
-            "widen_times": [20020*0.25, 20020*2.5],
+            "widen_times": [5005*scaling*5, 5005*scaling*10],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*0.25, 20020*2.5],
+            "widen_times": [5005*scaling*5, 5005*scaling*10],
             "lr_drop_mag": [1.0], #[10.0],
             "grad_clip": 10.0,
-            "adjust_weight_decay": False,
+            "adjust_weight_decay": True,
         }
 
     elif script == "iclr_n2wn_imagenet_debug":
@@ -1996,14 +1996,14 @@ def get_defaults(script_name):
             "exp": exp_id,
             "batch_size": 256 // scaling,
             "workers": 6,
-            "widen_times": [20020*0.25, 20020*2.5],
+            "widen_times": [5005*scaling*5, 5005*scaling*10],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
-            "lr_drops": [20020*0.25, 20020*2.5],
+            "lr_drops": [5005*scaling*5, 5005*scaling*10],
             "lr_drop_mag": [1.0], #[10.0],
             "grad_clip": 10.0,
-            "adjust_weight_decay": False,
+            "adjust_weight_decay": True,
         }
 
 
