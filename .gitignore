@@ -3,6 +3,7 @@ src/checkpoints/*
 src/tb_logs/*
 src/dataset/data/*
 final_tb_logs/*
+jade_tb_logs/*
 
 # Random stuff from IDE's and/or operating systems.
 .idea/
