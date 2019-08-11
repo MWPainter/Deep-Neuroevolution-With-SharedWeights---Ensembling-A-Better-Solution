@@ -75,12 +75,13 @@ def _visualize_grid(Xs, ubound=255.0, padding=1, viz_width=0, kernel_norm=True):
 
 
 class FC_Net(nn.Module):
-    def __init__(self, hidden_units, in_channels=1, widen_method='r2r', multiplicative_widen=False):
+    def __init__(self, hidden_units, in_channels=1, widen_method='r2r', multiplicative_widen=False, init_scale=1.0):
         super(FC_Net, self).__init__()
         self.widen_method = widen_method.lower()
         self.multiplicative_widen = multiplicative_widen
         self.in_channels = in_channels
         self.hidden_units = hidden_units
+        self.init_scale = init_scale
         self.W1 = nn.Linear(in_channels * 32 * 32, hidden_units)
         self.bn = nn.BatchNorm1d(num_features=hidden_units)
         self.W2 = nn.Linear(hidden_units, 10)
@@ -101,7 +102,7 @@ class FC_Net(nn.Module):
     def widen(self, num_channels=2):
         if self.widen_method == 'r2r':
             r_2_wider_r_(self.W1, (self.hidden_units,), self.W2, extra_channels=num_channels,
-                         init_type="match_std", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
+                         init_type=self.init_scale, function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
             net_2_wider_net_(self.W1, self.W2, (self.hidden_units,), extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
@@ -166,7 +167,9 @@ class Conv_Net(nn.Module):
             # r_2_wider_r_(self.W1, (self.W1.weight.data.size(0),), self.W2, extra_channels=num_hidden,
             #              init_type="match_std_exact", function_preserving=True, multiplicative_widen=self.multiplicative_widen)
         elif self.widen_method == 'net2net':
-            net_2_wider_net_(self.conv1, self.W1, (self.conv1.weight.data.size(0),16,16), extra_channels=num_channels,
+            net_2_wider_net_(prev_layers=self.conv1, next_layers=self.W1, 
+                             volume_shape=(self.conv1.weight.data.size(0),16,16), 
+                             extra_channels=num_channels,
                              multiplicative_widen=self.multiplicative_widen, add_noise=True)
             # net_2_wider_net_(self.W1, self.W2, (self.W1.weight.data.size(0),), extra_channels=num_hidden,
             #                  multiplicative_widen=self.multiplicative_widen, add_noise=True)
@@ -211,8 +214,8 @@ def _make_optimizer_fn(model, lr, weight_decay, args=None):
         training loop functions
     """
     # return t.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
-    return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
-    # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    # return t.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=0.9)
+    return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
     # return t.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
 
@@ -481,7 +484,7 @@ def _mnist_weight_visuals(args, widen_method="r2r", use_conv=False, start_wide=F
 
 
 
-def _svhn_weight_visuals(args):
+def _svhn_weight_visuals(args, conv=True, svhn=True):
     """
     Trains the FC net, and provides weight visualizations to the checkpoint directory.
     """
@@ -496,25 +499,34 @@ def _svhn_weight_visuals(args):
     orig_wd = args.weight_decay
 
     # Make the data loader objects
-    # train_dataset = CifarDataset(train=True, labels_as_logits=False)
-    train_dataset = SvhnDataset(train=True, labels_as_logits=False, use_extra_train=True)
+    if not svhn:
+        train_dataset = CifarDataset(train=True, labels_as_logits=False)
+    else:
+        train_dataset = SvhnDataset(train=True, labels_as_logits=False, use_extra_train=True)
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, pin_memory=True)
+                            num_workers=args.workers, pin_memory=True)
 
-    # val_dataset = CifarDataset(train=False, labels_as_logits=False)
-    val_dataset = SvhnDataset(train=False, labels_as_logits=False)
+    if not svhn:
+        val_dataset = CifarDataset(train=False, labels_as_logits=False)
+    else:
+        val_dataset = SvhnDataset(train=False, labels_as_logits=False)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
 
     # Make the model
-    args.initial_channels = 8
+    args.initial_channels = 4
     args.shard = "teacher"
     args.total_flops = 0
     args.lr = orig_lr
     args.weight_decay = orig_wd
-    init_channels = 16
-    init_hidden = 150 #250 if start_wide else 50
-    model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method='r2r', init_scale=1.0)
+    if conv:
+        init_channels = 4 #16
+        init_hidden = 32 #150 #250 if start_wide else 50
+        model = Conv_Net(init_hidden, init_channels, in_channels=3, widen_method='r2r', init_scale=1.0)
+    else:
+        init_channels = 4 
+        init_hidden = 4 
+        model = FC_Net(hidden_units=init_hidden, in_channels=3, widen_method='r2r', init_scale=1.0)
 
     # Train teacher
     teacher_model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
@@ -526,12 +538,12 @@ def _svhn_weight_visuals(args):
         # N2N
         model = copy.deepcopy(teacher_model)
         model.widen_method = 'net2net' 
-        model.widen()
+        model.widen(num_channels=init_channels)
         weight_after = parameter_magnitude(model)
         args.shard = "N2N_wd_match={w}".format(w=weight_decay_match)
         args.total_flops = 0
         args.adjust_weight_decay = weight_decay_match
-        args.lr = orig_lr / 10.0
+        args.lr = orig_lr #/ 10.0
         args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
         model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                         _validation_loss, args)
@@ -543,12 +555,12 @@ def _svhn_weight_visuals(args):
             model = copy.deepcopy(teacher_model)
             model.init_scale = init_scale
             model.widen_method = 'r2r' 
-            model.widen()
+            model.widen(num_channels=init_channels)
             weight_after = parameter_magnitude(model)
             args.shard = "R2R_scale={s}_wd_match={w}".format(s=init_scale, w=weight_decay_match)
             args.total_flops = 0
             args.adjust_weight_decay = weight_decay_match
-            args.lr = orig_lr / 10.0
+            args.lr = orig_lr #/ 10.0
             args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
             model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                             _validation_loss, args)
@@ -556,12 +568,12 @@ def _svhn_weight_visuals(args):
     # NetMorph
     model = copy.deepcopy(teacher_model)
     model.widen_method = 'netmorph'
-    model.widen()
+    model.widen(num_channels=init_channels)
     weight_after = parameter_magnitude(model)
     args.shard = "NetMorph"
     args.total_flops = 0
     args.adjust_weight_decay = weight_decay_match
-    args.lr = orig_lr / 10.0
+    args.lr = orig_lr #/ 10.0
     args.weight_decay = orig_wd if not weight_decay_match else orig_wd / weight_after * weight_before
     model = train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
                     _validation_loss, args)

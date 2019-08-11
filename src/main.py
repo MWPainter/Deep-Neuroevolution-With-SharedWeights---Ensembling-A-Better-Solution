@@ -1887,7 +1887,67 @@ def get_defaults(script_name):
         return {
             "lr": 1.0e-3,
             "weight_decay": 1.0e-4,
-            "epochs": 3,
+            "epochs": 15,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": True,
+        }  
+
+    elif script == "iclr_viz_fc":
+        return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 15,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": True,
+        }
+
+    elif script == "iclr_viz_cifar":
+        return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 200,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [], # unused
+            "flops_budget": 0, # unused
+            "momentum": 0.0, # unused
+            "lr_drops": [], # unused
+            "lr_drop_mag": [0.0], # unused,
+            "grad_clip": 0.0,
+            "adjust_weight_decay": True,
+        }
+
+    elif script == "iclr_viz_fc_cifar":
+        return {
+            "lr": 1.0e-3,
+            "weight_decay": 1.0e-4,
+            "epochs": 200,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
@@ -1905,41 +1965,43 @@ def get_defaults(script_name):
 
 
     elif script == "iclr_r2wr_imagenet_debug":
+        scaling = 16
         return {
-            "lr": 0.1,
+            "lr": 0.1 / scaling,
             "weight_decay": 1.0e-4,
             "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 256 // scaling,
             "workers": 6,
             "widen_times": [20020*0.25, 20020*2.5],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20020*0.25, 20020*2.5],
-            "lr_drop_mag": [10.0],
+            "lr_drop_mag": [1.0], #[10.0],
             "grad_clip": 10.0,
             "adjust_weight_decay": False,
         }
 
     elif script == "iclr_n2wn_imagenet_debug":
+        scaling = 16
         return {
-            "lr": 0.1,
+            "lr": 0.1 / scaling,
             "weight_decay": 1.0e-4,
             "epochs": 45,
             "tb_dir": tb_log_dir,
             "checkpoint_dir": checkpoint_dir,
             "exp": exp_id,
-            "batch_size": 64,
+            "batch_size": 256 // scaling,
             "workers": 6,
             "widen_times": [20020*0.25, 20020*2.5],
             "deepen_times": [],
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [20020*0.25, 20020*2.5],
-            "lr_drop_mag": [10.0],
+            "lr_drop_mag": [1.0], #[10.0],
             "grad_clip": 10.0,
             "adjust_weight_decay": False,
         }
@@ -2306,6 +2368,15 @@ if __name__ == "__main__":
 
     elif script == "iclr_viz":
         _svhn_weight_visuals(args)
+
+    elif script == "iclr_viz_fc":
+        _svhn_weight_visuals(args, conv=False)
+
+    elif script == "iclr_viz_cifar":
+        _svhn_weight_visuals(args, svhn=False)
+
+    elif script == "iclr_viz_fc_cifar":
+        _svhn_weight_visuals(args, conv=False, svhn=False)
 
     elif script == "iclr_r2wr_imagenet_debug":
         r2wr_imagenet(args, shardname="iclr_r2wr_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
