@@ -75,10 +75,10 @@ def _crop_points(points, xmin, xmax, ymin, ymax):
     the ranges [xmin,xmax] and [ymin,ymax]. Treats the points as points and not 
     as a curve. If this eliminates points in the middle of a curve it would 
     change how it looks (consider cropping a sine curve to [0,1] on yaxis)."""
-    indxs = (points[:,0] >= xmin) 
+    indxs = ((points[:,0] >= xmin) 
           & (points[:,0] <= xmax) 
           & (points[:,1] >= ymin) 
-          & (points[:,1] <= ymax) 
+          & (points[:,1] <= ymax))
 
 
 
@@ -509,7 +509,6 @@ def clean_scalar(logdir, scalar_name):
 
 
 if __name__ == "__main__":
-    raise Exception("TODO: set files correctly for plots")
     base_dir = sys.argv[1]
 
     # matplotlib.rcParams['ps.useafm'] = True
@@ -555,251 +554,66 @@ if __name__ == "__main__":
 
 
 
-    # Fig 5 / CIFAR / net2widernet tests, validation curves
-    imgfile = os.path.join(base_dir, "cifar_net2widernet.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-    # Fig 5 / SVHN / net2widernet tests, validation curves
+    # Expr 1 - SVHN / net2widernet tests, validation curves
     imgfile = os.path.join(base_dir, "svhn_net2widernet.pdf")
 
+    exp_dir = os.path.join(os.getenv("HOME"), "r2r/jade_tb_logs/tb_logs/paper_ewnw_default_tb_log")
+    n2n_file = os.path.join(exp_dir, "Net2Net_student")
+    r2r_file = os.path.join(exp_dir, "R2R_student")
+    netmorph_file = os.path.join(exp_dir, "NetMorph_student")
+    rand_pad_file = os.path.join(exp_dir, "RandomPadding_student")
+    rand_init_file = os.path.join(exp_dir, "Completely_Random_Init")
+    teacher_file = os.path.join(exp_dir, "teacher_w_residual")
+    teacher_nr_file = os.path.join(exp_dir, "teacher_w_out_residual")
+
     scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
+        (n2n_file, 'iter/train/valacc_1'),
+        (r2r_file, 'iter/train/valacc_1'),
+        (netmorph_file, 'iter/train/valacc_1'),
+        (rand_pad_file, 'iter/train/valacc_1'),
+        (rand_init_file, 'iter/train/valacc_1'),
+        (teacher_file, 'iter/train/valacc_1'),
+        (teacher_nr_file, 'iter/train/valacc_1'),
     ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResnetCifar18(2/3)']
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)', 'ResNetCifar18(1/4)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
     linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+    normal_plots(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
 
 
-    # Fig 6 / CIFAR / net2deepernet tests, validation curves
-    imgfile = os.path.join(base_dir, "cifar_net2deepernet.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-    # Fig 6 / SVHN / net2deepernet tests, validation curves
-    imgfile = os.path.join(base_dir, "svhn_net2deepernet.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-    # Fig 7 / CIFAR / overfitting
-    imgfile = os.path.join(base_dir, "cifar_overfit.pdf")
-
-    scalars = [
-        ('overfitting_teacher_file': 'iter/train/accuracy_1'),
-        ('overfitting_teacher_file': 'iter/train/valacc_1'),
-        ('overfitting_student_file': 'iter/train/accuracy_1'),
-        ('overfitting_student_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/accuracy_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-    ]
-    labels = ['Teacher-Train', 'Teacher-Test', 'Student-Train', 'Student-Test', 'ResNetCifar18(3/8)-Train', 'ResNetCifar18(3/8)-Test']
-    xaxis = "Iterations"
-    yaxis = "Training/Validation Accuracy"
-    linestyles = ['--', '-', '--', '-', '--', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 8 / CIFAR / Weight init
-    imgfile = os.path.join(base_dir, "cifar_large_init.pdf")
-
-    scalars = [
-        ('largewieghts_file': 'iter/train/accuracy_1'),
-        ('matchstd_file': 'iter/train/accuracy_1'),
-    ]
-    labels = ['He Init', 'StdDev Matching']
-    xaxis = "Iterations"
-    yaxis = "Training/Validation Accuracy"
-    linestyles = ['--', '--']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 9.1 / CIFAR / R2WiderR tests
-    imgfile = os.path.join(base_dir, "cifar_r2widerr.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 9.1 / SVHN / R2WiderR tests
-    imgfile = os.path.join(base_dir, "svhn_r2widerr.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 9.1 / CIFAR / R2DeeprR tests
-    imgfile = os.path.join(base_dir, "cifar_r2deeperr.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 9.1 / SVHN / R2DeeprR tests
-    imgfile = os.path.join(base_dir, "svhn_r2deeperr.pdf")
-
-    scalars = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
-
-    # Fig 9.2 / CIFAR / R2WiderR tests
-    imgfile = os.path.join(base_dir, "cifar_r2widerr_flops.pdf")
-
-    scalars_xvals = [
-        ('n2n_file': 'iter/train/total_flops'),
-        ('r2r_file': 'iter/train/total_flops'),
-        ('netmorph_file': 'iter/train/total_flops'),
-        ('rand_pad_file': 'iter/train/total_flops'),
-        ('rand_init_file': 'iter/train/total_flops'),
-        ('teacher_file'): 'iter/train/total_flops'),
-    ]
-
-    scalars_yvals = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
-
-
-
-
-
-    # Fig 9.2 / SVHN / R2WiderR tests
+    # Expr 2 - SVHN / r2widerr tests, validation curves
     imgfile = os.path.join(base_dir, "svhn_r2widerr_flops.pdf")
 
+    exp_dir = os.path.join(os.getenv("HOME"), "r2r/jade_tb_logs/tb_logs/paper_ewrw_default_tb_log")
+    n2n_file = os.path.join(exp_dir, "Net2Net_student")
+    r2r_file = os.path.join(exp_dir, "R2R_student")
+    netmorph_file = os.path.join(exp_dir, "NetMorph_student")
+    rand_pad_file = os.path.join(exp_dir, "RandomPadding_student")
+    rand_init_file = os.path.join(exp_dir, "Completely_Random_Init")
+    teacher_file = os.path.join(exp_dir, "teacher_w_residual")
+    teacher_nr_file = os.path.join(exp_dir, "teacher_w_out_residual")
+
     scalars_xvals = [
-        ('n2n_file': 'iter/train/total_flops'),
-        ('r2r_file': 'iter/train/total_flops'),
-        ('netmorph_file': 'iter/train/total_flops'),
-        ('rand_pad_file': 'iter/train/total_flops'),
-        ('rand_init_file': 'iter/train/total_flops'),
-        ('teacher_file'): 'iter/train/total_flops'),
+        (n2n_file, 'iter/train/total_flops'),
+        (r2r_file, 'iter/train/total_flops'),
+        (netmorph_file, 'iter/train/total_flops'),
+        (rand_pad_file, 'iter/train/total_flops'),
+        (rand_init_file, 'iter/train/total_flops'),
+        (teacher_file, 'iter/train/total_flops'),
+        (teacher_nr_file, 'iter/train/total_flops'),
     ]
 
     scalars_yvals = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('netmorph_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
+        (n2n_file, 'iter/train/valacc_1'),
+        (r2r_file, 'iter/train/valacc_1'),
+        (netmorph_file, 'iter/train/valacc_1'),
+        (rand_pad_file, 'iter/train/valacc_1'),
+        (rand_init_file, 'iter/train/valacc_1'),
+        (teacher_nr_file, 'iter/train/valacc_1'),
     ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)', 'ResNetCifar18(2/3)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
     linestyles = ['-', '-', '-', '-', '-']
@@ -809,57 +623,292 @@ if __name__ == "__main__":
 
 
 
-    # Fig 9.2 / CIFAR / R2DeeprR tests
-    imgfile = os.path.join(base_dir, "cifar_r2deeperr_flops.pdf")
+    # # Fig 5 / SVHN / net2widernet tests, validation curves
+    # imgfile = os.path.join(base_dir, "svhn_net2widernet.pdf")
 
-    scalars_xvals = [
-        ('n2n_file': 'iter/train/total_flops'),
-        ('r2r_file': 'iter/train/total_flops'),
-        ('rand_pad_file': 'iter/train/total_flops'),
-        ('rand_init_file': 'iter/train/total_flops'),
-        ('teacher_file'): 'iter/train/total_flops'),
-    ]
-
-    scalars_yvals = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('netmorph_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResnetCifar18(2/3)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
 
 
+    # # Fig 6 / CIFAR / net2deepernet tests, validation curves
+    # imgfile = os.path.join(base_dir, "cifar_net2deepernet.pdf")
+
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
 
-    # Fig 9.2 / SVHN / R2DeeprR tests
-    imgfile = os.path.join(base_dir, "svhn_r2deeperr_flops.pdf")
 
-    scalars_xvals = [
-        ('n2n_file': 'iter/train/total_flops'),
-        ('r2r_file': 'iter/train/total_flops'),
-        ('rand_pad_file': 'iter/train/total_flops'),
-        ('rand_init_file': 'iter/train/total_flops'),
-        ('teacher_file'): 'iter/train/total_flops'),
-    ]
+    # # Fig 6 / SVHN / net2deepernet tests, validation curves
+    # imgfile = os.path.join(base_dir, "svhn_net2deepernet.pdf")
 
-    scalars_yvals = [
-        ('n2n_file': 'iter/train/valacc_1'),
-        ('r2r_file': 'iter/train/valacc_1'),
-        ('rand_pad_file': 'iter/train/valacc_1'),
-        ('rand_init_file': 'iter/train/valacc_1'),
-        ('teacher_file'): 'iter/train/valacc_1'),
-    ]
-    labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
-    xaxis = "Iterations"
-    yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+    # # Fig 7 / CIFAR / overfitting
+    # imgfile = os.path.join(base_dir, "cifar_overfit.pdf")
+
+    # scalars = [
+    #     ('overfitting_teacher_file': 'iter/train/accuracy_1'),
+    #     ('overfitting_teacher_file': 'iter/train/valacc_1'),
+    #     ('overfitting_student_file': 'iter/train/accuracy_1'),
+    #     ('overfitting_student_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/accuracy_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Teacher-Train', 'Teacher-Test', 'Student-Train', 'Student-Test', 'ResNetCifar18(3/8)-Train', 'ResNetCifar18(3/8)-Test']
+    # xaxis = "Iterations"
+    # yaxis = "Training/Validation Accuracy"
+    # linestyles = ['--', '-', '--', '-', '--', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 8 / CIFAR / Weight init
+    # imgfile = os.path.join(base_dir, "cifar_large_init.pdf")
+
+    # scalars = [
+    #     ('largewieghts_file': 'iter/train/accuracy_1'),
+    #     ('matchstd_file': 'iter/train/accuracy_1'),
+    # ]
+    # labels = ['He Init', 'StdDev Matching']
+    # xaxis = "Iterations"
+    # yaxis = "Training/Validation Accuracy"
+    # linestyles = ['--', '--']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 9.1 / CIFAR / R2WiderR tests
+    # imgfile = os.path.join(base_dir, "cifar_r2widerr.pdf")
+
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('netmorph_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 9.1 / SVHN / R2WiderR tests
+    # imgfile = os.path.join(base_dir, "svhn_r2widerr.pdf")
+
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('netmorph_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 9.1 / CIFAR / R2DeeprR tests
+    # imgfile = os.path.join(base_dir, "cifar_r2deeperr.pdf")
+
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 9.1 / SVHN / R2DeeprR tests
+    # imgfile = os.path.join(base_dir, "svhn_r2deeperr.pdf")
+
+    # scalars = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
+
+
+
+
+
+    # # Fig 9.2 / CIFAR / R2WiderR tests
+    # imgfile = os.path.join(base_dir, "cifar_r2widerr_flops.pdf")
+
+    # scalars_xvals = [
+    #     ('n2n_file': 'iter/train/total_flops'),
+    #     ('r2r_file': 'iter/train/total_flops'),
+    #     ('netmorph_file': 'iter/train/total_flops'),
+    #     ('rand_pad_file': 'iter/train/total_flops'),
+    #     ('rand_init_file': 'iter/train/total_flops'),
+    #     ('teacher_file'): 'iter/train/total_flops'),
+    # ]
+
+    # scalars_yvals = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('netmorph_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # # Fig 9.2 / SVHN / R2WiderR tests
+    # imgfile = os.path.join(base_dir, "svhn_r2widerr_flops.pdf")
+
+    # scalars_xvals = [
+    #     ('n2n_file': 'iter/train/total_flops'),
+    #     ('r2r_file': 'iter/train/total_flops'),
+    #     ('netmorph_file': 'iter/train/total_flops'),
+    #     ('rand_pad_file': 'iter/train/total_flops'),
+    #     ('rand_init_file': 'iter/train/total_flops'),
+    #     ('teacher_file'): 'iter/train/total_flops'),
+    # ]
+
+    # scalars_yvals = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('netmorph_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # # Fig 9.2 / CIFAR / R2DeeprR tests
+    # imgfile = os.path.join(base_dir, "cifar_r2deeperr_flops.pdf")
+
+    # scalars_xvals = [
+    #     ('n2n_file': 'iter/train/total_flops'),
+    #     ('r2r_file': 'iter/train/total_flops'),
+    #     ('rand_pad_file': 'iter/train/total_flops'),
+    #     ('rand_init_file': 'iter/train/total_flops'),
+    #     ('teacher_file'): 'iter/train/total_flops'),
+    # ]
+
+    # scalars_yvals = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar12(3/8)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+
+
+
+
+
+    # # Fig 9.2 / SVHN / R2DeeprR tests
+    # imgfile = os.path.join(base_dir, "svhn_r2deeperr_flops.pdf")
+
+    # scalars_xvals = [
+    #     ('n2n_file': 'iter/train/total_flops'),
+    #     ('r2r_file': 'iter/train/total_flops'),
+    #     ('rand_pad_file': 'iter/train/total_flops'),
+    #     ('rand_init_file': 'iter/train/total_flops'),
+    #     ('teacher_file': 'iter/train/total_flops'),
+    # ]
+
+    # scalars_yvals = [
+    #     ('n2n_file': 'iter/train/valacc_1'),
+    #     ('r2r_file': 'iter/train/valacc_1'),
+    #     ('rand_pad_file': 'iter/train/valacc_1'),
+    #     ('rand_init_file': 'iter/train/valacc_1'),
+    #     ('teacher_file'): 'iter/train/valacc_1'),
+    # ]
+    # labels = ['Net2DeeperNet', 'R2DeeperR', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar12(1)']
+    # xaxis = "Iterations"
+    # yaxis = "Validation Accuracy"
+    # linestyles = ['-', '-', '-', '-', '-']
+    # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
 
 
     """

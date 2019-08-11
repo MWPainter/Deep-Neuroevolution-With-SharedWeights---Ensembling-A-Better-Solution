@@ -2157,6 +2157,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: 'python main.py <script_name> <options>'")
         exit()
+    print("Running script called {script_name}".format(script_name=sys.argv[1]))
 
     # Get script name + options from command line
     script = sys.argv[1]
