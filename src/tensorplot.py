@@ -6,6 +6,7 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib
 from matplotlib import pyplot as plt
+from scipy import signal
 
 # This is needed to have TrueType fonts.
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -79,6 +80,7 @@ def _crop_points(points, xmin, xmax, ymin, ymax):
           & (points[:,0] <= xmax) 
           & (points[:,1] >= ymin) 
           & (points[:,1] <= ymax))
+    return points[indxs]
 
 
 
@@ -118,7 +120,7 @@ def _remove_discontinuity(logdir, scalar_name):
 
 
 
-def _read_sequence(logfile, scalar_name):
+def _read_sequence(logdir, scalar_name):
     """
     Reads from the TensorBoard summery to produce a list of
 
@@ -145,11 +147,14 @@ def _read_sequence(logfile, scalar_name):
     """
 
     out = []
-    for event in tf.train.summary_iterator(logfile):
-        for value in event.summary.value:
-            if value.tag == scalar_name:
-                out.append([value.simple_value])
-
+    for (dirname, _, filenames) in os.walk(logdir):
+        for filename in filenames:
+            logfile = os.path.join(dirname, filename)
+            for event in tf.train.summary_iterator(logfile):
+                for value in event.summary.value:
+                    if value.tag == scalar_name:
+                        out.append([value.simple_value])
+                        
     steps = [[i] for i in range(len(out))]
     result = np.array(np.concatenate([np.array(steps), np.array(out)], axis=1))
     return result
@@ -167,7 +172,21 @@ def _read_sequence_csv(csv_file):
     return result
 
 
-def _plot_sequence(sequence, linestyle, label):
+
+def _add_rolling_mean_and_std(sequence, window_size):
+    df = pd.DataFrame(data=sequence, columns=["x", "y"])
+    rolling_mean = df.rolling(window=window_size, on='x').mean() #.ewm(alpha=0.2)
+    rolling_std = df.rolling(window=window_size, on='x').std()
+
+    new_df = pd.DataFrame({'x': df['x'], 'y': df['y'],
+                           'y_rmean': rolling_mean['y'].values,
+                           'y_rstd': rolling_std['y'].values})
+
+    return new_df
+
+
+
+def _plot_sequence(df, linestyle, label):
     """
     Adds the plot 'sequence' with color 'color' to the current Seaboarn figure.
 
@@ -175,8 +194,11 @@ def _plot_sequence(sequence, linestyle, label):
     :param color: The color that we wish to plot with.
     """
     # df = pd.DataFrame(data=sequence, columns=["x","y"])
-    # sns.lineplot(x=xaxis_name, y=yaxis_name, data=df, linestyle=line style)
-    plt.plot(sequence[:,0], sequence[:,1], linestyle=linestyle, label=label)
+
+    # cis = np.asarray((df['y_rmean']-df['y_rstd']*1000,
+    #                   df['y_rmean']+df['y_rstd']*1000))
+    sns.lineplot(x='x', y='y_rmean', data=df)#, linestyle=linestyle)
+    # plt.plot(sequence[:,0], sequence[:,1], linestyle=linestyle, label=label)
 
 
 
@@ -277,20 +299,6 @@ def _interpolate_value(p1, p2, u):
 
 
 
-def _add_rolling_mean_and_std(sequence, window_size):
-    df = pd.DataFrame(data=sequence, columns=["x", "y"])
-    rolling_mean = df.rolling(window=window_size, on='x').mean()
-    rolling_std = df.rolling(window=window_size, on='x').std()
-
-    new_df = pd.DataFrame({'x': df['x'], 'y': df['y'],
-                           'y_rmean': rolling_mean['y'].values,
-                           'y_rstd': rolling_std['y'].values})
-
-    return new_df.values[window_size:]
-
-
-
-
 """
 Section: TensorPlot interface
 """
@@ -322,8 +330,8 @@ def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_nam
         event_filename = event_filename_scalar_pair[i][0]
         scalar = event_filename_scalar_pair[i][1]
         scalar_sequence = _read_sequence(event_filename, scalar)
-        scalar_sequence = _add_rolling_mean_and_std(scalar_sequence, window_size=window_size)
         scalar_sequence = _crop_points(scalar_sequence, xmin, xmax, ymin, ymax)
+        scalar_sequence = _add_rolling_mean_and_std(scalar_sequence, window_size=window_size)
         if log_x_axis:
             scalar_sequence = _log_scale_(scalar_sequence)
         _plot_sequence(scalar_sequence, linestyles[i], labels[i])
@@ -364,7 +372,7 @@ def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_nam
 #     _save_current_fig(out_filename)
 
 
-def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points, window_size=10,
+def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points=None, window_size=500,
                  xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
     """
     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
@@ -409,14 +417,13 @@ def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filenam
         scalar_two = event_filename_scalar_pair_two[i][1]
 
         scalar_sequence_one = _read_sequence(event_filename_one, scalar_one)
-        scalar_sequence_one = _add_rolling_mean_and_std(scalar_sequence_one, window_size=window_size)
-
         scalar_sequence_two = _read_sequence(event_filename_two, scalar_two)
-        scalar_sequence_two = _add_rolling_mean_and_std(scalar_sequence_two, window_size=window_size)
 
         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
 
         parametric_sequence = _crop_points(parametric_sequence, xmin, xmax, ymin, ymax)
+        parametric_sequence = _add_rolling_mean_and_std(parametric_sequence, window_size=window_size)
+
         if log_x_axis:
             parametric_sequence = _log_scale_(parametric_sequence)
         
@@ -578,7 +585,7 @@ if __name__ == "__main__":
     labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)', 'ResNetCifar18(1/4)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
+    linestyles = ['-', '-', '-', '-', '-', '-', '-']
     normal_plots(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
 
@@ -611,13 +618,14 @@ if __name__ == "__main__":
         (netmorph_file, 'iter/train/valacc_1'),
         (rand_pad_file, 'iter/train/valacc_1'),
         (rand_init_file, 'iter/train/valacc_1'),
+        (teacher_file, 'iter/train/valacc_1'),
         (teacher_nr_file, 'iter/train/valacc_1'),
     ]
     labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)', 'ResNetCifar18(2/3)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
-    linestyles = ['-', '-', '-', '-', '-']
-    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
+    linestyles = ['-', '-', '-', '-', '-', '-', '-']
+    parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=False)
 
 
 
