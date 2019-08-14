@@ -1925,6 +1925,44 @@ def n2wn_imagenet(args, shardname, optimizer='sgd', resnet_class=resnet35, use_t
                _validation_loss, args)
 
 
+def n2dn_imagenet(args, shardname, optimizer='sgd', resnet_class=resnet35, use_thin=False, deepen_indices=[1,1,2,1], function_preserving=True):
+    """
+    This is split into multiuple parts because otherwise it will take longer than 5 days to run.
+    """
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    if len(args.widen_times) != 0:
+        raise Exception("Widening times needs to be a list of length 0 for this test")
+    if len(args.deepen_times) != 2:
+        raise Exception("Deepening times needs to be a list of length 2 for this test")
+    args.deepen_indidces_list = [deepen_indices] * 2
+
+    # Make the data loaders for imagenet
+    # train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+    train_loader = get_imagenet_dataloader("train", batch_size=args.batch_size, num_workers=args.workers)
+    val_loader = get_imagenet_dataloader("val", batch_size=args.batch_size, num_workers=args.workers)
+
+    # Get the optimizer function to use
+    make_optimizer_fn = _make_optimizer_fn
+    if optimizer == 'sgd':
+        make_optimizer_fn = _make_optimizer_fn_sgd
+    elif optimizer == 'adagrad':
+        make_optimizer_fn = _make_optimizer_fn_adagrad
+    elif optimizer == 'rms':
+        make_optimizer_fn = _make_optimizer_fn_rms
+
+
+    # R2R
+    model = resnet_class(thin=use_thin, thinning_ratio=1.5, use_residual=False, morphism_scheme="net2net")
+    if not function_preserving:
+        model.function_preserving = False
+        model.init_scheme = 'match_std_exact'
+    args.shard = shardname
+    train_loop(model, train_loader, val_loader, make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op,
+               _validation_loss, args)
+
+
 
 
 
@@ -3222,4 +3260,35 @@ def _last_weight_decay_tune(args, train_loader, val_loader):
     #     args.lr = orig_lr
     #     args.weight_decay = wd
     #     train_loop(orig_resnet24_cifar(), train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, 
-    #                _update_op_cts_eval, _validation_loss, args)
+    #                _update_op_cts_eval, _validation_loss, args)]
+
+
+
+
+
+def iclr_widen_time_experiment(args, lr_drop, widen_times):
+    # Fix some args for the test (shouldn't ever be loading anythin)
+    args.load = ""
+    if hasattr(args, "flops_budget"):
+        del args.flops_budget
+    args.deepen_times = []
+
+    orig_lr = args.lr
+    max_epochs = args.epochs
+
+    train_loader, val_loader = _make_svhn_data_loaders(args, extended=True)
+
+    # R2R
+    for morphism_scheme in ["Net2Net", "r2r", "NetMorph"]:
+        for widen_time in widen_times:
+            model = orig_resnet12_cifar(thin=True, thinning_ratio=1.5, num_classes=10, use_residual=morphism_scheme!="Net2Net", morphism_scheme=morphism_scheme)
+            args.shard = morphism_scheme + "_widen_at_" + str(widen_time)
+            args.total_flops = 0
+            args.adjust_weight_decay = True
+            args.lr = orig_lr
+            args.lr_drops = [widen_time]
+            args.lr_drop_mag = [lr_drop]
+            args.widen_times = [widen_time]
+            args.epochs = min(max(2, widen_time//4772) + 1, max_epochs)
+            train_loop(model, train_loader, val_loader, _make_optimizer_fn, _load_fn, _checkpoint_fn, _update_op_cts_eval,
+                    _validation_loss, args)

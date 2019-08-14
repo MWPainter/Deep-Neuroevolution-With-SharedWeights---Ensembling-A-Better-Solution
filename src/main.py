@@ -2044,6 +2044,47 @@ def get_defaults(script_name):
         }
 
 
+    elif script == "iclr_widen_timing_test":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 30,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], 
+            "deepen_times": [], 
+            "flops_budget": 0, 
+            "momentum": 0.0, 
+            "lr_drops": [], 
+            "lr_drop_mag": [0.0],
+            "grad_clip": 0.0,
+            "adjust_weight_decay": True,
+        }
+
+    elif script == "iclr_widen_timing_test_no_lr_drop":
+        return {
+            "lr": 3.0e-3,
+            "weight_decay": 1.0e-5,
+            "epochs": 30,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 128,
+            "workers": 6,
+            "widen_times": [], 
+            "deepen_times": [], 
+            "flops_budget": 0, 
+            "momentum": 0.0, 
+            "lr_drops": [], 
+            "lr_drop_mag": [0.0],
+            "grad_clip": 0.0,
+            "adjust_weight_decay": True,
+        }
+
+
     elif script == "iclr_r2wr_imagenet_debug":
         scaling = 16
         return {
@@ -2081,6 +2122,27 @@ def get_defaults(script_name):
             "flops_budget": 0, # unused
             "momentum": 0.9,
             "lr_drops": [5005*scaling*5, 5005*scaling*10],
+            "lr_drop_mag": [1.0], #[10.0],
+            "grad_clip": 10.0,
+            "adjust_weight_decay": True,
+        }
+
+    elif script == "iclr_n2dn_imagenet_debug":
+        scaling = 16
+        return {
+            "lr": 0.1 / scaling,
+            "weight_decay": 1.0e-4,
+            "epochs": 45,
+            "tb_dir": tb_log_dir,
+            "checkpoint_dir": checkpoint_dir,
+            "exp": exp_id,
+            "batch_size": 256 // scaling,
+            "workers": 6,
+            "widen_times": [],
+            "deepen_times": [5005*scaling*3, 5005*scaling*10],
+            "flops_budget": 0, # unused
+            "momentum": 0.9,
+            "lr_drops": [5005*scaling*3, 5005*scaling*10],
             "lr_drop_mag": [1.0], #[10.0],
             "grad_clip": 10.0,
             "adjust_weight_decay": True,
@@ -2449,33 +2511,33 @@ if __name__ == "__main__":
 
     elif script == "iclr_viz":
         _svhn_weight_visuals(args)
-
     elif script == "iclr_viz_fc":
         _svhn_weight_visuals(args, conv=False)
-
     elif script == "iclr_viz_cifar":
         _svhn_weight_visuals(args, svhn=False)
-
     elif script == "iclr_viz_fc_cifar":
         _svhn_weight_visuals(args, conv=False, svhn=False)
-
     elif script == "iclr_viz_sgd":
         _svhn_weight_visuals(args, adam=False)
-
     elif script == "iclr_viz_fc_sgd":
         _svhn_weight_visuals(args, conv=False, adam=False)
-
     elif script == "iclr_viz_cifar_sgd":
         _svhn_weight_visuals(args, svhn=False, adam=False)
-
     elif script == "iclr_viz_fc_cifar_sgd":
         _svhn_weight_visuals(args, conv=False, svhn=False, adam=False)
 
+    elif script == "iclr_widen_timing_test":
+        iclr_widen_time_experiment(args, lr_drop=1.0, widen_times=[0]+[2**(7+i) for i in range(10)])
+    elif script == "iclr_widen_timing_test_no_lr_drop":
+        iclr_widen_time_experiment(args, lr_drop=10.0, widen_times=[0]+[2**(7+i) for i in range(10)])
+
+
     elif script == "iclr_r2wr_imagenet_debug":
         r2wr_imagenet(args, shardname="iclr_r2wr_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
-
     elif script == "iclr_n2wn_imagenet_debug":  
         n2wn_imagenet(args, shardname="iclr_n2wn_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
+    elif script == "iclr_n2dn_imagenet_debug":  
+        n2dn_imagenet(args, shardname="iclr_n2dn_imagenet_debug", optimizer='sgd', resnet_class=resnet18, use_thin=True)
 
 
 
