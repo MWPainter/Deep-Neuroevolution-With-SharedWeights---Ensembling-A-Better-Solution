@@ -14,20 +14,13 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-
-
 """
 TensorPlot: converting TensorBoard summaries into nice plots with SeaBoarn.
 """
 
-
-
-
 """
 Section: Generic helpers
 """
-
-
 
 
 def _listify(val):
@@ -37,8 +30,6 @@ def _listify(val):
     if type(val) is str or not hasattr(val, '__len__'):
         return [val]
     return val
-
-
 
 
 def _si(arr, i, j=None):
@@ -54,21 +45,14 @@ def _si(arr, i, j=None):
     elif i >= len(arr):
         i = len(arr) - 1
     if j is not None:
-        return arr[i,j]
+        return arr[i, j]
     return arr[i]
-
-
-
-
 
 
 def _log_scale_(curve):
     """Puts curve on log x scale, assumes curve is a np.array of shape (N,2)"""
-    curve[:,0] = np.log10(curve[:,0])
+    curve[:, 0] = np.log10(curve[:, 0])
     return curve
-
-
-
 
 
 def _crop_points(points, xmin, xmax, ymin, ymax):
@@ -76,22 +60,16 @@ def _crop_points(points, xmin, xmax, ymin, ymax):
     the ranges [xmin,xmax] and [ymin,ymax]. Treats the points as points and not 
     as a curve. If this eliminates points in the middle of a curve it would 
     change how it looks (consider cropping a sine curve to [0,1] on yaxis)."""
-    indxs = ((points[:,0] >= xmin) 
-          & (points[:,0] <= xmax) 
-          & (points[:,1] >= ymin) 
-          & (points[:,1] <= ymax))
+    indxs = ((points[:, 0] >= xmin)
+             & (points[:, 0] <= xmax)
+             & (points[:, 1] >= ymin)
+             & (points[:, 1] <= ymax))
     return points[indxs]
-
-
-
-
-
 
 
 """
 Section: wrappers for reading TensorBoard summaries and for plotting with Seaboarn.
 """
-
 
 
 def _clean_sequence(logdir, scalar_name):
@@ -105,7 +83,6 @@ def _clean_sequence(logdir, scalar_name):
     pass
 
 
-
 def _remove_discontinuity(logdir, scalar_name):
     """
     For a given scalar with name 'scalar_name' we remove a discontinuity from the plot. Sometime in restarting plots
@@ -116,8 +93,6 @@ def _remove_discontinuity(logdir, scalar_name):
     :param scalar_name: The scalar that we wish to clean values for in this log
     """
     pass
-
-
 
 
 def _read_sequence(logdir, scalar_name):
@@ -154,39 +129,40 @@ def _read_sequence(logdir, scalar_name):
                 for value in event.summary.value:
                     if value.tag == scalar_name:
                         out.append([value.simple_value])
-                        
+
     steps = [[i] for i in range(len(out))]
     result = np.array(np.concatenate([np.array(steps), np.array(out)], axis=1))
     return result
 
+
 def _read_sequence_csv(csv_file):
     points = []
-    with open(csv_file,"r") as f:
+    with open(csv_file, "r") as f:
         for line in f:
             try:
                 _, xstr, ystr = line.split(",")
-                points.append([float(xstr),float(ystr)])
+                points.append([float(xstr), float(ystr)])
             except:
-                pass # first line in the file... try and ask forgiveness...
+                pass  # first line in the file... try and ask forgiveness...
     result = np.array(points)
     return result
 
 
-
-def _add_rolling_mean_and_std(sequence, window_size):
+def _add_moving_averages(sequence, window_size):
     df = pd.DataFrame(data=sequence, columns=["x", "y"])
-    rolling_mean = df.rolling(window=window_size, on='x').mean() #.ewm(alpha=0.2)
+    rolling_mean = df.rolling(window=window_size, on='x').mean()  # .ewm(alpha=0.2)
     rolling_std = df.rolling(window=window_size, on='x').std()
 
     new_df = pd.DataFrame({'x': df['x'], 'y': df['y'],
                            'y_rmean': rolling_mean['y'].values,
                            'y_rstd': rolling_std['y'].values})
 
+    new_df['y_ewma'] = new_df['y'].ewm(span=window_size, adjust=False).mean()
+
     return new_df
 
 
-
-def _plot_sequence(df, linestyle, label):
+def _plot_sequence(df, linestyle, label, avg='rolling'):
     """
     Adds the plot 'sequence' with color 'color' to the current Seaboarn figure.
 
@@ -197,10 +173,11 @@ def _plot_sequence(df, linestyle, label):
 
     # cis = np.asarray((df['y_rmean']-df['y_rstd']*1000,
     #                   df['y_rmean']+df['y_rstd']*1000))
-    sns.lineplot(x='x', y='y_rmean', data=df)#, linestyle=linestyle)
+    if (avg == 'rolling'):
+        sns.lineplot(x='x', y='y_rmean', data=df)
+    else:
+        sns.lineplot(x='x', y='y_ewma', data=df)  # , linestyle=linestyle)
     # plt.plot(sequence[:,0], sequence[:,1], linestyle=linestyle, label=label)
-
-
 
 
 def _save_current_fig(out_filename):
@@ -210,12 +187,9 @@ def _save_current_fig(out_filename):
     plt.savefig(out_filename)
 
 
-
 """
 Section: TensorPlot processing.
 """
-
-
 
 
 def _compute_parametric_curve(seq1, seq2):
@@ -243,15 +217,15 @@ def _compute_parametric_curve(seq1, seq2):
     parametric_points = []
 
     # rescale
-    tx = seq1[-1,0]
-    ty = seq2[-1,0]
-    seq2[:,0] = seq2[:,0] * tx / ty
+    tx = seq1[-1, 0]
+    ty = seq2[-1, 0]
+    seq2[:, 0] = seq2[:, 0] * tx / ty
 
     j = 0
     for j in range(M):
-        while i < N and _si(seq1,i+1,0) < _si(seq2,j,0):
+        while i < N and _si(seq1, i + 1, 0) < _si(seq2, j, 0):
             i += 1
-        new_point = [_si(seq1,i,1), _si(seq2,j,1)]
+        new_point = [_si(seq1, i, 1), _si(seq2, j, 1)]
         parametric_points.append(new_point)
     return np.array(parametric_points)
 
@@ -286,17 +260,13 @@ def _compute_parametric_curve(seq1, seq2):
     # return np.array(parametric_points)
 
 
-
-
-
 def _interpolate_value(p1, p2, u):
     """
     If p1 = (u1,v1) and p2 = (u2,v2) then return v = v1 + (u-u1)/(u2-u1) * (v2-v1)
     """
     u1, v1 = p1
     u2, v2 = p2
-    return v1 + (u-u1)/(u2-u1) * (v2-v1)
-
+    return v1 + (u - u1) / (u2 - u1) * (v2 - v1)
 
 
 """
@@ -304,7 +274,7 @@ Section: TensorPlot interface
 """
 
 
-def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_name, linestyles, labels, window_size=10,
+def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_name, linestyles, labels, window_size=500,
                  xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
     """
        Reads in the sequence values recorded for each scalar in 'scalar_names' and plots it on the same graph.
@@ -331,15 +301,14 @@ def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_nam
         scalar = event_filename_scalar_pair[i][1]
         scalar_sequence = _read_sequence(event_filename, scalar)
         scalar_sequence = _crop_points(scalar_sequence, xmin, xmax, ymin, ymax)
-        scalar_sequence = _add_rolling_mean_and_std(scalar_sequence, window_size=window_size)
+        scalar_sequence = _add_moving_averages(scalar_sequence, window_size=window_size)
         if log_x_axis:
             scalar_sequence = _log_scale_(scalar_sequence)
-        _plot_sequence(scalar_sequence, linestyles[i], labels[i])
+        _plot_sequence(scalar_sequence, linestyles[i], labels[i], avg='ewma')
     plt.xlabel(xaxis_name)
     plt.ylabel(yaxis_name)
     plt.gca().legend(loc='lower right')
     _save_current_fig(out_filename)
-
 
 
 # def normal_plots(out_filename, scalar_filenames, xaxis_name, yaxis_name, linestyles, labels):
@@ -372,8 +341,9 @@ def normal_plots(out_filename, event_filename_scalar_pair, xaxis_name, yaxis_nam
 #     _save_current_fig(out_filename)
 
 
-def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name, yaxis_name, linestyles, labels, num_points=None, window_size=500,
-                 xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
+def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filename_scalar_pair_two, xaxis_name,
+                     yaxis_name, linestyles, labels, num_points=None, window_size=500,
+                     xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, log_x_axis=False):
     """
     Produces a paramteric plot. If scalar1's plot is a sequence [(x1,y1), ..., ] and scalar2's plot is a sequence
     [(x'1, y'1), ..., ], then we compute a sequence [(a1, b1), ..., ] from the two scalars. Each pair (ai, bi) is
@@ -405,7 +375,8 @@ def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filenam
     # logdirs = _listify(logdirs)
     # if len(logdirs) == 1:
     #     logdirs = logdirs * len(scalar_names_one)
-    assert len(event_filename_scalar_pair_one) == len(event_filename_scalar_pair_two), "Invalid input to plot multiple parametric curves on a single axis."
+    assert len(event_filename_scalar_pair_one) == len(
+        event_filename_scalar_pair_two), "Invalid input to plot multiple parametric curves on a single axis."
     # assert len(logdirs) == len(scalar_names_two), "Invalid number of logdirs provided"
 
     for i in range(len(event_filename_scalar_pair_one)):
@@ -422,17 +393,16 @@ def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filenam
         parametric_sequence = _compute_parametric_curve(scalar_sequence_one, scalar_sequence_two)
 
         parametric_sequence = _crop_points(parametric_sequence, xmin, xmax, ymin, ymax)
-        parametric_sequence = _add_rolling_mean_and_std(parametric_sequence, window_size=window_size)
+        parametric_sequence = _add_moving_averages(parametric_sequence, window_size=window_size)
 
         if log_x_axis:
             parametric_sequence = _log_scale_(parametric_sequence)
-        
-        _plot_sequence(parametric_sequence, linestyles[i], labels[i])
+
+        _plot_sequence(parametric_sequence, linestyles[i], labels[i], avg='ewma')
     plt.xlabel(xaxis_name)
     plt.ylabel(yaxis_name)
     plt.gca().legend(loc='lower right')
     _save_current_fig(out_filename)
-
 
 
 # def parametric_plots(out_filename, scalar_filenames_one, scalar_filenames_two, xaxis_name, yaxis_name, linestyles, labels, num_points):
@@ -486,8 +456,6 @@ def parametric_plots(out_filename, event_filename_scalar_pair_one, event_filenam
 #     _save_current_fig(out_filename)
 
 
-
-
 def repair_discontinuity(logdir, scalar_name):
     """
     For a given scalar with name 'scalar_name' we remove a discontinuity from the plot. Sometime in restarting plots
@@ -498,8 +466,6 @@ def repair_discontinuity(logdir, scalar_name):
     :param scalar_name: The scalar that we wish to clean values for in this log
     """
     raise NotImplementedError()
-
-
 
 
 def clean_scalar(logdir, scalar_name):
@@ -513,15 +479,12 @@ def clean_scalar(logdir, scalar_name):
     raise NotImplementedError()
 
 
-
-
 if __name__ == "__main__":
     base_dir = sys.argv[1]
 
     # matplotlib.rcParams['ps.useafm'] = True
     # matplotlib.rcParams['pdf.use14corefonts'] = True
     # matplotlib.rcParams['text.usetex'] = True
-
 
     # # Test normal plots
     # imgfile = os.path.join(base_dir, "test_normal.pdf")
@@ -559,11 +522,11 @@ if __name__ == "__main__":
     # parametric_plots_new(imgfile, event_filename_scalar_pair_one, event_filename_scalar_pair_two,
     #                      xaxis, yaxis, linestyles, labels, num_points=100)
 
-
-
     # Expr 1 - SVHN / net2widernet tests, validation curves
     imgfile = os.path.join(base_dir, "svhn_net2widernet.pdf")
 
+    #exp_dir = os.path.join(os.getenv("HOME"),
+    #                       "Desktop/Neuroevolution/Deep-Neuroevolution-With-SharedWeights---Ensembling-A-Better-Solution/src/tb_logs/jade_tb_logs/tb_logs/paper_ewnw_default_tb_log")
     exp_dir = os.path.join(os.getenv("HOME"), "r2r/jade_tb_logs/tb_logs/paper_ewnw_default_tb_log")
     n2n_file = os.path.join(exp_dir, "Net2Net_student")
     r2r_file = os.path.join(exp_dir, "R2R_student")
@@ -582,17 +545,18 @@ if __name__ == "__main__":
         (teacher_file, 'iter/train/valacc_1'),
         (teacher_nr_file, 'iter/train/valacc_1'),
     ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)', 'ResNetCifar18(1/4)(NoRes)']
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(3/8)', 'ResNetCifar18(1/4)',
+              'ResNetCifar18(1/4)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
     linestyles = ['-', '-', '-', '-', '-', '-', '-']
     normal_plots(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
     # Expr 2 - SVHN / r2widerr tests, validation curves
     imgfile = os.path.join(base_dir, "svhn_r2widerr_flops.pdf")
 
+    #exp_dir = os.path.join(os.getenv("HOME"),
+     #                      "Desktop/Neuroevolution/Deep-Neuroevolution-With-SharedWeights---Ensembling-A-Better-Solution/src/tb_logs/jade_tb_logs/tb_logs/paper_ewnw_default_tb_log")
     exp_dir = os.path.join(os.getenv("HOME"), "r2r/jade_tb_logs/tb_logs/paper_ewrw_default_tb_log")
     n2n_file = os.path.join(exp_dir, "Net2Net_student")
     r2r_file = os.path.join(exp_dir, "R2R_student")
@@ -621,15 +585,12 @@ if __name__ == "__main__":
         (teacher_file, 'iter/train/valacc_1'),
         (teacher_nr_file, 'iter/train/valacc_1'),
     ]
-    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)', 'ResNetCifar18(2/3)(NoRes)']
+    labels = ['Net2WiderNet', 'R2WiderR', 'NetMorph', 'RandomPad', 'ResNetCifar18(1)', 'ResNetCifar18(2/3)',
+              'ResNetCifar18(2/3)(NoRes)']
     xaxis = "Iterations"
     yaxis = "Validation Accuracy"
     linestyles = ['-', '-', '-', '-', '-', '-', '-']
     parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=False)
-
-
-
-
 
     # # Fig 5 / SVHN / net2widernet tests, validation curves
     # imgfile = os.path.join(base_dir, "svhn_net2widernet.pdf")
@@ -648,8 +609,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
     # # Fig 6 / CIFAR / net2deepernet tests, validation curves
     # imgfile = os.path.join(base_dir, "cifar_net2deepernet.pdf")
 
@@ -666,8 +625,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
     # # Fig 6 / SVHN / net2deepernet tests, validation curves
     # imgfile = os.path.join(base_dir, "svhn_net2deepernet.pdf")
 
@@ -683,8 +640,6 @@ if __name__ == "__main__":
     # yaxis = "Validation Accuracy"
     # linestyles = ['-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
 
     # # Fig 7 / CIFAR / overfitting
     # imgfile = os.path.join(base_dir, "cifar_overfit.pdf")
@@ -703,10 +658,6 @@ if __name__ == "__main__":
     # linestyles = ['--', '-', '--', '-', '--', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
-
-
     # # Fig 8 / CIFAR / Weight init
     # imgfile = os.path.join(base_dir, "cifar_large_init.pdf")
 
@@ -719,10 +670,6 @@ if __name__ == "__main__":
     # yaxis = "Training/Validation Accuracy"
     # linestyles = ['--', '--']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
 
     # # Fig 9.1 / CIFAR / R2WiderR tests
     # imgfile = os.path.join(base_dir, "cifar_r2widerr.pdf")
@@ -741,10 +688,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
-
-
     # # Fig 9.1 / SVHN / R2WiderR tests
     # imgfile = os.path.join(base_dir, "svhn_r2widerr.pdf")
 
@@ -762,10 +705,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
-
-
     # # Fig 9.1 / CIFAR / R2DeeprR tests
     # imgfile = os.path.join(base_dir, "cifar_r2deeperr.pdf")
 
@@ -782,10 +721,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
 
-
-
-
-
     # # Fig 9.1 / SVHN / R2DeeprR tests
     # imgfile = os.path.join(base_dir, "svhn_r2deeperr.pdf")
 
@@ -801,10 +736,6 @@ if __name__ == "__main__":
     # yaxis = "Validation Accuracy"
     # linestyles = ['-', '-', '-', '-', '-']
     # normal_plots_new(imgfile, scalars, xaxis, yaxis, linestyles, labels)
-
-
-
-
 
     # # Fig 9.2 / CIFAR / R2WiderR tests
     # imgfile = os.path.join(base_dir, "cifar_r2widerr_flops.pdf")
@@ -832,10 +763,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
 
-
-
-
-
     # # Fig 9.2 / SVHN / R2WiderR tests
     # imgfile = os.path.join(base_dir, "svhn_r2widerr_flops.pdf")
 
@@ -862,10 +789,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
 
-
-
-
-
     # # Fig 9.2 / CIFAR / R2DeeprR tests
     # imgfile = os.path.join(base_dir, "cifar_r2deeperr_flops.pdf")
 
@@ -890,10 +813,6 @@ if __name__ == "__main__":
     # linestyles = ['-', '-', '-', '-', '-']
     # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
 
-
-
-
-
     # # Fig 9.2 / SVHN / R2DeeprR tests
     # imgfile = os.path.join(base_dir, "svhn_r2deeperr_flops.pdf")
 
@@ -917,7 +836,6 @@ if __name__ == "__main__":
     # yaxis = "Validation Accuracy"
     # linestyles = ['-', '-', '-', '-', '-']
     # parametric_plots(imgfile, scalars_xvals, scalars_yvals, xaxis, yaxis, linestyles, labels, log_x_axis=True)
-
 
     """
     # Net2WiderNet results
