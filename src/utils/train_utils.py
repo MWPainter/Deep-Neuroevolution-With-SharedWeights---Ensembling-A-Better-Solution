@@ -172,6 +172,9 @@ def _train_loop_epoch(model, data_loader, step_op, optimizer, global_iter, write
             writer.add_scalar(scalar_name, losses[key], global_iter)
             minibatch_size = minibatch_data[0].size(0)
             avg_losses_dict[key].update(losses[key], n=minibatch_size)
+        
+        if global_iter % args.tb_log_freq == 0 and hasattr(model, 'log_weights'):
+            model.log_weights(summary_writer=writer, iteration=global_iter)
 
         # Update averages and progress bar
         prog_stats = {

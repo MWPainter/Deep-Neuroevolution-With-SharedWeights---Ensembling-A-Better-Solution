@@ -258,6 +258,15 @@ class BasicBlock(nn.Module):
         return hvg, conv2_hvn
 
 
+    def log_weights(self, summary_writer, summary_scope, iteration):
+        """
+        Adds historgrams to tensorboardx summary writer to log the distributions of the weights at different layers
+        """
+        hist_name_format_string = summary_scope + "conv_{c}"
+        summary_writer.add_histogram(hist_name_format_string.format(c=1), self.conv1.weight.data, iteration)
+        summary_writer.add_histogram(hist_name_format_string.format(c=2), self.conv2.weight.data, iteration)
+
+
 
 
 
@@ -410,6 +419,16 @@ class Bottleneck(nn.Module):
             hvn.residual_connection = self.res
 
         return hvg, conv3_hvn
+
+
+    def log_weights(self, summary_writer, summary_scope, iteration):
+        """
+        Adds historgrams to tensorboardx summary writer to log the distributions of the weights at different layers
+        """
+        hist_name_format_string = summary_scope + "conv_{c}"
+        summary_writer.add_histogram(hist_name_format_string.format(c=1), self.conv1.weight.data, iteration)
+        summary_writer.add_histogram(hist_name_format_string.format(c=2), self.conv2.weight.data, iteration)
+        summary_writer.add_histogram(hist_name_format_string.format(c=3), self.conv3.weight.data, iteration)
 
 
 
@@ -615,6 +634,35 @@ class ResNet(nn.Module):
     def fc_hvg(self, cur_hvg):
         cur_hvg.add_hvn(hv_shape=self.out_shape, input_modules=[self.fc])
         return cur_hvg
+
+    def log_weights(self, summary_writer, iteration):
+        """
+        Adds historgrams to tensorboardx summary writer to log the distributions of the weights at different layers
+        """
+        if self.skip_stem:
+            summary_writer.add_histogram('stem_conv_hist', self.replacement_stem.weight.data, iteration)
+        else:
+            summary_writer.add_histogram('stem_conv_hist', self.conv1.weight.data, iteration)
+        
+        layer_indx = 0
+        for module_list in [self.layer1_modules, self.layer2_modules, self.layer3_modules, self.layer4_modules]:
+            block_indx = 0
+            for block in module_list:
+                summary_scope = "layer_{l}_block_{b}".format(l=layer_indx, b=block_indx)
+                block.log_weights(summary_writer=summary_writer, summary_scope=summary_scope, iteration=iteration)
+                block_indx += 1
+            layer_indx += 1
+
+
+        # self.layer1.log_weights(summary_writer=summary_writer, summary_scope='layer_1', iteration=iteration)
+        # self.layer2.log_weights(summary_writer=summary_writer, summary_scope='layer_2', iteration=iteration)
+        # self.layer3.log_weights(summary_writer=summary_writer, summary_scope='layer_3', iteration=iteration)
+        # self.layer4.log_weights(summary_writer=summary_writer, summary_scope='layer_4', iteration=iteration)
+
+        summary_writer.add_histogram('fc_hist', self.fc.weight.data, iteration)
+
+
+
 
 
 
