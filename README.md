@@ -15,7 +15,7 @@ The setup that we use for this code is as follows:
 3. Use `source activate <your_env_name>` to start using the environment, and `source deactivate <your_env_name>` to stop.
 4. When in your environment (after running `source activate <your_env_name>`) install the following dependencies, ensuring that you install using `conda` and the appropriate versions for your system, including if you want to use a GPU or not:
     1. [PyTorch](https://pytorch.org/),
-    3. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx), (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo for anyone interested),
+    3. [TensorboardX](https://anaconda.org/conda-forge/tensorboardx), (Here's the [GitHub](https://github.com/lanpa/tensorboardX) repo),
     4. [Tqdm](https://anaconda.org/conda-forge/tqdm) for terminal progress bar.
     
 Note that we will use jupyter notebooks, which are part of the default anaconda environment.
